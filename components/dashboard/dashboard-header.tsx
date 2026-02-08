@@ -1,0 +1,86 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Dumbbell, Search, Bell, X } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+
+export default function DashboardHeader() {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-6">
+        <Link href="/dashboard" className="flex shrink-0 items-center gap-2">
+          <Dumbbell className="h-6 w-6 text-gold" strokeWidth={2.5} />
+          <span className="text-xl font-black tracking-[0.15em] text-gold">
+            FITPEAK
+          </span>
+        </Link>
+
+        <div className="mx-8 hidden max-w-md flex-1 md:flex">
+          <div className="group relative w-full">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-gold" />
+            <input
+              type="text"
+              placeholder="ジム名・ユーザーを検索..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 w-full rounded-lg border border-border bg-secondary/60 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground/60 transition-all duration-300 focus:border-gold/50 focus:bg-secondary focus:outline-none focus:ring-1 focus:ring-gold/20"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSearchOpen(!searchOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground md:hidden"
+            aria-label="検索"
+          >
+            {searchOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Search className="h-5 w-5" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            className="relative flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            aria-label="通知"
+          >
+            <Bell className="h-5 w-5" />
+            <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-background" />
+          </button>
+
+          <Link href="/profile" className="ml-1">
+            <Avatar className="h-9 w-9 ring-2 ring-border transition-all hover:ring-gold/50">
+              <AvatarImage src="/placeholder.svg" alt="プロフィール" />
+              <AvatarFallback className="bg-secondary text-xs font-bold text-foreground">
+                U
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+        </div>
+      </div>
+
+      {searchOpen && (
+        <div className="animate-in slide-in-from-top-2 border-t border-border/40 bg-background/95 p-3 duration-200 md:hidden">
+          <div className="relative group">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-gold" />
+            <input
+              type="text"
+              placeholder="ジム名・ユーザーを検索..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+              className="h-10 w-full rounded-lg border border-border bg-secondary/60 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground/60 transition-all duration-300 focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
+            />
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}

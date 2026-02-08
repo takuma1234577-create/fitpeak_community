@@ -1,0 +1,37 @@
+{
+  "name": "fitpeak-community",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@radix-ui/react-avatar": "1.1.2",
+    "@radix-ui/react-dialog": "1.1.4",
+    "@radix-ui/react-select": "2.1.4",
+    "@radix-ui/react-slot": "1.1.1",
+    "@radix-ui/react-switch": "1.1.2",
+    "class-variance-authority": "^0.7.1",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.47.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.544.0",
+    "next": "15.1.6",
+    "react": "^19",
+    "react-dom": "^19",
+    "tailwind-merge": "^2.5.5",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5",
+    "tailwindcss": "^3.4.17",
+    "typescript": "5.7.3"
+  }
+}
