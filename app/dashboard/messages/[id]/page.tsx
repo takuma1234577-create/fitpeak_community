@@ -7,9 +7,5 @@ export default function DashboardMessageChatPage() {
   const params = useParams();
   const id = params.id as string;
 
-  return (
-    <div className="min-h-[calc(100vh-10rem)] w-full">
-      <IndividualChatView conversationId={id} embedded />
-    </div>
-  );
+  return <IndividualChatView conversationId={id} embedded />;
 }

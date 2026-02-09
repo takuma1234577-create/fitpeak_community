@@ -47,13 +47,18 @@ export async function getMyProfile(
   supabase: SupabaseClient,
   userId: string
 ): Promise<MyProfile | null> {
-  const { data, error } = await (supabase as any)
-    .from("profiles")
-    .select("id, prefecture, home_gym, exercises")
-    .eq("id", userId)
-    .maybeSingle();
-  if (error || !data) return null;
-  return data as MyProfile;
+  try {
+    const { data, error } = await (supabase as any)
+      .from("profiles")
+      .select("id, prefecture, home_gym, exercises")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as MyProfile;
+  } catch (e) {
+    console.error("getMyProfile error:", e);
+    return null;
+  }
 }
 
 /**
@@ -64,49 +69,54 @@ export async function getRecommendedWorkouts(
   myProfile: MyProfile | null,
   limit = 10
 ): Promise<RecruitmentWithProfile[]> {
-  const sb = supabase as any;
-  const baseQuery = () =>
-    sb.from("recruitments").select("*, profiles(id, nickname, username, avatar_url)").eq("status", "open");
+  try {
+    const sb = supabase as any;
+    const baseQuery = () =>
+      sb.from("recruitments").select("*, profiles(id, nickname, username, avatar_url)").eq("status", "open");
 
-  const promises: Promise<{ data: RecruitmentWithProfile[] | null }>[] = [];
+    const promises: Promise<{ data: RecruitmentWithProfile[] | null }>[] = [];
 
-  if (myProfile?.prefecture?.trim()) {
-    const pattern = `%${myProfile.prefecture.trim()}%`;
-    promises.push(
-      baseQuery().ilike("location", pattern).order("created_at", { ascending: false }).limit(limit)
-    );
-  }
-  if (myProfile?.exercises?.length) {
-    const parts = myProfile.exercises.filter(Boolean);
-    if (parts.length > 0) {
+    if (myProfile?.prefecture?.trim()) {
+      const pattern = `%${myProfile.prefecture.trim()}%`;
       promises.push(
-        baseQuery()
-          .in("target_body_part", parts)
-          .order("created_at", { ascending: false })
-          .limit(limit)
+        baseQuery().ilike("location", pattern).order("created_at", { ascending: false }).limit(limit)
       );
     }
-  }
-
-  if (promises.length === 0) {
-    const { data } = await baseQuery().order("created_at", { ascending: false }).limit(limit);
-    return (data ?? []) as RecruitmentWithProfile[];
-  }
-
-  const results = await Promise.all(promises);
-  const seen = new Set<string>();
-  const merged: RecruitmentWithProfile[] = [];
-  for (const res of results) {
-    const list = (res.data ?? []) as RecruitmentWithProfile[];
-    for (const row of list) {
-      if (!seen.has(row.id)) {
-        seen.add(row.id);
-        merged.push(row);
+    if (myProfile?.exercises?.length) {
+      const parts = myProfile.exercises.filter(Boolean);
+      if (parts.length > 0) {
+        promises.push(
+          baseQuery()
+            .in("target_body_part", parts)
+            .order("created_at", { ascending: false })
+            .limit(limit)
+        );
       }
     }
+
+    if (promises.length === 0) {
+      const { data } = await baseQuery().order("created_at", { ascending: false }).limit(limit);
+      return (data ?? []) as RecruitmentWithProfile[];
+    }
+
+    const results = await Promise.all(promises);
+    const seen = new Set<string>();
+    const merged: RecruitmentWithProfile[] = [];
+    for (const res of results) {
+      const list = (res.data ?? []) as RecruitmentWithProfile[];
+      for (const row of list) {
+        if (!seen.has(row.id)) {
+          seen.add(row.id);
+          merged.push(row);
+        }
+      }
+    }
+    merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return merged.slice(0, limit);
+  } catch (e) {
+    console.error("getRecommendedWorkouts error:", e);
+    return [];
   }
-  merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  return merged.slice(0, limit);
 }
 
 const RECOMMENDED_USERS_TARGET = 5;
@@ -135,80 +145,85 @@ export async function getRecommendedUsers(
   myId: string,
   limit = RECOMMENDED_USERS_TARGET
 ): Promise<RecommendedUser[]> {
-  const sb = supabase as any;
-  const target = Math.min(limit, RECOMMENDED_USERS_TARGET);
-  const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises";
+  try {
+    const sb = supabase as any;
+    const target = Math.min(limit, RECOMMENDED_USERS_TARGET);
+    const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises";
 
-  // Step 1: おすすめ（ジム・住まい・種目一致）で最大 target 名
-  const promises: Promise<{ data: RecommendedUser[] | null }>[] = [];
+    // Step 1: おすすめ（ジム・住まい・種目一致）で最大 target 名
+    const promises: Promise<{ data: RecommendedUser[] | null }>[] = [];
 
-  if (myProfile?.home_gym?.trim()) {
-    const pattern = `%${myProfile.home_gym.trim()}%`;
-    promises.push(
-      sb.from("profiles").select(fields).neq("id", myId).ilike("home_gym", pattern).limit(target)
-    );
-  }
-  if (myProfile?.prefecture?.trim()) {
-    promises.push(
-      sb
-        .from("profiles")
-        .select(fields)
-        .neq("id", myId)
-        .eq("prefecture", myProfile.prefecture.trim())
-        .limit(target)
-    );
-  }
-  if (myProfile?.exercises?.length) {
-    const ex = myProfile.exercises.filter(Boolean);
-    if (ex.length > 0) {
+    if (myProfile?.home_gym?.trim()) {
+      const pattern = `%${myProfile.home_gym.trim()}%`;
       promises.push(
-        sb.from("profiles").select(fields).neq("id", myId).overlaps("exercises", ex).limit(target)
+        sb.from("profiles").select(fields).neq("id", myId).ilike("home_gym", pattern).limit(target)
       );
     }
-  }
+    if (myProfile?.prefecture?.trim()) {
+      promises.push(
+        sb
+          .from("profiles")
+          .select(fields)
+          .neq("id", myId)
+          .eq("prefecture", myProfile.prefecture.trim())
+          .limit(target)
+      );
+    }
+    if (myProfile?.exercises?.length) {
+      const ex = myProfile.exercises.filter(Boolean);
+      if (ex.length > 0) {
+        promises.push(
+          sb.from("profiles").select(fields).neq("id", myId).overlaps("exercises", ex).limit(target)
+        );
+      }
+    }
 
-  const seen = new Set<string>();
-  const merged: RecommendedUser[] = [];
+    const seen = new Set<string>();
+    const merged: RecommendedUser[] = [];
 
-  if (promises.length > 0) {
-    const results = await Promise.all(promises);
-    for (const res of results) {
-      const list = (res.data ?? []) as RecommendedUser[];
-      for (const row of list) {
-        if (row.id !== myId && !seen.has(row.id)) {
-          seen.add(row.id);
-          merged.push(row);
+    if (promises.length > 0) {
+      const results = await Promise.all(promises);
+      for (const res of results) {
+        const list = (res.data ?? []) as RecommendedUser[];
+        for (const row of list) {
+          if (row.id !== myId && !seen.has(row.id)) {
+            seen.add(row.id);
+            merged.push(row);
+          }
         }
       }
     }
-  }
-  const step1 = merged.slice(0, target);
+    const step1 = merged.slice(0, target);
 
-  // Step 2: 不足分をランダムで補填（自分と Step1 の ID を除外）
-  const need = target - step1.length;
-  if (need <= 0) {
-    return step1;
-  }
-
-  const excludeIds = [myId, ...step1.map((u) => u.id)];
-  const { data: randomRows, error } = await sb.rpc("get_random_profiles", {
-    p_exclude_ids: excludeIds,
-    p_limit: need,
-  });
-
-  if (error || !Array.isArray(randomRows)) {
-    return step1;
-  }
-
-  for (const row of randomRows as Record<string, unknown>[]) {
-    const id = row?.id as string | undefined;
-    if (id && !seen.has(id)) {
-      seen.add(id);
-      step1.push(toRecommendedUser(row as Record<string, unknown>));
+    // Step 2: 不足分をランダムで補填（自分と Step1 の ID を除外）
+    const need = target - step1.length;
+    if (need <= 0) {
+      return step1;
     }
-  }
 
-  return step1.slice(0, target);
+    const excludeIds = [myId, ...step1.map((u) => u.id)];
+    const { data: randomRows, error } = await sb.rpc("get_random_profiles", {
+      p_exclude_ids: excludeIds,
+      p_limit: need,
+    });
+
+    if (error || !Array.isArray(randomRows)) {
+      return step1;
+    }
+
+    for (const row of randomRows as Record<string, unknown>[]) {
+      const id = row?.id as string | undefined;
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        step1.push(toRecommendedUser(row as Record<string, unknown>));
+      }
+    }
+
+    return step1.slice(0, target);
+  } catch (e) {
+    console.error("getRecommendedUsers error:", e);
+    return [];
+  }
 }
 
 /**
@@ -219,17 +234,22 @@ export async function getNewArrivalUsers(
   myId: string,
   limit = 7
 ): Promise<NewArrivalUser[]> {
-  const sb = supabase as any;
-  const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, created_at";
-  const { data, error } = await sb
-    .from("profiles")
-    .select(fields)
-    .neq("id", myId)
-    .order("created_at", { ascending: false })
-    .limit(Math.min(limit, 10));
-  if (error || !Array.isArray(data)) return [];
-  return (data as Record<string, unknown>[]).map((row) => ({
-    ...toRecommendedUser(row),
-    created_at: (row.created_at as string) ?? "",
-  })) as NewArrivalUser[];
+  try {
+    const sb = supabase as any;
+    const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, created_at";
+    const { data, error } = await sb
+      .from("profiles")
+      .select(fields)
+      .neq("id", myId)
+      .order("created_at", { ascending: false })
+      .limit(Math.min(limit, 10));
+    if (error || !Array.isArray(data)) return [];
+    return (data as Record<string, unknown>[]).map((row) => ({
+      ...toRecommendedUser(row),
+      created_at: (row.created_at as string) ?? "",
+    })) as NewArrivalUser[];
+  } catch (e) {
+    console.error("getNewArrivalUsers error:", e);
+    return [];
+  }
 }

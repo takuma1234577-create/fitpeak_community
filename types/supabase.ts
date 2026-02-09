@@ -218,16 +218,19 @@ export interface Database {
           conversation_id: string;
           user_id: string;
           joined_at: string;
+          last_read_at: string | null;
         };
         Insert: {
           conversation_id: string;
           user_id: string;
           joined_at?: string;
+          last_read_at?: string | null;
         };
         Update: {
           conversation_id?: string;
           user_id?: string;
           joined_at?: string;
+          last_read_at?: string | null;
         };
       };
       messages: {

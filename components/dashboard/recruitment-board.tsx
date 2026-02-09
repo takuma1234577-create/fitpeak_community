@@ -25,75 +25,73 @@ export default function RecruitmentBoard() {
   const { blockedIds } = useBlockedUserIds();
 
   const fetchRecruitments = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setMyUserId(user.id);
-      const { data: profile } = await (supabase as any).from("profiles").select("nickname, username").eq("id", user.id).single();
-      const name = profile?.nickname || profile?.username || "ユーザー";
-      setMyDisplayName(name);
-    }
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setMyUserId(user.id);
+        const { data: profile } = await (supabase as any).from("profiles").select("nickname, username").eq("id", user.id).single();
+        const name = profile?.nickname || profile?.username || "ユーザー";
+        setMyDisplayName(name);
+      }
 
-    const { data: rows, error } = await (supabase as any)
-      .from("recruitments")
-      .select("id, title, description, target_body_part, event_date, location, status, created_at, user_id, profiles(id, nickname, username, avatar_url)")
-      .eq("status", "open")
-      .order("created_at", { ascending: false });
-    if (error) {
-      setPosts([]);
-      setLoading(false);
-      return;
-    }
-    const list = (rows ?? []) as Array<{
-      id: string;
-      title: string;
-      description: string | null;
-      event_date: string;
-      location: string | null;
-      target_body_part: string | null;
-      user_id: string;
-      profiles: { id: string; nickname: string | null; username: string | null; avatar_url: string | null } | null;
-    }>;
-    const mapped = list.map((r) => {
-      const d = new Date(r.event_date);
-      const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
-      const timeStr = d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) + "~";
-      const prof = r.profiles;
-      const name = prof?.nickname || prof?.username || "ユーザー";
-      const tags = r.target_body_part ? [r.target_body_part] : [];
-      return {
-        id: r.id,
-        title: r.title,
-        description: r.description ?? "",
-        date: dateStr,
-        time: timeStr,
-        location: r.location || "未設定",
-        tags,
-        user_id: r.user_id,
-        user: { name, title: "", initial: name.charAt(0), avatar: prof?.avatar_url ?? undefined },
-        spots: 1,
-        spotsLeft: 1,
-        event_date: r.event_date,
-      };
-    });
-    setPosts(mapped);
-
-    if (user && mapped.length > 0) {
-      const ids = mapped.map((p) => p.id);
-      const { data: parts } = await (supabase as any)
-        .from("recruitment_participants")
-        .select("recruitment_id, status")
-        .eq("user_id", user.id)
-        .in("recruitment_id", ids);
-      const statusMap: Record<string, "pending" | "approved" | "rejected" | "withdrawn"> = {};
-      (parts ?? []).forEach((p: { recruitment_id: string; status: string }) => {
-        if (["pending", "approved", "rejected", "withdrawn"].includes(p.status)) {
-          statusMap[p.recruitment_id] = p.status as "pending" | "approved" | "rejected" | "withdrawn";
-        }
+      const { data: rows, error } = await (supabase as any)
+        .from("recruitments")
+        .select("id, title, description, target_body_part, event_date, location, status, created_at, user_id, profiles(id, nickname, username, avatar_url)")
+        .eq("status", "open")
+        .order("created_at", { ascending: false });
+      if (error) {
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+      const list = Array.isArray(rows) ? rows : [];
+      const mapped = list.map((r: Record<string, unknown>) => {
+        const eventDate = r.event_date != null ? String(r.event_date) : "";
+        const d = eventDate ? new Date(eventDate) : new Date();
+        const dateStr = Number.isNaN(d.getTime()) ? "—" : `${d.getMonth() + 1}/${d.getDate()}`;
+        const timeStr = Number.isNaN(d.getTime()) ? "—" : d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) + "~";
+        const prof = r.profiles as { id?: string; nickname?: string | null; username?: string | null; avatar_url?: string | null } | null | undefined;
+        const name = (prof?.nickname ?? prof?.username ?? "ユーザー") as string;
+        const tags = r.target_body_part ? [String(r.target_body_part)] : [];
+        return {
+          id: String(r.id),
+          title: String(r.title ?? ""),
+          description: r.description != null ? String(r.description) : "",
+          date: dateStr,
+          time: timeStr,
+          location: r.location != null ? String(r.location) : "未設定",
+          tags,
+          user_id: String(r.user_id ?? ""),
+          user: { name, title: "", initial: name.charAt(0) || "?", avatar: prof?.avatar_url ?? undefined },
+          spots: 1,
+          spotsLeft: 1,
+          event_date: eventDate,
+        };
       });
-      setParticipantStatusByRecruitment(statusMap);
+      setPosts(mapped);
+
+      if (user && mapped.length > 0) {
+        const ids = mapped.map((p) => p.id);
+        const { data: parts } = await (supabase as any)
+          .from("recruitment_participants")
+          .select("recruitment_id, status")
+          .eq("user_id", user.id)
+          .in("recruitment_id", ids);
+        const statusMap: Record<string, "pending" | "approved" | "rejected" | "withdrawn"> = {};
+        (Array.isArray(parts) ? parts : []).forEach((p: { recruitment_id: string; status: string }) => {
+          if (["pending", "approved", "rejected", "withdrawn"].includes(p.status)) {
+            statusMap[p.recruitment_id] = p.status as "pending" | "approved" | "rejected" | "withdrawn";
+          }
+        });
+        setParticipantStatusByRecruitment(statusMap);
+      }
+    } catch (e) {
+      console.error("Recruitment board fetch error:", e);
+      setPosts([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {

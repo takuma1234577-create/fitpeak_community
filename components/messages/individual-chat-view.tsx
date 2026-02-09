@@ -9,12 +9,13 @@ import {
   Send,
   Loader2,
   UserCircle,
-  Phone,
   MoreHorizontal,
   Check,
   CheckCheck,
   ChevronDown,
   ImagePlus,
+  MapPin,
+  Dumbbell,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
@@ -29,7 +30,15 @@ type MessageRow = {
   message_type: string | null;
 };
 
-type OtherUser = { id: string; name: string; avatar: string | null };
+type OtherUser = {
+  id: string;
+  name: string;
+  avatar: string | null;
+  bio: string | null;
+  home_gym: string | null;
+  exercises: string[] | null;
+  prefecture: string | null;
+};
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
@@ -65,6 +74,7 @@ export default function IndividualChatView({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
   const { blockedIds } = useBlockedUserIds();
   const visibleMessages = messages.filter(
     (msg) => msg.sender_id === myUserId || !blockedIds.has(msg.sender_id)
@@ -82,9 +92,22 @@ export default function IndividualChatView({
 
     const { data: participants } = await supabase
       .from("conversation_participants")
-      .select("user_id, profiles(id, nickname, username, avatar_url)")
+      .select("user_id, last_read_at, profiles(id, nickname, username, avatar_url, bio, home_gym, exercises, prefecture)")
       .eq("conversation_id", id);
-    const list = (participants ?? []) as { user_id: string; profiles: { id: string; nickname: string | null; username: string | null; avatar_url: string | null } | null }[];
+    const list = (participants ?? []) as {
+      user_id: string;
+      last_read_at: string | null;
+      profiles: {
+        id: string;
+        nickname: string | null;
+        username: string | null;
+        avatar_url: string | null;
+        bio: string | null;
+        home_gym: string | null;
+        exercises: string[] | null;
+        prefecture: string | null;
+      } | null;
+    }[];
     const other = list.find((p) => p.user_id !== user.id);
     if (other?.profiles) {
       const p = other.profiles;
@@ -92,9 +115,23 @@ export default function IndividualChatView({
         id: p.id,
         name: p.nickname || p.username || "ユーザー",
         avatar: p.avatar_url,
+        bio: p.bio ?? null,
+        home_gym: p.home_gym ?? null,
+        exercises: p.exercises ?? null,
+        prefecture: p.prefecture ?? null,
       });
+      setOtherLastReadAt(other.last_read_at ?? null);
     } else {
-      setOtherUser({ id: "", name: "ユーザー", avatar: null });
+      setOtherUser({
+        id: "",
+        name: "ユーザー",
+        avatar: null,
+        bio: null,
+        home_gym: null,
+        exercises: null,
+        prefecture: null,
+      });
+      setOtherLastReadAt(null);
     }
 
     const { data: rows, error } = await (supabase as any)
@@ -106,7 +143,23 @@ export default function IndividualChatView({
       setMessages((rows as MessageRow[]).map((r) => ({ ...r, message_type: r.message_type ?? "text" })));
     }
     setLoading(false);
+
+    await (supabase as any)
+      .from("conversation_participants")
+      .update({ last_read_at: new Date().toISOString() })
+      .eq("conversation_id", id)
+      .eq("user_id", user.id);
   }, [id, router]);
+
+  const markAsRead = useCallback(async () => {
+    if (!id || !myUserId) return;
+    const supabase = createClient();
+    await (supabase as any)
+      .from("conversation_participants")
+      .update({ last_read_at: new Date().toISOString() })
+      .eq("conversation_id", id)
+      .eq("user_id", myUserId);
+  }, [id, myUserId]);
 
   useEffect(() => {
     fetchConversation();
@@ -123,6 +176,7 @@ export default function IndividualChatView({
         (payload) => {
           const row = payload.new as MessageRow;
           const normalized = { ...row, message_type: row.message_type ?? "text" };
+          const isFromOther = normalized.sender_id !== myUserId;
           setMessages((prev) => {
             if (prev.some((m) => m.id === normalized.id)) return prev;
             const isFromMe = normalized.sender_id === myUserId;
@@ -138,6 +192,26 @@ export default function IndividualChatView({
             }
             return [...prev, normalized];
           });
+          if (isFromOther) markAsRead();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, myUserId, markAsRead]);
+
+  useEffect(() => {
+    if (!id || !myUserId) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`participants:${id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "conversation_participants", filter: `conversation_id=eq.${id}` },
+        (payload) => {
+          const row = payload.new as { user_id: string; last_read_at: string | null };
+          if (row.user_id !== myUserId && row.last_read_at) setOtherLastReadAt(row.last_read_at);
         }
       )
       .subscribe();
@@ -222,6 +296,7 @@ export default function IndividualChatView({
         );
       }
       await notifyOtherParticipants(supabase);
+      setInput("");
     } catch (e) {
       console.error("send message:", e);
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -271,7 +346,7 @@ export default function IndividualChatView({
 
   if (loading) {
     return (
-      <div className={cn("flex items-center justify-center bg-[#060606]", embedded ? "min-h-[320px] rounded-xl" : "min-h-screen")}>
+      <div className={cn("flex items-center justify-center bg-[#060606]", embedded ? "h-[100dvh]" : "min-h-screen")}>
         <Loader2 className="h-8 w-8 animate-spin text-gold" />
       </div>
     );
@@ -281,76 +356,106 @@ export default function IndividualChatView({
   const otherAvatar = otherUser?.avatar ?? "/placeholder.svg";
 
   const containerClass = embedded
-    ? "flex flex-col min-h-[calc(100vh-12rem)] max-h-[calc(100vh-8rem)] rounded-xl border border-border/40 bg-[#060606] overflow-hidden"
+    ? "flex h-[100dvh] flex-col bg-[#060606] overflow-hidden"
     : "flex h-screen flex-col bg-[#060606]";
 
   return (
     <div className={containerClass}>
-      <header className="relative z-10 flex shrink-0 items-center gap-3 border-b border-border/30 bg-[#0c0c0c]/90 px-3 py-3 backdrop-blur-xl sm:px-5">
+      <div className="flex flex-1 min-h-0">
+        <div className="flex flex-1 flex-col min-w-0 min-h-0">
+      <header className="sticky top-0 z-20 flex shrink-0 items-center gap-3 border-b border-border/30 bg-[#0c0c0c]/95 px-3 py-2.5 backdrop-blur-xl sm:px-4 md:py-3">
         <Link
           href="/dashboard/messages"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground -ml-1"
           aria-label="一覧に戻る"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-
-        <div className="relative shrink-0">
-          <div className="relative h-10 w-10 overflow-hidden rounded-full ring-2 ring-border/40">
-            {otherUser?.avatar ? (
-              <Image
-                src={otherAvatar}
-                alt={otherName}
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-secondary text-sm font-bold text-foreground">
-                {otherName.charAt(0)}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-1 flex-col min-w-0">
-          <span className="truncate text-sm font-bold text-foreground leading-tight">
-            {otherName}
-          </span>
-          <span className="text-[11px] leading-tight text-muted-foreground/50">
-            ダイレクトメッセージ
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
-            aria-label="通話"
-          >
-            <Phone className="h-[18px] w-[18px]" />
-          </button>
+        {otherUser?.id ? (
           <Link
-            href={otherUser?.id ? `/profile?u=${otherUser.id}` : "/dashboard/messages"}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
-            aria-label="プロフィール"
+            href={`/profile?u=${otherUser.id}`}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition-colors hover:bg-secondary/40 -mx-1 px-1 py-0.5"
+            aria-label={`${otherName}のプロフィール`}
           >
-            <UserCircle className="h-5 w-5" />
+            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-border/40 sm:h-10 sm:w-10">
+              {otherUser?.avatar ? (
+                <Image
+                  src={otherAvatar}
+                  alt={otherName}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-secondary text-sm font-bold text-foreground">
+                  {otherName.charAt(0)}
+                </div>
+              )}
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-bold text-foreground">
+                {otherName}
+              </span>
+              {!embedded && (
+                <span className="text-[11px] leading-tight text-muted-foreground/50">
+                  ダイレクトメッセージ
+                </span>
+              )}
+            </div>
           </Link>
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
-            aria-label="メニュー"
-          >
-            <MoreHorizontal className="h-5 w-5" />
-          </button>
-        </div>
+        ) : (
+          <>
+            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-border/40 sm:h-10 sm:w-10">
+              {otherUser?.avatar ? (
+                <Image
+                  src={otherAvatar}
+                  alt={otherName}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-secondary text-sm font-bold text-foreground">
+                  {otherName.charAt(0)}
+                </div>
+              )}
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-bold text-foreground">
+                {otherName}
+              </span>
+              {!embedded && (
+                <span className="text-[11px] leading-tight text-muted-foreground/50">
+                  ダイレクトメッセージ
+                </span>
+              )}
+            </div>
+          </>
+        )}
+        {!embedded && (
+          <div className="flex shrink-0 items-center gap-1">
+            <Link
+              href={otherUser?.id ? `/profile?u=${otherUser.id}` : "/dashboard/messages"}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
+              aria-label="プロフィール"
+            >
+              <UserCircle className="h-5 w-5" />
+            </Link>
+            <button
+              type="button"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
+              aria-label="メニュー"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          </div>
+        )}
       </header>
 
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="relative flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain px-4 py-2 scrollbar-hide sm:px-6 min-h-0"
+        className="relative flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain px-4 py-2 scrollbar-hide sm:px-6 min-h-0 touch-pan-y"
       >
         <DateChip label="Today" />
 
@@ -442,15 +547,20 @@ export default function IndividualChatView({
 
                 <div
                   className={cn(
-                    "flex shrink-0 items-center gap-0.5 pb-1 transition-opacity duration-200",
+                    "flex shrink-0 flex-col items-end gap-0.5 pb-1 transition-opacity duration-200",
                     isLast ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   )}
                 >
-                  <span className="text-[10px] text-muted-foreground/40 tabular-nums">
-                    {formatTime(msg.created_at)}
-                  </span>
-                  {isMe && isLast && <CheckCheck className="h-3 w-3 text-gold/60" />}
-                  {isMe && !isLast && <Check className="h-3 w-3 text-muted-foreground/30" />}
+                  <div className="flex items-center gap-0.5">
+                    <span className="text-[10px] text-muted-foreground/40 tabular-nums">
+                      {formatTime(msg.created_at)}
+                    </span>
+                    {isMe && isLast && <CheckCheck className="h-3 w-3 text-gold/60" />}
+                    {isMe && !isLast && <Check className="h-3 w-3 text-muted-foreground/30" />}
+                  </div>
+                  {isMe && otherLastReadAt && new Date(msg.created_at).getTime() <= new Date(otherLastReadAt).getTime() && (
+                    <span className="text-xs text-gray-400">既読</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -461,7 +571,7 @@ export default function IndividualChatView({
       </div>
 
       {showScrollBtn && (
-        <div className="absolute bottom-24 right-6 z-20">
+        <div className="absolute bottom-4 right-4 z-20 sm:bottom-6 sm:right-6">
           <button
             type="button"
             onClick={scrollToBottom}
@@ -473,7 +583,7 @@ export default function IndividualChatView({
         </div>
       )}
 
-      <div className="relative z-10 shrink-0 border-t border-border/20 bg-[#0a0a0a]/95 px-3 py-2.5 backdrop-blur-xl sm:px-5 sm:py-3">
+      <div className="sticky bottom-0 z-10 shrink-0 border-t border-border/20 bg-[#0a0a0a]/95 px-3 py-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-5 sm:py-3">
         <div className="flex items-end gap-2">
           <input
             ref={fileInputRef}
@@ -498,7 +608,7 @@ export default function IndividualChatView({
             </button>
           </div>
 
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <textarea
               ref={textareaRef}
               value={input}
@@ -511,7 +621,7 @@ export default function IndividualChatView({
               }}
               placeholder="メッセージを入力..."
               rows={1}
-              className="w-full resize-none rounded-[22px] border-0 bg-[#161616] px-5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/35 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-gold/25 max-h-[120px]"
+              className="w-full resize-none rounded-[22px] border-0 bg-[#161616] px-4 py-2.5 text-[16px] text-foreground placeholder:text-muted-foreground/35 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-gold/25 max-h-[120px] md:text-sm"
               style={{ minHeight: "42px" }}
             />
           </div>
@@ -537,6 +647,76 @@ export default function IndividualChatView({
             </button>
           </div>
         </div>
+      </div>
+        </div>
+
+        <aside className="hidden lg:block w-80 shrink-0 border-l border-border/30 bg-[#0a0a0a] overflow-y-auto">
+          <div className="sticky top-0 p-4">
+            <div className="rounded-xl border border-border/40 bg-[#111] p-4 shadow-sm">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="relative h-24 w-24 overflow-hidden rounded-full ring-2 ring-border/40">
+                  {otherUser?.avatar ? (
+                    <Image
+                      src={otherAvatar}
+                      alt={otherName}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-secondary text-2xl font-bold text-foreground">
+                      {otherName.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <span className="text-base font-bold text-foreground">{otherName}</span>
+              </div>
+              {otherUser?.bio && (
+                <p className="mt-3 text-sm text-muted-foreground leading-relaxed text-left whitespace-pre-wrap">
+                  {otherUser.bio}
+                </p>
+              )}
+              <dl className="mt-4 space-y-2.5 text-sm">
+                {otherUser?.home_gym && (
+                  <div className="flex items-start gap-2">
+                    <Dumbbell className="h-4 w-4 shrink-0 text-gold/70 mt-0.5" />
+                    <div>
+                      <dt className="text-muted-foreground/70">よく行くジム</dt>
+                      <dd className="font-medium text-foreground">{otherUser.home_gym}</dd>
+                    </div>
+                  </div>
+                )}
+                {otherUser?.exercises && otherUser.exercises.length > 0 && (
+                  <div className="flex items-start gap-2">
+                    <Dumbbell className="h-4 w-4 shrink-0 text-gold/70 mt-0.5" />
+                    <div className="min-w-0">
+                      <dt className="text-muted-foreground/70">エクササイズ</dt>
+                      <dd className="flex flex-wrap gap-1.5 mt-0.5">
+                        {otherUser.exercises.map((ex) => (
+                          <span
+                            key={ex}
+                            className="rounded-full bg-border/50 px-2.5 py-0.5 text-xs font-medium text-foreground"
+                          >
+                            {ex}
+                          </span>
+                        ))}
+                      </dd>
+                    </div>
+                  </div>
+                )}
+                {otherUser?.prefecture && (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 shrink-0 text-gold/70 mt-0.5" />
+                    <div>
+                      <dt className="text-muted-foreground/70">住まい</dt>
+                      <dd className="font-medium text-foreground">{otherUser.prefecture}</dd>
+                    </div>
+                  </div>
+                )}
+              </dl>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

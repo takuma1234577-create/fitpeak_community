@@ -19,12 +19,16 @@ export default async function DashboardPage() {
 
   if (user) {
     myUserId = user.id;
-    myProfile = await getMyProfile(supabase, user.id);
-    [recommendedWorkouts, recommendedUsers, newArrivalUsers] = await Promise.all([
-      getRecommendedWorkouts(supabase, myProfile, 10),
-      getRecommendedUsers(supabase, myProfile, user.id, 5),
-      getNewArrivalUsers(supabase, user.id, 7),
-    ]);
+    try {
+      myProfile = await getMyProfile(supabase, user.id);
+      [recommendedWorkouts, recommendedUsers, newArrivalUsers] = await Promise.all([
+        getRecommendedWorkouts(supabase, myProfile, 10),
+        getRecommendedUsers(supabase, myProfile, user.id, 5),
+        getNewArrivalUsers(supabase, user.id, 7),
+      ]);
+    } catch (e) {
+      console.error("Dashboard recommendations fetch error:", e);
+    }
   }
 
   return (
