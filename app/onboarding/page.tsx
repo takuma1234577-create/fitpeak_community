@@ -430,7 +430,7 @@ export default function OnboardingPage() {
             </div>
 
             {saveError && (
-              <p className="text-sm text-red-400" role="alert">
+              <p className="whitespace-pre-line text-sm text-red-400" role="alert">
                 {saveError}
               </p>
             )}

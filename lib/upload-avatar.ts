@@ -40,7 +40,16 @@ export async function uploadAvatar(
   if (error) {
     if (error.message?.toLowerCase().includes("bucket") && error.message?.toLowerCase().includes("not found")) {
       throw new Error(
-        "プロフィール写真用のストレージが準備されていません。管理者に Supabase で「avatars」バケットの作成を依頼するか、.env.local に SUPABASE_SERVICE_ROLE_KEY を設定してください。"
+        "プロフィール写真用の「avatars」バケットがありません。次のどちらかを行ってください。\n\n" +
+          "【方法1】.env.local にサービスロールキーを追加する\n" +
+          "1. Supabase ダッシュボード → Project Settings → API\n" +
+          "2. 「service_role」のキーをコピー\n" +
+          "3. .env.local に 1 行追加: SUPABASE_SERVICE_ROLE_KEY=貼り付けたキー\n" +
+          "4. 開発サーバーを再起動（npm run dev）\n\n" +
+          "【方法2】手動でバケットを作る\n" +
+          "1. Supabase ダッシュボード → Storage → New bucket\n" +
+          "2. Name に「avatars」、Public をオンにして作成\n" +
+          "3. SQL Editor で supabase-storage-policies.sql を実行"
       );
     }
     throw error;

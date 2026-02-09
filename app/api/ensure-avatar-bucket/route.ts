@@ -17,7 +17,7 @@ export async function POST() {
     }
     const { error } = await supabase.storage.createBucket(AVATAR_BUCKET, {
       public: true,
-      fileSizeLimit: 2 * 1024 * 1024, // 2MB
+      fileSizeLimit: "2MB",
       allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
     });
     if (error) {
