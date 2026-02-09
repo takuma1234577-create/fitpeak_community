@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { uploadAvatar } from "@/lib/upload-avatar";
-import type { ProfilesInsert } from "@/types/supabase";
 import { PREFECTURES, EXERCISE_OPTIONS, GENDER_OPTIONS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -158,8 +157,8 @@ export default function OnboardingPage() {
         setIsSubmitting(false);
         return;
       }
-      const payload: ProfilesInsert = {
-        id: user.id,
+      const updatedAt = new Date().toISOString();
+      const payload = {
         username: nickname.trim(),
         nickname: nickname.trim(),
         bio: bio.trim() || null,
@@ -174,16 +173,27 @@ export default function OnboardingPage() {
         is_home_gym_public: isHomeGymPublic,
         area: prefecture || null,
         gym: homeGym.trim() || null,
-        updated_at: new Date().toISOString(),
+        updated_at: updatedAt,
       };
-      const { error } = await (supabase as any)
-        .from("profiles")
-        .upsert(payload, { onConflict: "id" });
-      if (error) throw error;
+      const sb = supabase as any;
+      // 既存行を更新（サインアップ時の trigger で行がある想定）、無ければ挿入
+      const { data: existing } = await sb.from("profiles").select("id").eq("id", user.id).maybeSingle();
+      if (existing) {
+        const { error } = await sb.from("profiles").update(payload).eq("id", user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from("profiles").insert({ id: user.id, ...payload });
+        if (error) throw error;
+      }
       window.location.href = "/dashboard";
-    } catch (err) {
-      console.error(err);
-      setSaveError("プロフィールの保存に失敗しました。もう一度お試しください。");
+    } catch (err: unknown) {
+      console.error("Profile save error:", err);
+      const message = err && typeof err === "object" && "message" in err ? String((err as { message: unknown }).message) : "";
+      setSaveError(
+        message
+          ? `プロフィールの保存に失敗しました。${message}`
+          : "プロフィールの保存に失敗しました。もう一度お試しください。"
+      );
     } finally {
       setIsSubmitting(false);
     }
