@@ -7,7 +7,6 @@ import {
   User,
   Eye,
   EyeOff,
-  Dumbbell,
   ArrowRight,
   Loader2,
 } from "lucide-react";
@@ -169,18 +168,6 @@ export default function AuthForm() {
 
   return (
     <div className="mx-auto w-full max-w-[440px]">
-      <div className="mb-12 flex flex-col items-center gap-4">
-        <div className="flex items-center gap-3">
-          <Dumbbell className="h-9 w-9 text-gold" strokeWidth={2.5} />
-          <h1 className="text-5xl font-black tracking-[0.25em] text-gold">FITPEAK</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="h-px w-8 bg-gold/30" />
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">Community</p>
-          <span className="h-px w-8 bg-gold/30" />
-        </div>
-      </div>
-
       <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-2xl shadow-black/60 backdrop-blur-sm sm:p-10">
         <div className="mb-8 flex gap-1 rounded-lg bg-secondary/80 p-1.5">
           <button

@@ -106,24 +106,43 @@ export async function getRecommendedWorkouts(
   return merged.slice(0, limit);
 }
 
+const RECOMMENDED_USERS_TARGET = 5;
+
+function toRecommendedUser(row: Record<string, unknown>): RecommendedUser {
+  return {
+    id: row.id as string,
+    nickname: (row.nickname as string | null) ?? null,
+    username: (row.username as string | null) ?? null,
+    bio: (row.bio as string | null) ?? null,
+    avatar_url: (row.avatar_url as string | null) ?? null,
+    prefecture: (row.prefecture as string | null) ?? null,
+    home_gym: (row.home_gym as string | null) ?? null,
+    exercises: Array.isArray(row.exercises) ? (row.exercises as string[]) : null,
+  };
+}
+
 /**
- * おすすめのユーザー: ジム仲間 / エリア仲間 / 種目仲間、自分を除く
+ * おすすめのユーザー: 最大5人を返す。
+ * Step1: ジム・エリア・種目マッチで取得（最大5）。
+ * Step2: 5人未満なら不足分をランダムで補填（ORDER BY RANDOM()）。
  */
 export async function getRecommendedUsers(
   supabase: SupabaseClient,
   myProfile: MyProfile | null,
   myId: string,
-  limit = 10
+  limit = RECOMMENDED_USERS_TARGET
 ): Promise<RecommendedUser[]> {
   const sb = supabase as any;
+  const target = Math.min(limit, RECOMMENDED_USERS_TARGET);
   const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises";
 
+  // Step 1: おすすめ（ジム・住まい・種目一致）で最大 target 名
   const promises: Promise<{ data: RecommendedUser[] | null }>[] = [];
 
   if (myProfile?.home_gym?.trim()) {
     const pattern = `%${myProfile.home_gym.trim()}%`;
     promises.push(
-      sb.from("profiles").select(fields).neq("id", myId).ilike("home_gym", pattern).limit(limit)
+      sb.from("profiles").select(fields).neq("id", myId).ilike("home_gym", pattern).limit(target)
     );
   }
   if (myProfile?.prefecture?.trim()) {
@@ -133,33 +152,58 @@ export async function getRecommendedUsers(
         .select(fields)
         .neq("id", myId)
         .eq("prefecture", myProfile.prefecture.trim())
-        .limit(limit)
+        .limit(target)
     );
   }
   if (myProfile?.exercises?.length) {
     const ex = myProfile.exercises.filter(Boolean);
     if (ex.length > 0) {
       promises.push(
-        sb.from("profiles").select(fields).neq("id", myId).overlaps("exercises", ex).limit(limit)
+        sb.from("profiles").select(fields).neq("id", myId).overlaps("exercises", ex).limit(target)
       );
     }
   }
 
-  if (promises.length === 0) {
-    return [];
-  }
-
-  const results = await Promise.all(promises);
   const seen = new Set<string>();
   const merged: RecommendedUser[] = [];
-  for (const res of results) {
-    const list = (res.data ?? []) as RecommendedUser[];
-    for (const row of list) {
-      if (row.id !== myId && !seen.has(row.id)) {
-        seen.add(row.id);
-        merged.push(row);
+
+  if (promises.length > 0) {
+    const results = await Promise.all(promises);
+    for (const res of results) {
+      const list = (res.data ?? []) as RecommendedUser[];
+      for (const row of list) {
+        if (row.id !== myId && !seen.has(row.id)) {
+          seen.add(row.id);
+          merged.push(row);
+        }
       }
     }
   }
-  return merged.slice(0, limit);
+  const step1 = merged.slice(0, target);
+
+  // Step 2: 不足分をランダムで補填（自分と Step1 の ID を除外）
+  const need = target - step1.length;
+  if (need <= 0) {
+    return step1;
+  }
+
+  const excludeIds = [myId, ...step1.map((u) => u.id)];
+  const { data: randomRows, error } = await sb.rpc("get_random_profiles", {
+    p_exclude_ids: excludeIds,
+    p_limit: need,
+  });
+
+  if (error || !Array.isArray(randomRows)) {
+    return step1;
+  }
+
+  for (const row of randomRows as Record<string, unknown>[]) {
+    const id = row?.id as string | undefined;
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      step1.push(toRecommendedUser(row as Record<string, unknown>));
+    }
+  }
+
+  return step1.slice(0, target);
 }

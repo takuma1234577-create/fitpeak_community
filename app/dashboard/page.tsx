@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     myProfile = await getMyProfile(supabase, user.id);
     [recommendedWorkouts, recommendedUsers] = await Promise.all([
       getRecommendedWorkouts(supabase, myProfile, 10),
-      getRecommendedUsers(supabase, myProfile, user.id, 10),
+      getRecommendedUsers(supabase, myProfile, user.id, 5),
     ]);
   }
 
