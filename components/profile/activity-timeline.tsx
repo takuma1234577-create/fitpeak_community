@@ -102,8 +102,8 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
         <p className="text-sm text-muted-foreground">まだアクティビティはありません</p>
       ) : (
         <div className="flex flex-col gap-0">
-          {(items ?? []).map((activity, index) => {
-            const isLast = index === items.length - 1;
+          {(items || []).map((activity, index) => {
+            const isLast = index === (items || []).length - 1;
             const dateIso = activity.type === "recruitment" ? activity.createdAt : activity.date;
             const timeLabel = formatTimeAgo(dateIso);
             const Icon = activity.type === "recruitment" ? Dumbbell : Users;

@@ -134,12 +134,12 @@ export default function FollowListModal({
     try {
       if (current) {
         await unfollowUser(userId);
-        setFollowers((prev) => prev.map((p) => (p.id === userId ? { ...p, isFollowing: false } : p)));
-        setFollowing((prev) => prev.map((p) => (p.id === userId ? { ...p, isFollowing: false } : p)));
+        setFollowers((prev) => (prev || []).map((p) => (p.id === userId ? { ...p, isFollowing: false } : p)));
+        setFollowing((prev) => (prev || []).map((p) => (p.id === userId ? { ...p, isFollowing: false } : p)));
       } else {
         await followUser(userId);
-        setFollowers((prev) => prev.map((p) => (p.id === userId ? { ...p, isFollowing: true } : p)));
-        setFollowing((prev) => prev.map((p) => (p.id === userId ? { ...p, isFollowing: true } : p)));
+        setFollowers((prev) => (prev || []).map((p) => (p.id === userId ? { ...p, isFollowing: true } : p)));
+        setFollowing((prev) => (prev || []).map((p) => (p.id === userId ? { ...p, isFollowing: true } : p)));
       }
       onFollowChange?.();
     } finally {
@@ -195,7 +195,7 @@ export default function FollowListModal({
             </p>
           ) : (
             <ul className="divide-y divide-border/40">
-              {list.map((p) => (
+              {(list || []).map((p) => (
                 <li key={p.id} className="flex items-center gap-3 px-4 py-3">
                   <Link
                     href={`/profile?u=${p.id}`}

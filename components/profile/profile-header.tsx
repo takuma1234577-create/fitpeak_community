@@ -395,11 +395,11 @@ export default function ProfileHeader({
         )}
 
         <div className="flex items-center gap-0 border-t border-border/60 pt-5">
-          {stats.map((stat, i) => (
+          {(stats || []).map((stat, i) => (
             <div
               key={stat.label}
               className={`flex-1 text-center ${
-                i !== stats.length - 1 ? "border-r border-border/40" : ""
+                i !== (stats || []).length - 1 ? "border-r border-border/40" : ""
               }`}
             >
               {stat.onClick ? (

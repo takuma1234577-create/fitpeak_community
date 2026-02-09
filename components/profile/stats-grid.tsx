@@ -27,7 +27,7 @@ export default function StatsGrid({
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        {big3Stats.map((stat) => (
+        {(big3Stats || []).map((stat) => (
           <div
             key={stat.label}
             className="relative rounded-xl border border-border/60 bg-card p-4 transition-colors hover:border-gold/20 sm:p-5"

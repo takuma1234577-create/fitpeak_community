@@ -98,7 +98,9 @@ export default function ProfilePage() {
   if (u && !otherProfile) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">ユーザーが見つかりません</p>
+        <div className="rounded-xl border border-border/40 bg-card/50 px-6 py-8 text-center">
+          <p className="text-sm font-semibold text-muted-foreground">ユーザーが見つかりません</p>
+        </div>
       </main>
     );
   }
