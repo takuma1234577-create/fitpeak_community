@@ -11,6 +11,19 @@ import {
   Loader2,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/** プロフィール作成済みか（nickname または username が入っていれば作成済みとみなす） */
+async function checkProfileCreated(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("nickname, username")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error || !data) return false;
+  const row = data as { nickname: string | null; username: string | null };
+  return !!(row.nickname?.trim() || row.username?.trim());
+}
 
 function GoldInput({
   id,
@@ -117,12 +130,15 @@ export default function AuthForm() {
       setIsSubmitting(true);
       try {
         const supabase = createClient();
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        const { data: authData, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (error) {
           setAuthError(error.message === "Invalid login credentials" ? "メールアドレスまたはパスワードが正しくありません" : error.message);
           return;
         }
-        window.location.href = "/onboarding";
+        const hasProfile = authData.user
+          ? await checkProfileCreated(supabase, authData.user.id)
+          : false;
+        window.location.href = hasProfile ? "/dashboard" : "/onboarding";
       } catch (e) {
         setAuthError(e instanceof Error ? e.message : "ログインに失敗しました");
       } finally {
@@ -151,8 +167,9 @@ export default function AuthForm() {
           setAuthError(error.message === "User already registered" ? "このメールアドレスは既に登録されています" : error.message);
           return;
         }
-        if (data.session) {
-          window.location.href = "/onboarding";
+        if (data.session && data.user) {
+          const hasProfile = await checkProfileCreated(supabase, data.user.id);
+          window.location.href = hasProfile ? "/dashboard" : "/onboarding";
         } else {
           setAuthSuccess("確認メールを送信しました。メール内のリンクから認証を完了してください。");
         }

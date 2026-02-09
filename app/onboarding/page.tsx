@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   User,
   FileText,
@@ -100,6 +101,7 @@ const labelClass =
   "text-xs font-bold tracking-wider uppercase text-muted-foreground";
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [nickname, setNickname] = useState("");
@@ -114,8 +116,29 @@ export default function OnboardingPage() {
   const [isHomeGymPublic, setIsHomeGymPublic] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [checkingProfile, setCheckingProfile] = useState(true);
 
   const age = calcAge(birthday || null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) {
+        setCheckingProfile(false);
+        return;
+      }
+      const { data } = await supabase.from("profiles").select("nickname, username").eq("id", user.id).maybeSingle();
+      if (cancelled) return;
+      setCheckingProfile(false);
+      const row = data as { nickname: string | null; username: string | null } | null;
+      if (row && (row.nickname?.trim() || row.username?.trim())) {
+        router.replace("/dashboard");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [router]);
 
   const toggleExercise = (opt: string) => {
     setExercises((prev) =>
@@ -213,6 +236,17 @@ export default function OnboardingPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (checkingProfile) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-gold" />
+          <p className="text-sm font-semibold text-muted-foreground">読み込み中...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background px-4 py-10">
