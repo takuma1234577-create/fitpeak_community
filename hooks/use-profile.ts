@@ -27,6 +27,13 @@ export function useProfile() {
         console.error("[useProfile] Failed to fetch profile:", error.message);
         return null;
       }
+      const sb = supabase as any;
+      const [followersRes, followingRes] = await Promise.all([
+        sb.from("follows").select("follower_id", { count: "exact", head: true }).eq("following_id", user.id),
+        sb.from("follows").select("following_id", { count: "exact", head: true }).eq("follower_id", user.id),
+      ]);
+      const followers_count = (followersRes as { count?: number }).count ?? 0;
+      const following_count = (followingRes as { count?: number }).count ?? 0;
       const row = data as Record<string, unknown> & { bench_press_max?: number };
       return {
         ...row,
@@ -37,8 +44,8 @@ export function useProfile() {
         achievements: Array.isArray(row.achievements) ? row.achievements : [],
         certifications: Array.isArray(row.certifications) ? row.certifications : [],
         email: (row.email as string) ?? null,
-        followers_count: (row.followers_count as number) ?? 0,
-        following_count: (row.following_count as number) ?? 0,
+        followers_count: (row.followers_count as number) ?? followers_count,
+        following_count: (row.following_count as number) ?? following_count,
         collab_count: (row.collab_count as number) ?? 0,
         nickname: (row.nickname as string) ?? null,
         gender: (row.gender as string) ?? null,
@@ -78,6 +85,9 @@ export function useProfile() {
         if (updates.nickname !== undefined) dbUpdates.nickname = updates.nickname;
         if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
         if (updates.avatar_url !== undefined) dbUpdates.avatar_url = updates.avatar_url;
+        if ((updates as { header_url?: string }).header_url !== undefined) {
+          (dbUpdates as { header_url?: string }).header_url = (updates as { header_url: string }).header_url;
+        }
         if (updates.area !== undefined) dbUpdates.area = updates.area;
         if (updates.gym !== undefined) dbUpdates.gym = updates.gym;
         if (updates.training_years !== undefined) dbUpdates.training_years = updates.training_years;

@@ -127,8 +127,8 @@ export default function CreateRecruitmentDialog() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="border-border/60 bg-card sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-h-[90dvh] w-full max-w-md overflow-y-auto border-border/60 bg-card p-4 sm:p-6 [&>*]:min-h-0">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="text-lg font-black tracking-wide text-foreground">
             合トレを募集する
           </DialogTitle>
@@ -136,7 +136,7 @@ export default function CreateRecruitmentDialog() {
             日時・場所・部位を入力して募集を作成します
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-4 pb-20">
           <div>
             <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
               タイトル <span className="text-red-400">*</span>
@@ -170,7 +170,7 @@ export default function CreateRecruitmentDialog() {
               onChange={(e) => setTargetBodyPart(e.target.value)}
               className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
             >
-              {bodyParts.map((p) => (
+              {(Array.isArray(bodyParts) ? bodyParts : []).map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
                 </option>
@@ -188,7 +188,7 @@ export default function CreateRecruitmentDialog() {
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
                 <option value="all">指定なし</option>
-                {PREFECTURES.map((p) => (
+                {(Array.isArray(PREFECTURES) ? PREFECTURES : []).map((p) => (
                   <option key={p} value={p}>
                     {p}
                   </option>
@@ -204,7 +204,7 @@ export default function CreateRecruitmentDialog() {
                 onChange={(e) => setLevel(e.target.value)}
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
-                {levelOptions.map((opt) => (
+                {(Array.isArray(levelOptions) ? levelOptions : []).map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -256,7 +256,7 @@ export default function CreateRecruitmentDialog() {
                   <SelectValue placeholder="00:00〜23:30" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[240px] border-border bg-card">
-                  {timeOptions.map((opt) => (
+                  {(Array.isArray(timeOptions) ? timeOptions : []).map((opt) => (
                     <SelectItem
                       key={opt.value}
                       value={opt.value}
@@ -286,7 +286,7 @@ export default function CreateRecruitmentDialog() {
               {error}
             </p>
           )}
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="shrink-0 gap-2 sm:gap-0">
             <button
               type="button"
               onClick={() => handleOpenChange(false)}

@@ -29,6 +29,8 @@ import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { useProfile } from "@/hooks/use-profile"
 import { uploadAvatar } from "@/lib/upload-avatar"
+import { uploadHeader } from "@/lib/upload-header"
+import HeaderCropModal from "@/components/settings/header-crop-modal"
 import { PREFECTURES, EXERCISE_OPTIONS, GENDER_OPTIONS } from "@/lib/constants"
 import type { Achievement } from "@/types/profile"
 
@@ -83,6 +85,10 @@ export default function SettingsPage() {
   const [isHomeGymPublic, setIsHomeGymPublic] = useState(true)
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [headerPreviewUrl, setHeaderPreviewUrl] = useState<string | null>(null)
+  const [headerCropOpen, setHeaderCropOpen] = useState(false)
+  const [headerCropImageSrc, setHeaderCropImageSrc] = useState<string>("")
+  const headerInputRef = useRef<HTMLInputElement>(null)
   const [bench, setBench] = useState("0")
   const [squat, setSquat] = useState("0")
   const [deadlift, setDeadlift] = useState("0")
@@ -134,6 +140,7 @@ export default function SettingsPage() {
       setIsPrefecturePublic((profile as { is_prefecture_public?: boolean }).is_prefecture_public !== false)
       setIsHomeGymPublic((profile as { is_home_gym_public?: boolean }).is_home_gym_public !== false)
       setAvatarPreviewUrl(profile.avatar_url ?? null)
+      setHeaderPreviewUrl((profile as { header_url?: string | null }).header_url ?? null)
       setBench(String(profile.bench_max ?? 0))
       setSquat(String(profile.squat_max ?? 0))
       setDeadlift(String(profile.deadlift_max ?? 0))
@@ -209,6 +216,35 @@ export default function SettingsPage() {
     e.target.value = ""
   }
 
+  function handleHeaderFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    const url = URL.createObjectURL(file)
+    setHeaderCropImageSrc(url)
+    setHeaderCropOpen(true)
+    e.target.value = ""
+  }
+
+  async function handleHeaderCropConfirm(blob: Blob) {
+    if (!profile) return
+    try {
+      const url = await uploadHeader(profile.id, blob)
+      setHeaderPreviewUrl(url)
+      await updateProfile({ header_url: url } as { header_url: string })
+      router.refresh()
+    } catch (err) {
+      console.error("Header upload failed:", err)
+    }
+  }
+
+  function handleHeaderCropOpenChange(open: boolean) {
+    if (!open && headerCropImageSrc) {
+      URL.revokeObjectURL(headerCropImageSrc)
+      setHeaderCropImageSrc("")
+    }
+    setHeaderCropOpen(open)
+  }
+
   function toggleExercise(opt: string) {
     setExercises((prev) => (prev.includes(opt) ? prev.filter((x) => x !== opt) : [...prev, opt]))
     markChanged()
@@ -252,6 +288,45 @@ export default function SettingsPage() {
   function renderAccount() {
     return (
       <div className="flex flex-col gap-8">
+        {/* Header image */}
+        <div>
+          <h3 className="text-sm font-bold text-foreground mb-4">
+            ヘッダー画像を変更
+          </h3>
+          <div className="rounded-xl border border-border bg-secondary overflow-hidden">
+            <div className="aspect-[3/1] w-full max-h-32 sm:max-h-40 relative">
+              {headerPreviewUrl ? (
+                <Image
+                  src={headerPreviewUrl}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500" />
+              )}
+            </div>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              ref={headerInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleHeaderFileSelect}
+            />
+            <button
+              type="button"
+              onClick={() => headerInputRef.current?.click()}
+              className="text-sm font-semibold text-gold hover:text-gold-light transition-colors"
+            >
+              ヘッダー画像を選択
+            </button>
+            <span className="text-xs text-muted-foreground">3:1推奨。選択後に切り抜きができます</span>
+          </div>
+        </div>
+
         {/* Avatar */}
         <div>
           <h3 className="text-sm font-bold text-foreground mb-4">
@@ -961,6 +1036,15 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {headerCropImageSrc && (
+        <HeaderCropModal
+          open={headerCropOpen}
+          onOpenChange={handleHeaderCropOpenChange}
+          imageSrc={headerCropImageSrc}
+          onConfirm={handleHeaderCropConfirm}
+        />
+      )}
     </div>
   )
 }

@@ -2,11 +2,17 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { followUser, unfollowUser } from "@/actions/follow";
 
-export function useFollow(profileUserId: string | null, myUserId: string | null) {
+export function useFollow(
+  profileUserId: string | null,
+  myUserId: string | null,
+  options?: { onSuccess?: () => void }
+) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkDone, setCheckDone] = useState(false);
+  const onSuccess = options?.onSuccess;
 
   const check = useCallback(async () => {
     if (!profileUserId || !myUserId || profileUserId === myUserId) {
@@ -32,21 +38,28 @@ export function useFollow(profileUserId: string | null, myUserId: string | null)
     if (!profileUserId || !myUserId || profileUserId === myUserId) return;
     setLoading(true);
     try {
-      const supabase = createClient();
-      const sb = supabase as any;
       if (isFollowing) {
-        await sb.from("follows").delete().eq("follower_id", myUserId).eq("following_id", profileUserId);
+        const res = await unfollowUser(profileUserId);
+        if (res.error) {
+          console.error("unfollow:", res.error);
+          return;
+        }
         setIsFollowing(false);
       } else {
-        await sb.from("follows").insert({ follower_id: myUserId, following_id: profileUserId });
+        const res = await followUser(profileUserId);
+        if (res.error) {
+          console.error("follow:", res.error);
+          return;
+        }
         setIsFollowing(true);
       }
+      onSuccess?.();
     } catch (e) {
       console.error("follow toggle:", e);
     } finally {
       setLoading(false);
     }
-  }, [profileUserId, myUserId, isFollowing]);
+  }, [profileUserId, myUserId, isFollowing, onSuccess]);
 
-  return { isFollowing, toggle, loading, checkDone };
+  return { isFollowing, toggle, loading, checkDone, refetch: check };
 }

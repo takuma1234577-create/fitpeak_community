@@ -19,6 +19,13 @@ export function useProfileById(profileId: string | null) {
       setProfile(null);
       return null;
     }
+    const sb = supabase as any;
+    const [followersRes, followingRes] = await Promise.all([
+      sb.from("follows").select("follower_id", { count: "exact", head: true }).eq("following_id", id),
+      sb.from("follows").select("following_id", { count: "exact", head: true }).eq("follower_id", id),
+    ]);
+    const followers_count = (followersRes as { count?: number }).count ?? 0;
+    const following_count = (followingRes as { count?: number }).count ?? 0;
     const row = data as Record<string, unknown> & { bench_press_max?: number };
     const mapped: Profile = {
       ...row,
@@ -29,8 +36,8 @@ export function useProfileById(profileId: string | null) {
       achievements: Array.isArray(row.achievements) ? row.achievements : [],
       certifications: Array.isArray(row.certifications) ? row.certifications : [],
       email: (row.email as string) ?? null,
-      followers_count: (row.followers_count as number) ?? 0,
-      following_count: (row.following_count as number) ?? 0,
+      followers_count: (row.followers_count as number) ?? followers_count,
+      following_count: (row.following_count as number) ?? following_count,
       collab_count: (row.collab_count as number) ?? 0,
       nickname: (row.nickname as string) ?? null,
       gender: (row.gender as string) ?? null,

@@ -99,9 +99,10 @@ export default function RecruitmentBoard() {
   }, [fetchRecruitments]);
 
   type PostWithDate = RecruitmentPost & { event_date?: string };
+  const safeBlockedIds = blockedIds instanceof Set ? blockedIds : new Set<string>();
   const displayPosts = ((): RecruitmentPost[] => {
     const safePosts = Array.isArray(posts) ? posts : [];
-    const withDate = (safePosts as PostWithDate[]).filter((p) => !p.user_id || !blockedIds.has(p.user_id));
+    const withDate = (safePosts as PostWithDate[]).filter((p) => !p.user_id || !safeBlockedIds.has(p.user_id));
     if (sort === "newest") return withDate;
     const now = Date.now();
     const sorted = [...withDate].sort((a, b) => {
@@ -166,7 +167,7 @@ export default function RecruitmentBoard() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {displayPosts.map((post) => (
+          {(Array.isArray(displayPosts) ? displayPosts : []).map((post) => (
             <RecruitmentCard
               key={post.id}
               post={post}

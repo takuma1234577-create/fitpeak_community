@@ -20,6 +20,7 @@ export interface Database {
           username: string | null;
           bio: string | null;
           avatar_url: string | null;
+          header_url: string | null;
           area: string | null;
           gym: string | null;
           training_years: number | null;
@@ -50,6 +51,7 @@ export interface Database {
           username?: string | null;
           bio?: string | null;
           avatar_url?: string | null;
+          header_url?: string | null;
           area?: string | null;
           gym?: string | null;
           training_years?: number | null;
@@ -80,6 +82,7 @@ export interface Database {
           username?: string | null;
           bio?: string | null;
           avatar_url?: string | null;
+          header_url?: string | null;
           area?: string | null;
           gym?: string | null;
           training_years?: number | null;

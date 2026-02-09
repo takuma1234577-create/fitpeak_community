@@ -10,6 +10,7 @@ export interface Profile {
   bio: string | null;
   email: string | null;
   avatar_url: string | null;
+  header_url: string | null;
   bench_max: number;
   squat_max: number;
   deadlift_max: number;

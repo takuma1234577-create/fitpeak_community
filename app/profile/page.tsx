@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useProfile } from "@/hooks/use-profile";
@@ -9,6 +10,8 @@ import { useBlockStatus } from "@/hooks/use-block-status";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { getOrCreateConversation } from "@/lib/conversations";
 import ProfileHeader from "@/components/profile/profile-header";
+import FollowListModal from "@/components/profile/follow-list-modal";
+import type { FollowTab } from "@/components/profile/follow-list-modal";
 import StatsGrid from "@/components/profile/stats-grid";
 import MyGears from "@/components/profile/my-gears";
 import ActivityTimeline from "@/components/profile/activity-timeline";
@@ -31,6 +34,7 @@ const fallback = {
   bio: "IFBB Pro 目指し中",
   email: "taku@fitpeak.app",
   avatar_url: null as string | null,
+  header_url: null as string | null,
   area: "東京・渋谷エリア",
   gym: "GOLD'S GYM 原宿",
   bench_max: 130,
@@ -52,16 +56,21 @@ const fallback = {
 export default function ProfilePage() {
   const searchParams = useSearchParams();
   const u = searchParams.get("u");
-  const { profile: myProfile, isLoading: myLoading } = useProfile();
-  const { profile: otherProfile, isLoading: otherLoading } = useProfileById(u || null);
+  const { profile: myProfile, isLoading: myLoading, refreshProfile } = useProfile();
+  const { profile: otherProfile, isLoading: otherLoading, refresh: refreshOtherProfile } = useProfileById(u || null);
   const displayProfile = u ? otherProfile : myProfile;
   const isLoading = u ? (myLoading || otherLoading) : myLoading;
   const isOwnProfile = !u || (myProfile?.id === u);
   const profileUserId = displayProfile?.id ?? u ?? null;
-  const { isFollowing, toggle: onFollow, loading: followLoading } = useFollow(profileUserId, myProfile?.id ?? null);
+  const refreshDisplayProfile = u ? refreshOtherProfile : refreshProfile;
+  const { isFollowing, toggle: onFollow, loading: followLoading } = useFollow(profileUserId, myProfile?.id ?? null, {
+    onSuccess: refreshDisplayProfile,
+  });
   const { isBlocked, refetch: refetchBlock } = useBlockStatus(isOwnProfile ? null : profileUserId);
   const { blockedIds } = useBlockedUserIds();
   const router = useRouter();
+  const [followModalOpen, setFollowModalOpen] = useState(false);
+  const [followModalTab, setFollowModalTab] = useState<FollowTab>("followers");
 
   const handleMessage = async () => {
     if (!myProfile?.id || !profileUserId || myProfile.id === profileUserId) return;
@@ -137,6 +146,7 @@ export default function ProfilePage() {
           name={p.name ?? "名前未設定"}
           bio={p.bio}
           avatarUrl={p.avatar_url}
+          headerUrl={(p as { header_url?: string | null }).header_url ?? null}
           avatarUpdatedAt={(p as { updated_at?: string }).updated_at}
           area={displayArea}
           gym={displayGym}
@@ -161,7 +171,19 @@ export default function ProfilePage() {
           onMessage={handleMessage}
           isBlocked={isBlocked}
           onBlockChange={refetchBlock}
+          onFollowersClick={profileUserId ? () => { setFollowModalTab("followers"); setFollowModalOpen(true); } : undefined}
+          onFollowingClick={profileUserId ? () => { setFollowModalTab("following"); setFollowModalOpen(true); } : undefined}
         />
+        {profileUserId && (
+          <FollowListModal
+            open={followModalOpen}
+            onOpenChange={setFollowModalOpen}
+            profileUserId={profileUserId}
+            myUserId={myProfile?.id ?? null}
+            initialTab={followModalTab}
+            onFollowChange={refreshDisplayProfile}
+          />
+        )}
 
         <div className="mx-5 h-px bg-border/40 sm:mx-8" />
 

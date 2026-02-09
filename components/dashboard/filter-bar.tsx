@@ -48,7 +48,7 @@ export default function FilterBar() {
             <SelectItem value="all" className="font-medium focus:bg-gold/10 focus:text-gold">
               全県
             </SelectItem>
-            {PREFECTURES.map((p) => (
+            {(Array.isArray(PREFECTURES) ? PREFECTURES : []).map((p) => (
               <SelectItem
                 key={p}
                 value={p}
@@ -65,7 +65,7 @@ export default function FilterBar() {
             <SelectValue placeholder="部位" />
           </SelectTrigger>
           <SelectContent className="border-border bg-card">
-            {bodyParts.map((part) => (
+            {(Array.isArray(bodyParts) ? bodyParts : []).map((part) => (
               <SelectItem
                 key={part.value}
                 value={part.value}
@@ -82,7 +82,7 @@ export default function FilterBar() {
             <SelectValue placeholder="レベル" />
           </SelectTrigger>
           <SelectContent className="border-border bg-card">
-            {levels.map((level) => (
+            {(Array.isArray(levels) ? levels : []).map((level) => (
               <SelectItem
                 key={level.value}
                 value={level.value}

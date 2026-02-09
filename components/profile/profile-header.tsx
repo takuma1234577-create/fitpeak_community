@@ -66,6 +66,8 @@ interface ProfileHeaderProps {
   name: string;
   bio: string | null;
   avatarUrl: string | null;
+  /** ヘッダー画像URL。未設定時はグラデーション表示 */
+  headerUrl?: string | null;
   /** キャッシュ無効化用。avatarUrl に ?v= を付与する */
   avatarUpdatedAt?: string | null;
   /** 住まい（都道府県）。非公開時は "非公開" を渡す */
@@ -96,6 +98,10 @@ interface ProfileHeaderProps {
   isBlocked?: boolean;
   /** ブロック/ブロック解除後のコールバック */
   onBlockChange?: () => void;
+  /** フォロワー数をクリックしたとき（一覧モーダル用） */
+  onFollowersClick?: () => void;
+  /** フォロー中数をクリックしたとき（一覧モーダル用） */
+  onFollowingClick?: () => void;
 }
 
 function toFullUrl(kind: keyof SnsLinks, value: string): string {
@@ -114,6 +120,7 @@ export default function ProfileHeader({
   name,
   bio,
   avatarUrl,
+  headerUrl,
   avatarUpdatedAt,
   area,
   gym,
@@ -132,6 +139,8 @@ export default function ProfileHeader({
   onMessage,
   isBlocked,
   onBlockChange,
+  onFollowersClick,
+  onFollowingClick,
 }: ProfileHeaderProps) {
   const router = useRouter();
   const showFollowMessage = !isOwnProfile && profileUserId;
@@ -140,16 +149,28 @@ export default function ProfileHeader({
     : null;
 
   const stats = [
-    { label: "フォロワー", value: followersCount.toLocaleString() },
-    { label: "フォロー中", value: followingCount.toLocaleString() },
-    { label: "合トレ実績", value: collabCount.toLocaleString() },
+    { label: "フォロワー", value: followersCount.toLocaleString(), onClick: onFollowersClick },
+    { label: "フォロー中", value: followingCount.toLocaleString(), onClick: onFollowingClick },
+    { label: "合トレ実績", value: collabCount.toLocaleString(), onClick: undefined },
   ];
 
   const initial = name.charAt(0).toUpperCase();
 
   return (
     <section className="relative">
-      <div className="relative h-56 w-full overflow-hidden sm:h-72">
+      <div className="relative h-32 w-full overflow-hidden sm:h-48">
+        {headerUrl ? (
+          <Image
+            src={headerUrl}
+            alt=""
+            fill
+            className="object-cover"
+            unoptimized
+            priority
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-gold/20 via-transparent to-background" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background" />
 
@@ -192,7 +213,7 @@ export default function ProfileHeader({
       </div>
 
       <div className="relative px-5 pb-6 sm:px-8">
-        <div className="-mt-16 mb-4 flex items-end gap-4">
+        <div className="-mt-12 mb-4 flex items-end gap-4">
           <div className="relative shrink-0">
             <div className="flex h-28 w-28 overflow-hidden rounded-full border-4 border-background bg-secondary shadow-xl shadow-black/40 sm:h-32 sm:w-32">
               {avatarSrc ? (
@@ -381,12 +402,29 @@ export default function ProfileHeader({
                 i !== stats.length - 1 ? "border-r border-border/40" : ""
               }`}
             >
-              <p className="text-xl font-black text-foreground sm:text-2xl">
-                {stat.value}
-              </p>
-              <p className="mt-0.5 text-xs font-semibold tracking-wide text-muted-foreground">
-                {stat.label}
-              </p>
+              {stat.onClick ? (
+                <button
+                  type="button"
+                  onClick={stat.onClick}
+                  className="block w-full py-1 text-center transition-colors hover:opacity-80 active:opacity-70"
+                >
+                  <p className="text-xl font-black text-foreground sm:text-2xl">
+                    {stat.value}
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold tracking-wide text-muted-foreground">
+                    {stat.label}
+                  </p>
+                </button>
+              ) : (
+                <>
+                  <p className="text-xl font-black text-foreground sm:text-2xl">
+                    {stat.value}
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold tracking-wide text-muted-foreground">
+                    {stat.label}
+                  </p>
+                </>
+              )}
             </div>
           ))}
         </div>
