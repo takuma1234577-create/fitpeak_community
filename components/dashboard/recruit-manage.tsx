@@ -216,7 +216,7 @@ export default function RecruitManage() {
       sender_id: (await supabase.auth.getUser()).data.user?.id ?? null,
       type: "approve",
       content: `「${recruitmentTitle}」への参加が承認されました`,
-      link: chatRoomId ? `/messages/${chatRoomId}` : "/dashboard/recruit",
+      link: chatRoomId ? `/dashboard/messages/${chatRoomId}` : "/dashboard/recruit",
     });
     setActionLoading(null);
     fetchList();

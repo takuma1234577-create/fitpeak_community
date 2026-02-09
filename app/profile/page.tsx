@@ -67,7 +67,7 @@ export default function ProfilePage() {
     if (!myProfile?.id || !profileUserId || myProfile.id === profileUserId) return;
     try {
       const conversationId = await getOrCreateConversation(myProfile.id, profileUserId);
-      router.push(`/messages/${conversationId}`);
+      router.push(`/dashboard/messages/${conversationId}`);
     } catch (err) {
       console.error("getOrCreateConversation:", err);
     }

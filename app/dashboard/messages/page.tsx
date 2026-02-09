@@ -180,11 +180,11 @@ export default function MessagesPage() {
   const cFromUrl = searchParams.get("c");
   useEffect(() => {
     if (!cFromUrl || !myUserId) return;
-    router.replace(`/messages/${cFromUrl}`);
+    router.replace(`/dashboard/messages/${cFromUrl}`);
   }, [cFromUrl, myUserId, router]);
 
   const handleSelect = (id: string) => {
-    router.push(`/messages/${id}`);
+    router.push(`/dashboard/messages/${id}`);
   };
 
   const handleBack = () => {
