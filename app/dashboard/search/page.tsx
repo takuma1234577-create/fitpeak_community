@@ -17,6 +17,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { POPULAR_SEARCH_KEYWORDS } from "@/lib/search-constants";
+import { safeArray } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 type ProfileRow = {
@@ -173,7 +174,7 @@ export default function SearchPage() {
               人気のキーワード
             </p>
             <div className="flex flex-wrap gap-2">
-              {(Array.isArray(POPULAR_SEARCH_KEYWORDS) ? POPULAR_SEARCH_KEYWORDS : []).map((kw) => (
+              {safeArray(POPULAR_SEARCH_KEYWORDS).map((kw) => (
                 <button
                   key={kw}
                   type="button"

@@ -22,6 +22,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { bodyParts } from "@/components/dashboard/filter-bar";
 import { PREFECTURES } from "@/lib/constants";
+import { safeArray } from "@/lib/utils";
 
 type RecruitmentRow = {
   id: string;
@@ -403,7 +404,7 @@ export default function RecruitManage() {
                 onChange={(e) => setEditTargetBodyPart(e.target.value)}
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
-                {(Array.isArray(bodyParts) ? bodyParts : []).map((p) => (
+                {safeArray(bodyParts).map((p) => (
                   <option key={p.value} value={p.value}>
                     {p.label}
                   </option>

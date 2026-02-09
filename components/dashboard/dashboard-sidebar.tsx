@@ -12,7 +12,7 @@ import {
   Dumbbell,
   Shield,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, safeArray } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "ホーム", icon: Home },
@@ -30,7 +30,7 @@ export default function DashboardSidebar() {
   return (
     <aside className="hidden border-r border-border/60 bg-background lg:flex lg:w-60 lg:shrink-0 lg:flex-col">
       <nav className="flex flex-1 flex-col gap-1 p-4 pt-6">
-        {(Array.isArray(navItems) ? navItems : []).map((item) => {
+        {safeArray(navItems).map((item) => {
           const isActive =
             item.href === "/dashboard"
               ? pathname === "/dashboard"

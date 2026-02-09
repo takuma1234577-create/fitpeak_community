@@ -17,6 +17,7 @@ import MyGears from "@/components/profile/my-gears";
 import ActivityTimeline from "@/components/profile/activity-timeline";
 import ProfileDetails from "@/components/profile/profile-details";
 import { Loader2 } from "lucide-react";
+import { safeArray } from "@/lib/utils";
 
 function calcAge(birthday: string | null): number | null {
   if (!birthday) return null;
@@ -201,8 +202,8 @@ export default function ProfilePage() {
         <div className="mx-5 h-px bg-border/40 sm:mx-8" />
 
         <ProfileDetails
-          achievements={safeAchievements}
-          certifications={safeCertifications}
+          achievements={safeArray(safeAchievements)}
+          certifications={safeArray(safeCertifications)}
           trainingYears={p.training_years ?? 0}
           goal={p.goal}
         />

@@ -8,6 +8,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useProfile } from "@/hooks/use-profile";
 import { POPULAR_SEARCH_KEYWORDS } from "@/lib/search-constants";
 import { createClient } from "@/utils/supabase/client";
+import { safeArray } from "@/lib/utils";
 
 function stripHash(kw: string) {
   return kw.startsWith("#") ? kw.slice(1) : kw;
@@ -100,7 +101,7 @@ export default function DashboardHeader() {
                   人気のキーワード
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {(Array.isArray(POPULAR_SEARCH_KEYWORDS) ? POPULAR_SEARCH_KEYWORDS : []).map((kw) => (
+                  {safeArray(POPULAR_SEARCH_KEYWORDS).map((kw) => (
                     <button
                       key={kw}
                       type="button"
@@ -173,7 +174,7 @@ export default function DashboardHeader() {
                 人気のキーワード
               </p>
               <div className="flex flex-wrap gap-2">
-                {(Array.isArray(POPULAR_SEARCH_KEYWORDS) ? POPULAR_SEARCH_KEYWORDS : []).map((kw) => (
+                {safeArray(POPULAR_SEARCH_KEYWORDS).map((kw) => (
                   <button
                     key={kw}
                     type="button"

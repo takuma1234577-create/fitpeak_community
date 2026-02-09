@@ -15,6 +15,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ReportDialog from "@/components/report-dialog";
 import { createClient } from "@/utils/supabase/client";
+import { safeArray } from "@/lib/utils";
 
 export interface RecruitmentPost {
   id: string;
@@ -187,7 +188,7 @@ export default function RecruitmentCard({
         </h3>
 
         <div className="flex flex-wrap gap-1.5">
-          {(post?.tags ?? []).map((tag) => (
+          {safeArray(post?.tags).map((tag) => (
             <Badge
               key={tag}
               variant="secondary"
@@ -334,9 +335,9 @@ export default function RecruitmentCard({
                 {post.description}
               </p>
             )}
-            {(post?.tags ?? []).length > 0 && (
+            {safeArray(post?.tags).length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {(post?.tags ?? []).map((tag) => (
+                {safeArray(post?.tags).map((tag) => (
                   <Badge key={tag} variant="secondary" className="text-xs">
                     #{tag}
                   </Badge>

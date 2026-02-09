@@ -13,7 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { followUser, unfollowUser } from "@/actions/follow";
 import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, safeArray } from "@/lib/utils";
 
 export type FollowTab = "followers" | "following";
 
@@ -41,21 +41,21 @@ async function fetchFollowers(profileUserId: string, myUserId: string | null): P
     .from("follows")
     .select("follower_id")
     .eq("following_id", profileUserId);
-  const ids = Array.isArray(rows) ? (rows as { follower_id: string }[]).map((r) => r.follower_id) : [];
+  const ids = safeArray(rows).map((r: { follower_id: string }) => r.follower_id);
   if (ids.length === 0) return [];
   const { data: profiles } = await (supabase as any)
     .from("profiles")
     .select("id, nickname, username, avatar_url, bio")
     .in("id", ids);
-  const list = (Array.isArray(profiles) ? profiles : []) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
-  if (!myUserId) return (list || []).map((p) => ({ ...p, isFollowing: false }));
+  const list = safeArray(profiles) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
+  if (!myUserId) return safeArray(list).map((p) => ({ ...p, isFollowing: false }));
   const { data: myFollows } = await (supabase as any)
     .from("follows")
     .select("following_id")
     .eq("follower_id", myUserId)
     .in("following_id", ids);
-  const followingSet = new Set((Array.isArray(myFollows) ? myFollows : []).map((r: { following_id: string }) => r.following_id));
-  return (list || []).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
+  const followingSet = new Set(safeArray(myFollows).map((r: { following_id: string }) => r.following_id));
+  return safeArray(list).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
 }
 
 async function fetchFollowing(profileUserId: string, myUserId: string | null): Promise<FollowListItem[]> {
@@ -64,21 +64,21 @@ async function fetchFollowing(profileUserId: string, myUserId: string | null): P
     .from("follows")
     .select("following_id")
     .eq("follower_id", profileUserId);
-  const ids = Array.isArray(rows) ? (rows as { following_id: string }[]).map((r) => r.following_id) : [];
+  const ids = safeArray(rows).map((r: { following_id: string }) => r.following_id);
   if (ids.length === 0) return [];
   const { data: profiles } = await (supabase as any)
     .from("profiles")
     .select("id, nickname, username, avatar_url, bio")
     .in("id", ids);
-  const list = (Array.isArray(profiles) ? profiles : []) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
-  if (!myUserId) return (list || []).map((p) => ({ ...p, isFollowing: false }));
+  const list = safeArray(profiles) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
+  if (!myUserId) return safeArray(list).map((p) => ({ ...p, isFollowing: false }));
   const { data: myFollows } = await (supabase as any)
     .from("follows")
     .select("following_id")
     .eq("follower_id", myUserId)
     .in("following_id", ids);
-  const followingSet = new Set((Array.isArray(myFollows) ? myFollows : []).map((r: { following_id: string }) => r.following_id));
-  return (list || []).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
+  const followingSet = new Set(safeArray(myFollows).map((r: { following_id: string }) => r.following_id));
+  return safeArray(list).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
 }
 
 export default function FollowListModal({
@@ -195,7 +195,7 @@ export default function FollowListModal({
             </p>
           ) : (
             <ul className="divide-y divide-border/40">
-              {(list || []).map((p) => (
+              {safeArray(list).map((p) => (
                 <li key={p.id} className="flex items-center gap-3 px-4 py-3">
                   <Link
                     href={`/profile?u=${p.id}`}

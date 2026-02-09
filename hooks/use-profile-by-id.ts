@@ -3,22 +3,21 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile, Achievement } from "@/types/profile";
+import { safeArray } from "@/lib/utils";
 
-/** 取得した生データを正規化し、全ての配列プロパティを安全な配列に変換する */
+/** 取得した生データを正規化し、全ての配列プロパティを安全な配列に変換する（データ変換レイヤー） */
 function sanitizeProfile(raw: Record<string, unknown> & { bench_press_max?: number }): Profile {
   const toStrArr = (v: unknown): string[] =>
-    Array.isArray(v) ? (v as unknown[]).map((x) => String(x)) : [];
+    safeArray(v as string[] | null).map((x) => String(x));
   const toAchievements = (v: unknown): Achievement[] =>
-    Array.isArray(v)
-      ? (v as unknown[]).map((a) => {
-          const o = (a && typeof a === "object" ? a : {}) as Record<string, unknown>;
-          return {
-            title: String(o.title ?? ""),
-            year: Number(o.year) || 0,
-            rank: String(o.rank ?? ""),
-          };
-        })
-      : [];
+    safeArray(v as unknown[]).map((a) => {
+      const o = (a && typeof a === "object" ? a : {}) as Record<string, unknown>;
+      return {
+        title: String(o.title ?? ""),
+        year: Number(o.year) || 0,
+        rank: String(o.rank ?? ""),
+      };
+    });
 
   return {
     ...raw,

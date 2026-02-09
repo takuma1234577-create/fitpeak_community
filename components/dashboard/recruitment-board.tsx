@@ -10,6 +10,7 @@ import RecruitmentCard, {
 import { useRecruitModal } from "@/contexts/recruit-modal-context";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { createClient } from "@/utils/supabase/client";
+import { safeArray } from "@/lib/utils";
 
 type SortKey = "newest" | "date_nearest" | "date_furthest";
 
@@ -77,8 +78,8 @@ export default function RecruitmentBoard() {
           event_date: eventDate,
         };
       });
-      const filtered = (mapped || []).filter((p): p is NonNullable<typeof p> => p != null) as RecruitmentPost[];
-      setPosts(filtered);
+      const filtered = safeArray(mapped).filter((p): p is NonNullable<typeof p> => p != null) as RecruitmentPost[];
+      setPosts(safeArray(filtered));
 
       if (user && filtered.length > 0) {
         const ids = filtered.map((p) => p.id);
@@ -123,7 +124,7 @@ export default function RecruitmentBoard() {
     });
     return sorted.map(({ event_date: _ed, ...p }) => p);
   })();
-  const displayRecruitments = Array.isArray(displayPosts) ? displayPosts : [];
+  const displayRecruitments = safeArray(displayPosts);
 
   return (
     <div className="space-y-6">
@@ -178,7 +179,7 @@ export default function RecruitmentBoard() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {(displayRecruitments || []).map((post) => (
+          {safeArray(displayRecruitments).map((post) => (
             <RecruitmentCard
               key={post.id}
               post={post}

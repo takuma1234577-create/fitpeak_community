@@ -1,5 +1,6 @@
 import { Award, BadgeCheck } from "lucide-react";
 import type { Achievement } from "@/types/profile";
+import { safeArray } from "@/lib/utils";
 
 interface ProfileDetailsProps {
   achievements: Achievement[];
@@ -12,8 +13,8 @@ export default function ProfileDetails({
   achievements,
   certifications,
 }: ProfileDetailsProps) {
-  const safeAchievements = Array.isArray(achievements) ? achievements : [];
-  const safeCertifications = Array.isArray(certifications) ? certifications : [];
+  const safeAchievements = safeArray(achievements);
+  const safeCertifications = safeArray(certifications);
   const hasAchievements = safeAchievements.length > 0;
   const hasCertifications = safeCertifications.length > 0;
 
@@ -30,7 +31,7 @@ export default function ProfileDetails({
             </h2>
           </div>
           <div className="flex flex-col gap-2.5">
-            {(Array.isArray(safeAchievements) ? safeAchievements : []).map((a, i) => (
+            {safeArray(safeAchievements).map((a, i) => (
               <div
                 key={`${a.title}-${a.year}`}
                 className="flex items-center gap-4 rounded-xl border border-border/60 bg-card p-4 transition-colors hover:border-gold/20"
@@ -64,7 +65,7 @@ export default function ProfileDetails({
             </h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            {(Array.isArray(safeCertifications) ? safeCertifications : []).map((cert) => (
+            {safeArray(safeCertifications).map((cert) => (
               <span
                 key={cert}
                 className="inline-flex items-center gap-1.5 rounded-full border border-gold/20 bg-gold/[0.06] px-3.5 py-1.5 text-xs font-bold text-gold"

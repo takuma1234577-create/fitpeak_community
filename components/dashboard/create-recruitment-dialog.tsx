@@ -21,7 +21,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { createClient } from "@/utils/supabase/client";
 import { useRecruitModal } from "@/contexts/recruit-modal-context";
 import { Loader2, CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, safeArray } from "@/lib/utils";
 import { bodyParts } from "./filter-bar";
 import { PREFECTURES } from "@/lib/constants";
 
@@ -170,7 +170,7 @@ export default function CreateRecruitmentDialog() {
               onChange={(e) => setTargetBodyPart(e.target.value)}
               className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
             >
-              {(Array.isArray(bodyParts) ? bodyParts : []).map((p) => (
+              {safeArray(bodyParts).map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
                 </option>
@@ -188,7 +188,7 @@ export default function CreateRecruitmentDialog() {
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
                 <option value="all">指定なし</option>
-                {(Array.isArray(PREFECTURES) ? PREFECTURES : []).map((p) => (
+                {safeArray(PREFECTURES).map((p) => (
                   <option key={p} value={p}>
                     {p}
                   </option>
@@ -204,7 +204,7 @@ export default function CreateRecruitmentDialog() {
                 onChange={(e) => setLevel(e.target.value)}
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
-                {(Array.isArray(levelOptions) ? levelOptions : []).map((opt) => (
+                {safeArray(levelOptions).map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -256,7 +256,7 @@ export default function CreateRecruitmentDialog() {
                   <SelectValue placeholder="00:00〜23:30" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[240px] border-border bg-card">
-                  {(Array.isArray(timeOptions) ? timeOptions : []).map((opt) => (
+                  {safeArray(timeOptions).map((opt) => (
                     <SelectItem
                       key={opt.value}
                       value={opt.value}

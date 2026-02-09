@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Clock, Dumbbell, Users, TrendingUp } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { safeArray } from "@/lib/utils";
 
 type ActivityItem =
   | { type: "recruitment"; id: string; title: string; description: string | null; date: string; createdAt: string }
@@ -44,7 +45,7 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
     ]);
     const recruitments = (Array.isArray(recResp.data) ? recResp.data : []) as { id: string; title: string; description: string | null; event_date: string; created_at: string }[];
     const members = (Array.isArray(gmResp.data) ? gmResp.data : []) as { group_id: string; joined_at: string; groups: { id: string; name: string } | null }[];
-    const recItems: ActivityItem[] = (Array.isArray(recruitments) ? recruitments : []).map((r) => ({
+    const recItems: ActivityItem[] = safeArray(recruitments).map((r) => ({
       type: "recruitment",
       id: r.id,
       title: r.title,
@@ -52,7 +53,7 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
       date: r.event_date,
       createdAt: r.created_at,
     }));
-    const groupItems: ActivityItem[] = (Array.isArray(members) ? members : [])
+    const groupItems: ActivityItem[] = safeArray(members)
       .filter((m) => m.groups)
       .map((m) => ({
         type: "group",
@@ -102,9 +103,9 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
         <p className="text-sm text-muted-foreground">まだアクティビティはありません</p>
       ) : (
         <div className="flex flex-col gap-0">
-          {(Array.isArray(items) ? items : []).map((activity, index) => {
-            const safeItems = Array.isArray(items) ? items : [];
-            const isLast = index === safeItems.length - 1;
+          {safeArray(items).map((activity, index) => {
+            const arr = safeArray(items);
+            const isLast = index === arr.length - 1;
             const dateIso = activity.type === "recruitment" ? activity.createdAt : activity.date;
             const timeLabel = formatTimeAgo(dateIso);
             const Icon = activity.type === "recruitment" ? Dumbbell : Users;
