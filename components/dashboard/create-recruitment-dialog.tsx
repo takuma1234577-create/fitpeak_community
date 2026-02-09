@@ -78,17 +78,16 @@ export default function CreateRecruitmentDialog() {
         return;
       }
       const sb = supabase as any;
-      const { error: insertError } = await sb.from("recruitments").insert({
+      const baseRow = {
         user_id: user.id,
         title: title.trim(),
         description: description.trim() || null,
         target_body_part: targetBodyPart && targetBodyPart !== "all" ? targetBodyPart : null,
         event_date: eventDateTime,
         location: location.trim() || null,
-        area: area && area !== "all" ? area : null,
-        level: level || null,
         status: "open",
-      });
+      };
+      const { error: insertError } = await sb.from("recruitments").insert(baseRow);
       if (insertError) throw insertError;
       handleOpenChange(false);
       window.location.reload();
