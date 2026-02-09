@@ -41,7 +41,7 @@ async function fetchFollowers(profileUserId: string, myUserId: string | null): P
     .from("follows")
     .select("follower_id")
     .eq("following_id", profileUserId);
-  const ids = safeArray(rows).map((r: { follower_id: string }) => r.follower_id);
+  const ids = safeArray<{ follower_id: string }>(rows).map((r) => r.follower_id);
   if (ids.length === 0) return [];
   const { data: profiles } = await (supabase as any)
     .from("profiles")
@@ -54,7 +54,7 @@ async function fetchFollowers(profileUserId: string, myUserId: string | null): P
     .select("following_id")
     .eq("follower_id", myUserId)
     .in("following_id", ids);
-  const followingSet = new Set(safeArray(myFollows).map((r: { following_id: string }) => r.following_id));
+  const followingSet = new Set(safeArray<{ following_id: string }>(myFollows).map((r) => r.following_id));
   return safeArray(list).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
 }
 
@@ -64,7 +64,7 @@ async function fetchFollowing(profileUserId: string, myUserId: string | null): P
     .from("follows")
     .select("following_id")
     .eq("follower_id", profileUserId);
-  const ids = safeArray(rows).map((r: { following_id: string }) => r.following_id);
+  const ids = safeArray<{ following_id: string }>(rows).map((r) => r.following_id);
   if (ids.length === 0) return [];
   const { data: profiles } = await (supabase as any)
     .from("profiles")
@@ -77,7 +77,7 @@ async function fetchFollowing(profileUserId: string, myUserId: string | null): P
     .select("following_id")
     .eq("follower_id", myUserId)
     .in("following_id", ids);
-  const followingSet = new Set(safeArray(myFollows).map((r: { following_id: string }) => r.following_id));
+  const followingSet = new Set(safeArray<{ following_id: string }>(myFollows).map((r) => r.following_id));
   return safeArray(list).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
 }
 
