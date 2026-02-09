@@ -22,7 +22,9 @@ import { createClient } from "@/utils/supabase/client";
 import type {
   RecruitmentWithProfile,
   RecommendedUser,
+  NewArrivalUser,
 } from "@/lib/recommendations";
+import { useFollow } from "@/hooks/use-follow";
 
 const todayMotivation = {
   greeting: "おかえりなさい。",
@@ -257,7 +259,83 @@ function RecommendedWorkoutsSection({
   );
 }
 
-function RecommendedUsersSection({ users }: { users: RecommendedUser[] }) {
+function formatRegisteredAt(createdAt: string): string {
+  if (!createdAt) return "登録日不明";
+  const d = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+  if (diffDays === 0) return "今日登録";
+  if (diffDays === 1) return "1日前に登録";
+  if (diffDays < 7) return `${diffDays}日前に登録`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}週間前に登録`;
+  return `${Math.floor(diffDays / 30)}ヶ月前に登録`;
+}
+
+function RecommendedUserCard({
+  user,
+  myUserId,
+}: {
+  user: RecommendedUser;
+  myUserId: string | null;
+}) {
+  const { isFollowing, toggle, loading } = useFollow(user.id, myUserId);
+  const name = user.nickname || user.username || "ユーザー";
+  const initial = name.charAt(0);
+  const showFollow = myUserId && myUserId !== user.id;
+
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80">
+      <Link href={`/profile?u=${user.id}`} className="flex min-w-0 flex-1 items-center gap-4">
+        <Avatar className="h-12 w-12 shrink-0 ring-1 ring-border/60">
+          <AvatarImage src={user.avatar_url ?? undefined} alt={name} />
+          <AvatarFallback className="bg-secondary text-sm font-bold">{initial}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-foreground">{name}</p>
+          {user.bio && (
+            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{user.bio}</p>
+          )}
+          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
+            {user.prefecture && (
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3 w-3 text-gold/70" />
+                {user.prefecture}
+              </span>
+            )}
+            {user.home_gym && <span className="truncate">{user.home_gym}</span>}
+          </div>
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+      </Link>
+      {showFollow && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            toggle();
+          }}
+          disabled={loading}
+          className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-60 ${
+            isFollowing
+              ? "border-gold/50 bg-gold/10 text-gold"
+              : "border-border bg-secondary text-foreground hover:border-gold/30"
+          }`}
+        >
+          {isFollowing ? "フォロー中" : "フォローする"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function RecommendedUsersSection({
+  users,
+  myUserId,
+}: {
+  users: RecommendedUser[];
+  myUserId: string | null;
+}) {
   return (
     <section className="flex flex-col gap-4">
       <SectionHeader
@@ -266,61 +344,120 @@ function RecommendedUsersSection({ users }: { users: RecommendedUser[] }) {
         href="/dashboard/search"
         linkLabel="検索で仲間を探す"
       />
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {users.map((user) => (
+          <RecommendedUserCard key={user.id} user={user} myUserId={myUserId} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
-      {users.length === 0 ? (
-        <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
-          <Users className="mx-auto h-10 w-10 text-muted-foreground/40" />
-          <p className="mt-2 text-sm font-semibold text-muted-foreground">
-            {EMPTY_MESSAGE}
-          </p>
-          <Link
-            href="/dashboard/settings"
-            className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-gold transition-colors hover:text-gold-light"
-          >
-            プロフィールを編集
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Link>
+function NewArrivalUserCard({
+  user,
+  myUserId,
+}: {
+  user: NewArrivalUser;
+  myUserId: string | null;
+}) {
+  const { isFollowing, toggle, loading } = useFollow(user.id, myUserId);
+  const name = user.nickname || user.username || "ユーザー";
+  const initial = name.charAt(0);
+  const showFollow = myUserId && myUserId !== user.id;
+
+  return (
+    <div className="flex w-[160px] shrink-0 flex-col items-center gap-2 rounded-xl border border-border/40 bg-card px-4 py-4 transition-all hover:border-gold/30 hover:bg-card/80">
+      <Link href={`/profile?u=${user.id}`} className="flex flex-col items-center gap-2">
+        <Avatar className="h-14 w-14 shrink-0 ring-2 ring-border/60">
+          <AvatarImage src={user.avatar_url ?? undefined} alt={name} />
+          <AvatarFallback className="bg-secondary text-sm font-bold">{initial}</AvatarFallback>
+        </Avatar>
+        <p className="w-full truncate text-center text-sm font-bold text-foreground">{name}</p>
+        <span className="text-[11px] text-muted-foreground">
+          {formatRegisteredAt(user.created_at)}
+        </span>
+      </Link>
+      {showFollow && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            toggle();
+          }}
+          disabled={loading}
+          className={`w-full rounded-lg border px-2 py-1.5 text-[11px] font-bold transition-all disabled:opacity-60 ${
+            isFollowing
+              ? "border-gold/50 bg-gold/10 text-gold"
+              : "border-border bg-secondary text-foreground hover:border-gold/30"
+          }`}
+        >
+          {isFollowing ? "フォロー中" : "フォローする"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function NewArrivalUsersSection({
+  users,
+  myUserId,
+}: {
+  users: NewArrivalUser[];
+  myUserId: string | null;
+}) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const scroll = (dir: "left" | "right") => {
+    scrollRef.current?.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" });
+  };
+
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <Users className="h-5 w-5 text-gold" />
+          <h2 className="text-lg font-extrabold tracking-wide text-foreground">
+            新規ユーザー (New Arrivals)
+          </h2>
         </div>
+        {users.length > 0 && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => scroll("left")}
+              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
+              aria-label="前へスクロール"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scroll("right")}
+              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
+              aria-label="次へスクロール"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <Link
+              href="/dashboard/search"
+              className="ml-2 flex items-center gap-1 text-xs font-semibold text-gold/80 transition-colors hover:text-gold"
+            >
+              検索で仲間を探す
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        )}
+      </div>
+      {users.length === 0 ? (
+        <p className="text-center text-sm text-muted-foreground">まだ新規ユーザーはいません</p>
       ) : (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {users.map((user) => {
-            const name = user.nickname || user.username || "ユーザー";
-            const initial = name.charAt(0);
-            return (
-              <Link
-                key={user.id}
-                href={`/profile?u=${user.id}`}
-                className="flex items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80"
-              >
-                <Avatar className="h-12 w-12 shrink-0 ring-1 ring-border/60">
-                  <AvatarImage src={user.avatar_url ?? undefined} alt={name} />
-                  <AvatarFallback className="bg-secondary text-sm font-bold">
-                    {initial}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-foreground">{name}</p>
-                  {user.bio && (
-                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                      {user.bio}
-                    </p>
-                  )}
-                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
-                    {user.prefecture && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-gold/70" />
-                        {user.prefecture}
-                      </span>
-                    )}
-                    {user.home_gym && (
-                      <span className="truncate">{user.home_gym}</span>
-                    )}
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-              </Link>
-            );
-          })}
+        <div
+          ref={scrollRef}
+          className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {users.map((user) => (
+            <NewArrivalUserCard key={user.id} user={user} myUserId={myUserId} />
+          ))}
         </div>
       )}
     </section>
@@ -462,18 +599,23 @@ function YourGroupsSection() {
 type HomePageProps = {
   recommendedWorkouts: RecruitmentWithProfile[];
   recommendedUsers: RecommendedUser[];
+  newArrivalUsers: NewArrivalUser[];
+  myUserId: string | null;
 };
 
 export default function HomePage({
   recommendedWorkouts,
   recommendedUsers,
+  newArrivalUsers,
+  myUserId,
 }: HomePageProps) {
   return (
     <div className="flex flex-col gap-8">
       <HeroSection />
       <MyScheduleSection />
       <RecommendedWorkoutsSection posts={recommendedWorkouts} />
-      <RecommendedUsersSection users={recommendedUsers} />
+      <RecommendedUsersSection users={recommendedUsers} myUserId={myUserId} />
+      <NewArrivalUsersSection users={newArrivalUsers} myUserId={myUserId} />
       <YourGroupsSection />
     </div>
   );

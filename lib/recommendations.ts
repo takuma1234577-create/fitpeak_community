@@ -37,6 +37,9 @@ export type RecommendedUser = {
   exercises: string[] | null;
 };
 
+/** 新規ユーザー（created_at で登録日表示用） */
+export type NewArrivalUser = RecommendedUser & { created_at: string };
+
 /**
  * ログインユーザーのプロフィールを取得
  */
@@ -206,4 +209,27 @@ export async function getRecommendedUsers(
   }
 
   return step1.slice(0, target);
+}
+
+/**
+ * 新規ユーザー: created_at の新しい順に 5〜10 名取得（自分を除く）
+ */
+export async function getNewArrivalUsers(
+  supabase: SupabaseClient,
+  myId: string,
+  limit = 7
+): Promise<NewArrivalUser[]> {
+  const sb = supabase as any;
+  const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, created_at";
+  const { data, error } = await sb
+    .from("profiles")
+    .select(fields)
+    .neq("id", myId)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(limit, 10));
+  if (error || !Array.isArray(data)) return [];
+  return (data as Record<string, unknown>[]).map((row) => ({
+    ...toRecommendedUser(row),
+    created_at: (row.created_at as string) ?? "",
+  })) as NewArrivalUser[];
 }
