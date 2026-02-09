@@ -109,7 +109,10 @@ export function useProfile() {
           dbUpdates.facebook_url = (updates as { facebook_url: string }).facebook_url;
         }
 
-        const { error } = await (supabase as any).from("profiles").update(dbUpdates).eq("id", user.id);
+        const payload = { id: user.id, ...dbUpdates };
+        const { error } = await (supabase as any)
+          .from("profiles")
+          .upsert(payload, { onConflict: "id" });
 
         if (error) throw error;
         const next = await fetchProfile();

@@ -186,6 +186,7 @@ export default function SettingsPage() {
         facebook_url: facebookUrl || undefined,
       })
       setHasChanges(false)
+      router.refresh()
     } catch (e) {
       console.error("Save failed:", e)
     } finally {

@@ -221,8 +221,9 @@ export default function MessagesPage() {
         },
       ]);
       loadConversations();
+      await loadMessages(activeId);
     },
-    [activeId, myUserId, loadConversations]
+    [activeId, myUserId, loadConversations, loadMessages]
   );
 
   const filteredConversations = conversations.filter(
