@@ -165,7 +165,7 @@ export default function OnboardingPage() {
         bio: bio.trim() || null,
         avatar_url: avatarUrl || null,
         gender: gender || null,
-        birthday: birthday || null,
+        birthday: birthday?.trim() || null,
         prefecture: prefecture || null,
         home_gym: homeGym.trim() || null,
         exercises: exercises.length > 0 ? exercises : null,
@@ -176,10 +176,9 @@ export default function OnboardingPage() {
         gym: homeGym.trim() || null,
         updated_at: new Date().toISOString(),
       };
-      // @ts-expect-error - Supabase generic not inferred from createClient
-      const { error } = await supabase.from("profiles").upsert(payload, {
-        onConflict: "id",
-      });
+      const { error } = await (supabase as any)
+        .from("profiles")
+        .upsert(payload, { onConflict: "id" });
       if (error) throw error;
       window.location.href = "/dashboard";
     } catch (err) {
