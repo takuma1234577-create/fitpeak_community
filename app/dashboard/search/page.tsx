@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Search, Loader2, User, MapPin, Dumbbell } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import { POPULAR_SEARCH_KEYWORDS } from "@/lib/constants";
+import { POPULAR_SEARCH_KEYWORDS } from "@/lib/search-constants";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import type { ProfilesRow } from "@/types/supabase";
 

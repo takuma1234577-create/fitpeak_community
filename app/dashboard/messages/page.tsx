@@ -197,7 +197,7 @@ export default function MessagesPage() {
           time: new Date(inserted.created_at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
           isMe: true,
         },
-      });
+      ]);
       loadConversations();
     },
     [activeId, myUserId, loadConversations]

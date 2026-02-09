@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Dumbbell, Search, Bell, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { POPULAR_SEARCH_KEYWORDS } from "@/lib/constants";
+import { POPULAR_SEARCH_KEYWORDS } from "@/lib/search-constants";
 
 function stripHash(kw: string) {
   return kw.startsWith("#") ? kw.slice(1) : kw;
