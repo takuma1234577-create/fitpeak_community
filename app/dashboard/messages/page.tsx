@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import ConversationList, {
   type Conversation,
 } from "@/components/messages/conversation-list";
@@ -28,6 +28,7 @@ type ParticipantRow = { conversation_id: string; user_id: string; profiles: { id
 
 export default function MessagesPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -176,15 +177,11 @@ export default function MessagesPage() {
   const cFromUrl = searchParams.get("c");
   useEffect(() => {
     if (!cFromUrl || !myUserId) return;
-    setActiveId(cFromUrl);
-    setShowChat(true);
-    loadMessages(cFromUrl);
-  }, [cFromUrl, myUserId, loadMessages]);
+    router.replace(`/messages/${cFromUrl}`);
+  }, [cFromUrl, myUserId, router]);
 
   const handleSelect = (id: string) => {
-    setActiveId(id);
-    setShowChat(true);
-    loadMessages(id);
+    router.push(`/messages/${id}`);
   };
 
   const handleBack = () => {

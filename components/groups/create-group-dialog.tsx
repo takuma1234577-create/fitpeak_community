@@ -114,13 +114,15 @@ export default function CreateGroupDialog({
         setSubmitting(false);
         return;
       }
+      // created_by が profiles(id) を参照するため、プロフィールが無いと FK で失敗する。先に upsert する。
+      await sb.from("profiles").upsert({ id: user.id }, { onConflict: "id" });
       const { data: conv, error: convErr } = await sb
         .from("conversations")
         .insert({})
         .select("id")
         .single();
       if (convErr || !conv) {
-        setError("チャット用の会話を作成できませんでした。");
+        setError(convErr?.message ?? "チャット用の会話を作成できませんでした。");
         setSubmitting(false);
         return;
       }
@@ -137,7 +139,7 @@ export default function CreateGroupDialog({
         .select("id")
         .single();
       if (groupErr || !group) {
-        setError("グループの作成に失敗しました。");
+        setError(groupErr?.message ?? "グループの作成に失敗しました。");
         setSubmitting(false);
         return;
       }
