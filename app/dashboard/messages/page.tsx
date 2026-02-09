@@ -47,7 +47,8 @@ export default function MessagesPage() {
       .from("conversation_participants")
       .select("conversation_id")
       .eq("user_id", user.id);
-    const convIds = (myParts ?? []).map((p) => p.conversation_id);
+    const parts = (myParts ?? []) as { conversation_id: string }[];
+    const convIds = parts.map((p) => p.conversation_id);
     if (convIds.length === 0) {
       setConversations([]);
       setLoading(false);
