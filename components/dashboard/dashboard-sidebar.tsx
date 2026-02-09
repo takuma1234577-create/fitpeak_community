@@ -30,7 +30,7 @@ export default function DashboardSidebar() {
   return (
     <aside className="hidden border-r border-border/60 bg-background lg:flex lg:w-60 lg:shrink-0 lg:flex-col">
       <nav className="flex flex-1 flex-col gap-1 p-4 pt-6">
-        {navItems.map((item) => {
+        {(Array.isArray(navItems) ? navItems : []).map((item) => {
           const isActive =
             item.href === "/dashboard"
               ? pathname === "/dashboard"

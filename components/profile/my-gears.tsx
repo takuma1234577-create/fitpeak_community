@@ -78,7 +78,7 @@ export default function MyGears() {
         className="scrollbar-hide flex gap-3 overflow-x-auto px-5 pb-2 sm:px-8"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {(gears || []).map((gear) => (
+        {(Array.isArray(gears) ? gears : []).map((gear) => (
           <div
             key={gear.name}
             className="group w-40 flex-shrink-0 overflow-hidden rounded-xl border border-border/60 bg-card transition-all hover:border-gold/30 hover:shadow-lg hover:shadow-gold/5 sm:w-48"

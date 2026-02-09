@@ -48,14 +48,14 @@ async function fetchFollowers(profileUserId: string, myUserId: string | null): P
     .select("id, nickname, username, avatar_url, bio")
     .in("id", ids);
   const list = (Array.isArray(profiles) ? profiles : []) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
-  if (!myUserId) return list.map((p) => ({ ...p, isFollowing: false }));
+  if (!myUserId) return (list || []).map((p) => ({ ...p, isFollowing: false }));
   const { data: myFollows } = await (supabase as any)
     .from("follows")
     .select("following_id")
     .eq("follower_id", myUserId)
     .in("following_id", ids);
   const followingSet = new Set((Array.isArray(myFollows) ? myFollows : []).map((r: { following_id: string }) => r.following_id));
-  return list.map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
+  return (list || []).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
 }
 
 async function fetchFollowing(profileUserId: string, myUserId: string | null): Promise<FollowListItem[]> {
@@ -71,14 +71,14 @@ async function fetchFollowing(profileUserId: string, myUserId: string | null): P
     .select("id, nickname, username, avatar_url, bio")
     .in("id", ids);
   const list = (Array.isArray(profiles) ? profiles : []) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
-  if (!myUserId) return list.map((p) => ({ ...p, isFollowing: false }));
+  if (!myUserId) return (list || []).map((p) => ({ ...p, isFollowing: false }));
   const { data: myFollows } = await (supabase as any)
     .from("follows")
     .select("following_id")
     .eq("follower_id", myUserId)
     .in("following_id", ids);
   const followingSet = new Set((Array.isArray(myFollows) ? myFollows : []).map((r: { following_id: string }) => r.following_id));
-  return list.map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
+  return (list || []).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
 }
 
 export default function FollowListModal({

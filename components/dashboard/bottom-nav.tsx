@@ -19,7 +19,7 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-background/90 backdrop-blur-xl lg:hidden">
       <div className="flex h-16 items-stretch">
-        {navItems.map((item) => {
+        {(Array.isArray(navItems) ? navItems : []).map((item) => {
           const isActive =
             item.href === "/dashboard"
               ? pathname === "/dashboard"

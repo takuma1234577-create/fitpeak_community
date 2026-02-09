@@ -173,7 +173,7 @@ export default function SearchPage() {
               人気のキーワード
             </p>
             <div className="flex flex-wrap gap-2">
-              {POPULAR_SEARCH_KEYWORDS.map((kw) => (
+              {(Array.isArray(POPULAR_SEARCH_KEYWORDS) ? POPULAR_SEARCH_KEYWORDS : []).map((kw) => (
                 <button
                   key={kw}
                   type="button"

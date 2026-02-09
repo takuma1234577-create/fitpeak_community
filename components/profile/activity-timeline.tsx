@@ -44,7 +44,7 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
     ]);
     const recruitments = (Array.isArray(recResp.data) ? recResp.data : []) as { id: string; title: string; description: string | null; event_date: string; created_at: string }[];
     const members = (Array.isArray(gmResp.data) ? gmResp.data : []) as { group_id: string; joined_at: string; groups: { id: string; name: string } | null }[];
-    const recItems: ActivityItem[] = (recruitments ?? []).map((r) => ({
+    const recItems: ActivityItem[] = (Array.isArray(recruitments) ? recruitments : []).map((r) => ({
       type: "recruitment",
       id: r.id,
       title: r.title,
@@ -52,7 +52,7 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
       date: r.event_date,
       createdAt: r.created_at,
     }));
-    const groupItems: ActivityItem[] = (members ?? [])
+    const groupItems: ActivityItem[] = (Array.isArray(members) ? members : [])
       .filter((m) => m.groups)
       .map((m) => ({
         type: "group",
@@ -102,8 +102,9 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
         <p className="text-sm text-muted-foreground">まだアクティビティはありません</p>
       ) : (
         <div className="flex flex-col gap-0">
-          {(items || []).map((activity, index) => {
-            const isLast = index === (items || []).length - 1;
+          {(Array.isArray(items) ? items : []).map((activity, index) => {
+            const safeItems = Array.isArray(items) ? items : [];
+            const isLast = index === safeItems.length - 1;
             const dateIso = activity.type === "recruitment" ? activity.createdAt : activity.date;
             const timeLabel = formatTimeAgo(dateIso);
             const Icon = activity.type === "recruitment" ? Dumbbell : Users;
