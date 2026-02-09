@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
+  Search,
   Users,
   MessageCircle,
   UserCircle,
@@ -15,8 +16,9 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "ホーム", icon: Home },
+  { href: "/dashboard/search", label: "検索", icon: Search },
   { href: "/dashboard/recruit", label: "合トレ募集", icon: Users },
-  { href: "/dashboard/groups", label: "部活", icon: Shield },
+  { href: "/dashboard/groups", label: "グループ", icon: Shield },
   { href: "/dashboard/messages", label: "メッセージ", icon: MessageCircle },
   { href: "/profile", label: "マイページ", icon: UserCircle },
   { href: "/dashboard/settings", label: "設定", icon: Settings },
@@ -48,11 +50,6 @@ export default function DashboardSidebar() {
                 className={cn("h-5 w-5 shrink-0", isActive && "text-gold")}
               />
               {item.label}
-              {item.label === "メッセージ" && (
-                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gold px-1.5 text-[10px] font-bold text-[#050505]">
-                  3
-                </span>
-              )}
             </Link>
           );
         })}

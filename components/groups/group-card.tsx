@@ -15,10 +15,17 @@ export interface Group {
 }
 
 const categoryStyles: Record<string, string> = {
+  パワーリフティング: "border-gold/30 bg-gold/15 text-gold",
+  ウェイトリフティング: "border-amber-500/30 bg-amber-500/15 text-amber-400",
+  有酸素: "border-orange-500/30 bg-orange-500/15 text-orange-400",
+  減量: "border-sky-500/30 bg-sky-500/15 text-sky-400",
+  ダイエット: "border-emerald-500/30 bg-emerald-500/15 text-emerald-400",
+  ヨガ: "border-violet-500/30 bg-violet-500/15 text-violet-400",
+  コンテスト: "border-gold/30 bg-gold/15 text-gold",
+  合トレ募集: "border-gold/30 bg-gold/15 text-gold",
+  ゆるトレ: "border-emerald-500/30 bg-emerald-500/15 text-emerald-400",
   ガチ勢: "border-gold/30 bg-gold/15 text-gold",
   エンジョイ: "border-emerald-500/30 bg-emerald-500/15 text-emerald-400",
-  減量: "border-sky-500/30 bg-sky-500/15 text-sky-400",
-  有酸素: "border-orange-500/30 bg-orange-500/15 text-orange-400",
   その他: "border-border bg-secondary text-muted-foreground",
 };
 

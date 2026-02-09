@@ -24,6 +24,16 @@ export interface Profile {
   collab_count: number;
   created_at: string;
   updated_at: string;
+  /* 拡張プロフィール */
+  nickname: string | null;
+  gender: string | null;
+  birthday: string | null;
+  prefecture: string | null;
+  home_gym: string | null;
+  exercises: string[] | null;
+  is_age_public: boolean;
+  is_prefecture_public: boolean;
+  is_home_gym_public: boolean;
 }
 
 export type ProfileUpdate = Partial<

@@ -18,8 +18,12 @@ interface ProfileHeaderProps {
   name: string;
   bio: string | null;
   avatarUrl: string | null;
+  /** 住まい（都道府県）。非公開時は "非公開" を渡す */
   area: string | null;
+  /** よく行くジム。非公開時は "非公開" を渡す */
   gym: string | null;
+  /** 年齢表示。例: "25歳"。非公開時は "非公開"。表示しない場合は null */
+  ageDisplay: string | null;
   goal: string | null;
   trainingYears: number;
   followersCount: number;
@@ -33,6 +37,7 @@ export default function ProfileHeader({
   avatarUrl,
   area,
   gym,
+  ageDisplay,
   goal,
   trainingYears,
   followersCount,
@@ -143,6 +148,12 @@ export default function ProfileHeader({
               <span className="font-medium">{goal}</span>
             </span>
           )}
+          {ageDisplay !== null && (
+            <span className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-gold/70" />
+              <span className="font-medium">{ageDisplay}</span>
+            </span>
+          )}
           {trainingYears > 0 && (
             <span className="flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5 text-gold/70" />
@@ -154,17 +165,21 @@ export default function ProfileHeader({
         </div>
 
         <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-          {gym && (
-            <span className="flex items-center gap-1.5">
-              <Dumbbell className="h-3.5 w-3.5 text-gold/70" />
-              <span className="font-medium">{gym}</span>
-            </span>
-          )}
-          {area && (
-            <span className="flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5 text-gold/70" />
-              <span className="font-medium">{area}</span>
-            </span>
+          {(gym ?? area) && (
+            <>
+              {gym && (
+                <span className="flex items-center gap-1.5">
+                  <Dumbbell className="h-3.5 w-3.5 text-gold/70" />
+                  <span className="font-medium">{gym}</span>
+                </span>
+              )}
+              {area && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-gold/70" />
+                  <span className="font-medium">{area}</span>
+                </span>
+              )}
+            </>
           )}
         </div>
 

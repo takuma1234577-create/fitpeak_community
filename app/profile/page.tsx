@@ -8,6 +8,17 @@ import ActivityTimeline from "@/components/profile/activity-timeline";
 import ProfileDetails from "@/components/profile/profile-details";
 import { Loader2 } from "lucide-react";
 
+function calcAge(birthday: string | null): number | null {
+  if (!birthday) return null;
+  const d = new Date(birthday);
+  if (Number.isNaN(d.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - d.getFullYear();
+  const m = today.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+  return age;
+}
+
 const fallback = {
   name: "田中 太郎",
   bio: "IFBB Pro 目指し中",
@@ -63,6 +74,18 @@ export default function ProfilePage() {
     ? (p as { certifications: string[] }).certifications
     : fallback.certifications;
 
+  const isPrefecturePublic = (p as { is_prefecture_public?: boolean }).is_prefecture_public !== false;
+  const isHomeGymPublic = (p as { is_home_gym_public?: boolean }).is_home_gym_public !== false;
+  const isAgePublic = (p as { is_age_public?: boolean }).is_age_public !== false;
+  const prefecture = (p as { prefecture?: string | null }).prefecture ?? p.area;
+  const homeGym = (p as { home_gym?: string | null }).home_gym ?? p.gym;
+  const birthday = (p as { birthday?: string | null }).birthday ?? null;
+
+  const displayArea = prefecture || p.area ? (isPrefecturePublic ? (prefecture || p.area) : "非公開") : null;
+  const displayGym = homeGym || p.gym ? (isHomeGymPublic ? (homeGym || p.gym) : "非公開") : null;
+  const ageNum = calcAge(birthday);
+  const ageDisplay = birthday ? (isAgePublic && ageNum !== null ? `${ageNum}歳` : "非公開") : null;
+
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-lg">
@@ -70,8 +93,9 @@ export default function ProfilePage() {
           name={p.name ?? "名前未設定"}
           bio={p.bio}
           avatarUrl={p.avatar_url}
-          area={p.area}
-          gym={p.gym}
+          area={displayArea}
+          gym={displayGym}
+          ageDisplay={ageDisplay}
           goal={p.goal}
           trainingYears={p.training_years ?? 0}
           followersCount={p.followers_count ?? 0}

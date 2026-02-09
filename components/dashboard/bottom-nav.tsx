@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", label: "ホーム", icon: Home },
   { href: "/dashboard/recruit", label: "合トレ", icon: Users },
-  { href: "/dashboard/groups", label: "部活", icon: Shield },
+  { href: "/dashboard/groups", label: "グループ", icon: Shield },
   { href: "/dashboard/messages", label: "メッセージ", icon: MessageCircle },
   { href: "/profile", label: "マイページ", icon: UserCircle },
 ];

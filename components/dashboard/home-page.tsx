@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -13,9 +13,13 @@ import {
   Clock,
   Sparkles,
   MessageCircle,
+  Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { createClient } from "@/utils/supabase/client";
+import type { RecruitmentsRow } from "@/types/supabase";
+import type { ProfilesRow } from "@/types/supabase";
 
 const todayMotivation = {
   greeting: "おかえりなさい。",
@@ -28,94 +32,15 @@ const todayMotivation = {
   message: "今日は胸の日です。限界を超えろ。",
 };
 
-const mySchedule = {
-  id: "1",
-  title: "胸トレ合トレ募集！ベンチ100kg目指してる方一緒にやりましょう",
-  date: "2/10",
-  time: "19:00~",
-  location: "ゴールドジム原宿",
-  tags: ["胸トレ", "合トレ", "ガチ勢"],
-  user: { name: "田中 健二", initial: "田" },
-  spots: 4,
-  spotsLeft: 2,
-  role: "参加者" as const,
-};
+function formatRecruitDate(d: string) {
+  const date = new Date(d);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
 
-const recommended = [
-  {
-    id: "r1",
-    title: "脚の日！スクワット中心にやります。補助お願いしたいです",
-    date: "2/11",
-    time: "10:00~",
-    location: "エニタイム渋谷",
-    tags: ["脚トレ", "スクワット"],
-    user: { name: "鈴木 ユキ", initial: "鈴" },
-    spots: 3,
-    spotsLeft: 1,
-  },
-  {
-    id: "r2",
-    title: "デッドリフト200kg超えメンバー集合！背中の日やりましょう",
-    date: "2/12",
-    time: "18:30~",
-    location: "パワーハウスジム新宿",
-    tags: ["背中", "デッドリフト"],
-    user: { name: "佐藤 太郎", initial: "佐" },
-    spots: 3,
-    spotsLeft: 3,
-  },
-  {
-    id: "r3",
-    title: "女性限定！ヒップアップ＆脚トレを楽しくやりませんか？",
-    date: "2/13",
-    time: "11:00~",
-    location: "ゴールドジム銀座",
-    tags: ["脚トレ", "女性限定"],
-    user: { name: "山田 ミカ", initial: "山" },
-    spots: 6,
-    spotsLeft: 4,
-  },
-  {
-    id: "r4",
-    title: "肩トレ強化DAY！サイドレイズ地獄やりたい人募集",
-    date: "2/14",
-    time: "20:00~",
-    location: "エニタイム池袋",
-    tags: ["肩トレ", "中級者"],
-    user: { name: "高橋 リョウ", initial: "高" },
-    spots: 4,
-    spotsLeft: 2,
-  },
-  {
-    id: "r5",
-    title: "全身トレーニング！初心者大歓迎、フォーム教えます",
-    date: "2/15",
-    time: "09:00~",
-    location: "ティップネス六本木",
-    tags: ["全身", "初心者歓迎"],
-    user: { name: "伊藤 サキ", initial: "伊" },
-    spots: 5,
-    spotsLeft: 5,
-  },
-];
-
-const myGroups = [
-  {
-    id: "bench-100",
-    name: "ベンチプレス100kg目指す部",
-    unread: 3,
-  },
-  {
-    id: "summer-diet",
-    name: "夏までに絞る会 2026",
-    unread: 0,
-  },
-  {
-    id: "deadlift-lovers",
-    name: "デッドリフト愛好会",
-    unread: 1,
-  },
-];
+function formatRecruitTime(d: string) {
+  const date = new Date(d);
+  return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) + "~";
+}
 
 function SectionHeader({
   icon: Icon,
@@ -170,84 +95,110 @@ function HeroSection() {
 }
 
 function MyScheduleSection() {
-  const s = mySchedule;
-  const spotsPercent = ((s.spots - s.spotsLeft) / s.spots) * 100;
-
   return (
     <section className="flex flex-col gap-4">
-      <SectionHeader icon={Clock} title="参加予定" />
-      <article className="relative overflow-hidden rounded-xl border border-gold/20 bg-card transition-all hover:border-gold/40">
-        <div className="absolute left-0 top-0 h-full w-1 bg-gold" />
-        <div className="flex flex-col gap-2 border-b border-border/40 px-5 py-3 pl-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 text-sm text-foreground">
-              <CalendarDays className="h-3.5 w-3.5 text-gold" />
-              <span className="font-bold">{s.date}</span>
-              <span className="text-muted-foreground">{s.time}</span>
-            </div>
-            <Badge className="border-0 bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold hover:bg-gold/15">
-              {s.role}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5 text-gold/70" />
-            <span className="font-medium">{s.location}</span>
-          </div>
-        </div>
-        <div className="flex flex-col gap-3 px-5 py-4 pl-6">
-          <h3 className="line-clamp-2 text-balance text-sm font-bold leading-snug text-foreground">
-            {s.title}
-          </h3>
-          <div className="flex flex-wrap gap-1.5">
-            {s.tags.map((tag) => (
-              <Badge
-                key={tag}
-                variant="secondary"
-                className="border-0 bg-gold/10 px-2.5 py-0.5 text-[11px] font-semibold text-gold/90 hover:bg-gold/20"
-              >
-                #{tag}
-              </Badge>
-            ))}
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Avatar className="relative h-7 w-7 shrink-0 ring-1 ring-border">
-                <AvatarImage src="/placeholder.svg" alt={s.user.name} />
-                <AvatarFallback className="text-[10px]">
-                  {s.user.initial}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-xs font-semibold text-muted-foreground">
-                {s.user.name}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-1 w-16 overflow-hidden rounded-full bg-secondary">
-                <div
-                  className="h-full rounded-full bg-gold/60"
-                  style={{ width: `${spotsPercent}%` }}
-                />
-              </div>
-              <span className="text-[11px] font-bold">
-                <span className="text-gold">{s.spotsLeft}</span>
-                <span className="text-muted-foreground">/{s.spots}</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </article>
+      <SectionHeader icon={Clock} title="参加予定" href="/dashboard/recruit" linkLabel="募集を探す" />
+      <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
+        <Clock className="mx-auto h-10 w-10 text-muted-foreground/40" />
+        <p className="mt-2 text-sm font-semibold text-muted-foreground">
+          参加予定の募集はありません
+        </p>
+        <Link
+          href="/dashboard/recruit"
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-gold transition-colors hover:text-gold-light"
+        >
+          合トレ募集を探す
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
     </section>
   );
 }
 
+type RecruitmentWithProfile = RecruitmentsRow & { profiles: ProfilesRow | null };
+
 function RecommendedSection() {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [posts, setPosts] = useState<RecruitmentWithProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("recruitments")
+        .select("*, profiles(*)")
+        .eq("status", "open")
+        .neq("user_id", user.id)
+        .order("event_date", { ascending: true })
+        .limit(10);
+      if (!cancelled) {
+        if (error) {
+          console.error("recruitments fetch:", error);
+          setPosts([]);
+        } else {
+          setPosts((data as RecruitmentWithProfile[]) ?? []);
+        }
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const scroll = (dir: "left" | "right") => {
     scrollRef.current?.scrollBy({
       left: dir === "left" ? -300 : 300,
       behavior: "smooth",
     });
   };
+
+  if (loading) {
+    return (
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <Sparkles className="h-5 w-5 text-gold" />
+          <h2 className="text-lg font-extrabold tracking-wide text-foreground">
+            あなたへのおすすめ
+          </h2>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-gold/60" />
+        </div>
+      </section>
+    );
+  }
+
+  if (posts.length === 0) {
+    return (
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <Sparkles className="h-5 w-5 text-gold" />
+          <h2 className="text-lg font-extrabold tracking-wide text-foreground">
+            あなたへのおすすめ
+          </h2>
+        </div>
+        <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
+          <Sparkles className="mx-auto h-10 w-10 text-muted-foreground/40" />
+          <p className="mt-2 text-sm font-semibold text-muted-foreground">
+            いま募集中の募集はありません
+          </p>
+          <Link
+            href="/dashboard/recruit"
+            className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-gold transition-colors hover:text-gold-light"
+          >
+            合トレ募集を見る
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="flex flex-col gap-4">
@@ -290,68 +241,63 @@ function RecommendedSection() {
         className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {recommended.map((post) => {
-          const pct = ((post.spots - post.spotsLeft) / post.spots) * 100;
+        {posts.map((post) => {
+          const profile = post.profiles;
+          const name = profile?.nickname || profile?.username || "ユーザー";
+          const initial = name.charAt(0);
+          const tags = post.target_body_part ? [post.target_body_part] : [];
           return (
-            <article
+            <Link
               key={post.id}
+              href={`/dashboard/recruit#${post.id}`}
               className="group flex w-[300px] shrink-0 flex-col rounded-xl border border-border/60 bg-card transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/[0.04]"
             >
               <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
                 <div className="flex items-center gap-1.5 text-sm text-foreground">
                   <CalendarDays className="h-3.5 w-3.5 text-gold" />
-                  <span className="font-bold">{post.date}</span>
+                  <span className="font-bold">{formatRecruitDate(post.event_date)}</span>
                   <span className="text-xs text-muted-foreground">
-                    {post.time}
+                    {formatRecruitTime(post.event_date)}
                   </span>
                 </div>
-                <div className="flex max-w-[100px] items-center gap-1 truncate text-[11px] text-muted-foreground">
-                  <MapPin className="h-3 w-3 shrink-0 text-gold/70" />
-                  <span className="truncate font-medium">{post.location}</span>
-                </div>
+                {post.location && (
+                  <div className="flex max-w-[100px] items-center gap-1 truncate text-[11px] text-muted-foreground">
+                    <MapPin className="h-3 w-3 shrink-0 text-gold/70" />
+                    <span className="truncate font-medium">{post.location}</span>
+                  </div>
+                )}
               </div>
               <div className="flex flex-1 flex-col gap-3 px-4 py-3.5">
                 <h3 className="line-clamp-2 text-sm font-bold leading-snug text-foreground">
                   {post.title}
                 </h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {post.tags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="border-0 bg-gold/10 px-2 py-0.5 text-[11px] font-semibold text-gold/90 hover:bg-gold/20"
-                    >
-                      #{tag}
-                    </Badge>
-                  ))}
-                </div>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="border-0 bg-gold/10 px-2 py-0.5 text-[11px] font-semibold text-gold/90 hover:bg-gold/20"
+                      >
+                        #{tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between border-t border-border/40 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <Avatar className="relative h-7 w-7 shrink-0 ring-1 ring-border">
-                    <AvatarImage src="/placeholder.svg" alt={post.user.name} />
-                    <AvatarFallback className="text-[10px]">
-                      {post.user.initial}
-                    </AvatarFallback>
+                    <AvatarImage src={profile?.avatar_url ?? undefined} alt={name} />
+                    <AvatarFallback className="text-[10px]">{initial}</AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {post.user.name}
+                  <span className="text-xs font-semibold text-muted-foreground truncate max-w-[140px]">
+                    {name}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-1 w-12 overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full rounded-full bg-gold/60"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] font-bold">
-                    <span className="text-gold">{post.spotsLeft}</span>
-                    <span className="text-muted-foreground">/{post.spots}</span>
-                  </span>
-                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-gold/60" />
               </div>
-            </article>
+            </Link>
           );
         })}
       </div>
@@ -360,60 +306,131 @@ function RecommendedSection() {
 }
 
 function YourGroupsSection() {
+  const [groups, setGroups] = useState<{ id: string; name: string; unread: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      const { data: members, error: memErr } = await supabase
+        .from("group_members")
+        .select("group_id")
+        .eq("user_id", user.id);
+      if (memErr || !members?.length) {
+        if (!cancelled) {
+          setGroups([]);
+          setLoading(false);
+        }
+        return;
+      }
+      const ids = members.map((m) => m.group_id);
+      const { data: groupList, error } = await supabase
+        .from("groups")
+        .select("id, name")
+        .in("id", ids);
+      if (!cancelled) {
+        if (error) {
+          console.error("groups fetch:", error);
+          setGroups([]);
+        } else {
+          setGroups((groupList ?? []).map((g) => ({ id: g.id, name: g.name, unread: 0 })));
+        }
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="flex flex-col gap-4">
+        <SectionHeader icon={Shield} title="所属グループの更新" href="/dashboard/groups" linkLabel="すべて見る" />
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-gold/60" />
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="flex flex-col gap-4">
       <SectionHeader
         icon={Shield}
-        title="所属部活の更新"
+        title="所属グループの更新"
         href="/dashboard/groups"
         linkLabel="すべて見る"
       />
-      <div className="flex flex-col gap-2">
-        {myGroups.map((group) => (
+      {groups.length === 0 ? (
+        <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
+          <Shield className="mx-auto h-10 w-10 text-muted-foreground/40" />
+          <p className="mt-2 text-sm font-semibold text-muted-foreground">
+            所属しているグループはありません
+          </p>
           <Link
-            key={group.id}
-            href={`/dashboard/groups/${group.id}`}
-            className="flex items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all duration-200 hover:border-gold/30 hover:bg-card/80"
+            href="/dashboard/groups"
+            className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border/40 bg-secondary/40 px-4 py-2.5 text-sm font-bold text-muted-foreground transition-all hover:border-gold/30 hover:text-gold"
           >
-            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-border/60">
-              <Image
-                src="/placeholder.svg"
-                alt={group.name}
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div className="min-w-0 flex-1 flex-col gap-0.5">
-              <span className="truncate text-sm font-bold text-foreground">
-                {group.name}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                {group.unread > 0 ? (
-                  <span className="flex items-center gap-1 text-gold/80">
-                    <MessageCircle className="h-3 w-3" />
-                    {group.unread}件の新着メッセージ
-                  </span>
-                ) : (
-                  "新着なし"
-                )}
-              </span>
-            </div>
-            {group.unread > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gold px-1.5 text-[10px] font-bold text-[#050505]">
-                {group.unread}
-              </span>
-            )}
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+            <Flame className="h-4 w-4" />
+            グループを探す
           </Link>
-        ))}
-      </div>
-      <Link
-        href="/dashboard/groups"
-        className="flex items-center justify-center gap-2 rounded-xl border border-border/40 bg-secondary/40 py-3.5 text-sm font-bold text-muted-foreground transition-all duration-200 hover:border-gold/30 hover:text-gold"
-      >
-        <Flame className="h-4 w-4" />
-        他のグループを探す
-      </Link>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-2">
+            {groups.map((group) => (
+              <Link
+                key={group.id}
+                href={`/dashboard/groups/${group.id}`}
+                className="flex items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all duration-200 hover:border-gold/30 hover:bg-card/80"
+              >
+                <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-border/60 bg-secondary">
+                  <Image
+                    src="/placeholder.svg"
+                    alt={group.name}
+                    width={44}
+                    height={44}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                  <span className="truncate text-sm font-bold text-foreground">
+                    {group.name}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {group.unread > 0 ? (
+                      <span className="flex items-center gap-1 text-gold/80">
+                        <MessageCircle className="h-3 w-3" />
+                        {group.unread}件の新着
+                      </span>
+                    ) : (
+                      "新着なし"
+                    )}
+                  </span>
+                </div>
+                {group.unread > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-gold px-1.5 text-[10px] font-bold text-[#050505]">
+                    {group.unread}
+                  </span>
+                )}
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+              </Link>
+            ))}
+          </div>
+          <Link
+            href="/dashboard/groups"
+            className="flex items-center justify-center gap-2 rounded-xl border border-border/40 bg-secondary/40 py-3.5 text-sm font-bold text-muted-foreground transition-all duration-200 hover:border-gold/30 hover:text-gold"
+          >
+            <Flame className="h-4 w-4" />
+            他のグループを探す
+          </Link>
+        </>
+      )}
     </section>
   );
 }

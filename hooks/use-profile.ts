@@ -30,7 +30,7 @@ export function useProfile() {
       const row = data as Record<string, unknown> & { bench_press_max?: number };
       return {
         ...row,
-        name: row.username ?? row.name ?? null,
+        name: (row.nickname ?? row.username ?? row.name) as string | null,
         bench_max: row.bench_press_max ?? row.bench_max ?? 0,
         squat_max: (row.squat_max as number) ?? 0,
         deadlift_max: (row.deadlift_max as number) ?? 0,
@@ -40,6 +40,15 @@ export function useProfile() {
         followers_count: (row.followers_count as number) ?? 0,
         following_count: (row.following_count as number) ?? 0,
         collab_count: (row.collab_count as number) ?? 0,
+        nickname: (row.nickname as string) ?? null,
+        gender: (row.gender as string) ?? null,
+        birthday: (row.birthday as string) ?? null,
+        prefecture: (row.prefecture as string) ?? null,
+        home_gym: (row.home_gym as string) ?? null,
+        exercises: Array.isArray(row.exercises) ? (row.exercises as string[]) : null,
+        is_age_public: row.is_age_public !== false,
+        is_prefecture_public: row.is_prefecture_public !== false,
+        is_home_gym_public: row.is_home_gym_public !== false,
       } as Profile;
     } catch (e) {
       console.error("[useProfile] Error:", e);
@@ -66,6 +75,7 @@ export function useProfile() {
           updated_at: new Date().toISOString(),
         };
         if (updates.name !== undefined) dbUpdates.username = updates.name;
+        if (updates.nickname !== undefined) dbUpdates.nickname = updates.nickname;
         if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
         if (updates.avatar_url !== undefined) dbUpdates.avatar_url = updates.avatar_url;
         if (updates.area !== undefined) dbUpdates.area = updates.area;
@@ -75,6 +85,14 @@ export function useProfile() {
         if (updates.bench_max !== undefined) dbUpdates.bench_press_max = updates.bench_max;
         if (updates.squat_max !== undefined) dbUpdates.squat_max = updates.squat_max;
         if (updates.deadlift_max !== undefined) dbUpdates.deadlift_max = updates.deadlift_max;
+        if (updates.gender !== undefined) dbUpdates.gender = updates.gender;
+        if (updates.birthday !== undefined) dbUpdates.birthday = updates.birthday;
+        if (updates.prefecture !== undefined) dbUpdates.prefecture = updates.prefecture;
+        if (updates.home_gym !== undefined) dbUpdates.home_gym = updates.home_gym;
+        if (updates.exercises !== undefined) dbUpdates.exercises = updates.exercises;
+        if (updates.is_age_public !== undefined) dbUpdates.is_age_public = updates.is_age_public;
+        if (updates.is_prefecture_public !== undefined) dbUpdates.is_prefecture_public = updates.is_prefecture_public;
+        if (updates.is_home_gym_public !== undefined) dbUpdates.is_home_gym_public = updates.is_home_gym_public;
         if ((updates as { instagram_id?: string }).instagram_id !== undefined) {
           dbUpdates.instagram_id = (updates as { instagram_id: string }).instagram_id;
         }

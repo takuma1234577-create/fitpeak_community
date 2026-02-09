@@ -1,20 +1,36 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   User,
   FileText,
   MapPin,
   Dumbbell,
-  Target,
   Calendar,
   ArrowRight,
   Dumbbell as IconDumbbell,
   Loader2,
+  Camera,
+  Lock,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { uploadAvatar } from "@/lib/upload-avatar";
 import type { ProfilesInsert } from "@/types/supabase";
+import { PREFECTURES, EXERCISE_OPTIONS, GENDER_OPTIONS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+
+function calcAge(birthday: string | null): number | null {
+  if (!birthday) return null;
+  const d = new Date(birthday);
+  if (Number.isNaN(d.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - d.getFullYear();
+  const m = today.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+  return age;
+}
 
 function GoldInput({
   id,
@@ -25,6 +41,7 @@ function GoldInput({
   value,
   onChange,
   as = "input",
+  required,
 }: {
   id: string;
   type?: string;
@@ -34,6 +51,7 @@ function GoldInput({
   value: string;
   onChange: (v: string) => void;
   as?: "input" | "textarea";
+  required?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const inputClass = `w-full rounded-lg border bg-secondary py-3.5 pl-11 text-sm text-foreground placeholder:text-muted-foreground/50 transition-all duration-300 focus:outline-none pr-4 ${
@@ -71,6 +89,7 @@ function GoldInput({
             onBlur={() => setFocused(false)}
             placeholder={placeholder}
             className={inputClass}
+            required={required}
           />
         )}
       </div>
@@ -82,18 +101,54 @@ const labelClass =
   "text-xs font-bold tracking-wider uppercase text-muted-foreground";
 
 export default function OnboardingPage() {
-  const [name, setName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [nickname, setNickname] = useState("");
+  const [gender, setGender] = useState<string>("");
+  const [birthday, setBirthday] = useState("");
   const [bio, setBio] = useState("");
-  const [area, setArea] = useState("");
-  const [gym, setGym] = useState("");
-  const [goal, setGoal] = useState("");
-  const [trainingYears, setTrainingYears] = useState("");
+  const [prefecture, setPrefecture] = useState("");
+  const [homeGym, setHomeGym] = useState("");
+  const [exercises, setExercises] = useState<string[]>([]);
+  const [isAgePublic, setIsAgePublic] = useState(true);
+  const [isPrefecturePublic, setIsPrefecturePublic] = useState(true);
+  const [isHomeGymPublic, setIsHomeGymPublic] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const age = calcAge(birthday || null);
+
+  const toggleExercise = (opt: string) => {
+    setExercises((prev) =>
+      prev.includes(opt) ? prev.filter((x) => x !== opt) : [...prev, opt]
+    );
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSaveError(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const url = await uploadAvatar(user.id, file);
+      setAvatarUrl(url);
+    } catch (err) {
+      console.error(err);
+      setSaveError(
+        err instanceof Error ? err.message : "画像のアップロードに失敗しました。"
+      );
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaveError(null);
+    if (!nickname.trim()) {
+      setSaveError("ニックネームを入力してください。");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const supabase = createClient();
@@ -103,15 +158,22 @@ export default function OnboardingPage() {
         setIsSubmitting(false);
         return;
       }
-      const years = trainingYears.trim() ? parseInt(trainingYears, 10) : null;
       const payload: ProfilesInsert = {
         id: user.id,
-        username: name.trim() || null,
+        username: nickname.trim(),
+        nickname: nickname.trim(),
         bio: bio.trim() || null,
-        area: area.trim() || null,
-        gym: gym.trim() || null,
-        goal: goal.trim() || null,
-        training_years: years != null && !Number.isNaN(years) ? years : null,
+        avatar_url: avatarUrl || null,
+        gender: gender || null,
+        birthday: birthday || null,
+        prefecture: prefecture || null,
+        home_gym: homeGym.trim() || null,
+        exercises: exercises.length > 0 ? exercises : null,
+        is_age_public: isAgePublic,
+        is_prefecture_public: isPrefecturePublic,
+        is_home_gym_public: isHomeGymPublic,
+        area: prefecture || null,
+        gym: homeGym.trim() || null,
         updated_at: new Date().toISOString(),
       };
       // @ts-expect-error - Supabase generic not inferred from createClient
@@ -145,59 +207,233 @@ export default function OnboardingPage() {
 
         <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-2xl shadow-black/60 backdrop-blur-sm sm:p-10">
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {/* アバター */}
+            <div className="flex flex-col gap-2.5">
+              <label className={labelClass}>プロフィール画像</label>
+              <div className="flex items-center gap-5">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-border bg-secondary"
+                >
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt="アバター"
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                      <Camera className="h-10 w-10" />
+                    </div>
+                  )}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-left text-sm font-semibold text-gold hover:text-gold-light transition-colors"
+                  >
+                    写真をアップロード
+                  </button>
+                  <p className="text-xs text-muted-foreground">
+                    JPG, PNG, WebP。2MB以下
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <GoldInput
-              id="name"
-              placeholder="例: 田中 太郎"
+              id="nickname"
+              placeholder="例: たなか"
               icon={User}
-              label={<label htmlFor="name" className={labelClass}>お名前</label>}
-              value={name}
-              onChange={setName}
+              label={
+                <label htmlFor="nickname" className={labelClass}>
+                  ニックネーム <span className="text-red-400">*</span>
+                </label>
+              }
+              value={nickname}
+              onChange={setNickname}
+              required
             />
+
+            {/* 性別 */}
+            <div className="flex flex-col gap-2.5">
+              <span className={labelClass}>性別</span>
+              <div className="flex flex-wrap gap-4">
+                {GENDER_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex cursor-pointer items-center gap-2"
+                  >
+                    <input
+                      type="radio"
+                      name="gender"
+                      value={opt.value}
+                      checked={gender === opt.value}
+                      onChange={() => setGender(opt.value)}
+                      className="h-4 w-4 border-border text-gold focus:ring-gold"
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      {opt.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* 誕生日 + 年齢表示 */}
+            <div className="flex flex-col gap-2.5">
+              <label htmlFor="birthday" className={labelClass}>
+                誕生日
+              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-0">
+                  <Calendar className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                  <input
+                    id="birthday"
+                    type="date"
+                    value={birthday}
+                    onChange={(e) => setBirthday(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-secondary py-3.5 pl-11 pr-4 text-sm text-foreground focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/40"
+                  />
+                </div>
+                {age !== null && (
+                  <span className="rounded-full bg-gold/10 px-3 py-1.5 text-sm font-bold text-gold">
+                    {age}歳
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="is-age-private"
+                  type="checkbox"
+                  checked={!isAgePublic}
+                  onChange={(e) => setIsAgePublic(!e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-gold focus:ring-gold"
+                />
+                <label
+                  htmlFor="is-age-private"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                >
+                  <Lock className="h-3 w-3" />
+                  年齢を非公開にする
+                </label>
+              </div>
+            </div>
+
             <GoldInput
               id="bio"
-              placeholder="例: パワーリフティング歴5年。BIG3合計600kg目指しています。"
+              placeholder="パワーリフティング中心。ベンチ100kg目標！今は週4でエニタイムに行ってます。"
               icon={FileText}
               label={<label htmlFor="bio" className={labelClass}>自己紹介</label>}
               value={bio}
               onChange={setBio}
               as="textarea"
             />
-            <GoldInput
-              id="area"
-              placeholder="例: 東京・渋谷エリア"
-              icon={MapPin}
-              label={<label htmlFor="area" className={labelClass}>よく行くエリア</label>}
-              value={area}
-              onChange={setArea}
-            />
-            <GoldInput
-              id="gym"
-              placeholder="例: GOLD'S GYM 原宿"
-              icon={Dumbbell}
-              label={<label htmlFor="gym" className={labelClass}>よく行くジム</label>}
-              value={gym}
-              onChange={setGym}
-            />
-            <GoldInput
-              id="goal"
-              placeholder="例: BIG3合計600kgを目指す"
-              icon={Target}
-              label={<label htmlFor="goal" className={labelClass}>目標</label>}
-              value={goal}
-              onChange={setGoal}
-            />
-            <GoldInput
-              id="trainingYears"
-              type="number"
-              placeholder="例: 5"
-              icon={Calendar}
-              label={<label htmlFor="trainingYears" className={labelClass}>トレーニング年数（年）</label>}
-              value={trainingYears}
-              onChange={setTrainingYears}
-            />
+
+            {/* 住まい（都道府県） + 非公開 */}
+            <div className="flex flex-col gap-2.5">
+              <label htmlFor="prefecture" className={labelClass}>
+                住まい（都道府県）
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                <select
+                  id="prefecture"
+                  value={prefecture}
+                  onChange={(e) => setPrefecture(e.target.value)}
+                  className="w-full appearance-none rounded-lg border border-border bg-secondary py-3.5 pl-11 pr-10 text-sm text-foreground focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/40"
+                >
+                  <option value="">選択してください</option>
+                  {PREFECTURES.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="is-prefecture-private"
+                  type="checkbox"
+                  checked={!isPrefecturePublic}
+                  onChange={(e) => setIsPrefecturePublic(!e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-gold focus:ring-gold"
+                />
+                <label
+                  htmlFor="is-prefecture-private"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                >
+                  <Lock className="h-3 w-3" />
+                  住まいを非公開にする
+                </label>
+              </div>
+            </div>
+
+            {/* よく行くジム + 非公開 */}
+            <div className="flex flex-col gap-2.5">
+              <GoldInput
+                id="homeGym"
+                placeholder="例: エニタイムフィットネス 渋谷店"
+                icon={Dumbbell}
+                label={<label htmlFor="homeGym" className={labelClass}>よく行くジム</label>}
+                value={homeGym}
+                onChange={setHomeGym}
+              />
+              <div className="flex items-center gap-2">
+                <input
+                  id="is-home-gym-private"
+                  type="checkbox"
+                  checked={!isHomeGymPublic}
+                  onChange={(e) => setIsHomeGymPublic(!e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-gold focus:ring-gold"
+                />
+                <label
+                  htmlFor="is-home-gym-private"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                >
+                  <Lock className="h-3 w-3" />
+                  よく行くジムを非公開にする
+                </label>
+              </div>
+            </div>
+
+            {/* エクササイズ（複数選択） */}
+            <div className="flex flex-col gap-2.5">
+              <span className={labelClass}>やってる種目（複数選択可）</span>
+              <div className="flex flex-wrap gap-2">
+                {EXERCISE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => toggleExercise(opt)}
+                    className={cn(
+                      "rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all",
+                      exercises.includes(opt)
+                        ? "border-gold bg-gold/15 text-gold"
+                        : "border-border bg-secondary text-muted-foreground hover:border-foreground/20"
+                    )}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {saveError && (
-              <p className="text-sm text-red-400" role="alert">{saveError}</p>
+              <p className="text-sm text-red-400" role="alert">
+                {saveError}
+              </p>
             )}
             <button
               type="submit"
@@ -217,7 +453,10 @@ export default function OnboardingPage() {
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
             あとで
-            <Link href="/dashboard" className="ml-1 font-bold text-gold transition-colors hover:text-gold-light">
+            <Link
+              href="/dashboard"
+              className="ml-1 font-bold text-gold transition-colors hover:text-gold-light"
+            >
               スキップ
             </Link>
           </p>

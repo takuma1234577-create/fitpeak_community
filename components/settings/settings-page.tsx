@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
   UserCircle,
@@ -22,11 +23,25 @@ import {
   Plus,
   X,
   Loader2,
+  Lock,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { useProfile } from "@/hooks/use-profile"
+import { uploadAvatar } from "@/lib/upload-avatar"
+import { PREFECTURES, EXERCISE_OPTIONS, GENDER_OPTIONS } from "@/lib/constants"
 import type { Achievement } from "@/types/profile"
+
+function calcAge(birthday: string | null): number | null {
+  if (!birthday) return null
+  const d = new Date(birthday)
+  if (Number.isNaN(d.getTime())) return null
+  const today = new Date()
+  let age = today.getFullYear() - d.getFullYear()
+  const m = today.getMonth() - d.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--
+  return age
+}
 
 /* ── Settings categories ─────────────────────────────── */
 const categories = [
@@ -55,8 +70,19 @@ export default function SettingsPage() {
 
   /* account state */
   const [name, setName] = useState("")
+  const [nickname, setNickname] = useState("")
   const [bio, setBio] = useState("")
   const [email, setEmail] = useState("")
+  const [gender, setGender] = useState("")
+  const [birthday, setBirthday] = useState("")
+  const [prefecture, setPrefecture] = useState("")
+  const [homeGym, setHomeGym] = useState("")
+  const [exercises, setExercises] = useState<string[]>([])
+  const [isAgePublic, setIsAgePublic] = useState(true)
+  const [isPrefecturePublic, setIsPrefecturePublic] = useState(true)
+  const [isHomeGymPublic, setIsHomeGymPublic] = useState(true)
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const [bench, setBench] = useState("0")
   const [squat, setSquat] = useState("0")
   const [deadlift, setDeadlift] = useState("0")
@@ -89,9 +115,20 @@ export default function SettingsPage() {
   /* Load profile data into form */
   useEffect(() => {
     if (profile) {
-      setName(profile.name ?? "")
+      const nick = (profile as { nickname?: string | null }).nickname ?? profile.name ?? ""
+      setName(nick)
+      setNickname(nick)
       setBio(profile.bio ?? "")
       setEmail(profile.email ?? "")
+      setGender((profile as { gender?: string | null }).gender ?? "")
+      setBirthday((profile as { birthday?: string | null }).birthday ?? "")
+      setPrefecture((profile as { prefecture?: string | null }).prefecture ?? "")
+      setHomeGym((profile as { home_gym?: string | null }).home_gym ?? profile.gym ?? "")
+      setExercises(Array.isArray((profile as { exercises?: string[] | null }).exercises) ? (profile as { exercises: string[] }).exercises : [])
+      setIsAgePublic((profile as { is_age_public?: boolean }).is_age_public !== false)
+      setIsPrefecturePublic((profile as { is_prefecture_public?: boolean }).is_prefecture_public !== false)
+      setIsHomeGymPublic((profile as { is_home_gym_public?: boolean }).is_home_gym_public !== false)
+      setAvatarPreviewUrl(profile.avatar_url ?? null)
       setBench(String(profile.bench_max ?? 0))
       setSquat(String(profile.squat_max ?? 0))
       setDeadlift(String(profile.deadlift_max ?? 0))
@@ -111,14 +148,23 @@ export default function SettingsPage() {
     setSaving(true)
     try {
       await updateProfile({
-        name,
+        name: nickname || name,
+        nickname: nickname || name,
         bio,
         email,
+        gender: gender || undefined,
+        birthday: birthday || undefined,
+        prefecture: prefecture || undefined,
+        home_gym: homeGym || undefined,
+        exercises: exercises.length > 0 ? exercises : undefined,
+        is_age_public: isAgePublic,
+        is_prefecture_public: isPrefecturePublic,
+        is_home_gym_public: isHomeGymPublic,
         bench_max: Number(bench) || 0,
         squat_max: Number(squat) || 0,
         deadlift_max: Number(deadlift) || 0,
-        area,
-        gym,
+        area: prefecture || area,
+        gym: homeGym || gym,
         training_years: Number(trainingYears) || 0,
         goal,
         achievements,
@@ -131,6 +177,28 @@ export default function SettingsPage() {
       setSaving(false)
     }
   }
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    try {
+      const url = await uploadAvatar(profile.id, file)
+      setAvatarPreviewUrl(url)
+      await updateProfile({ avatar_url: url })
+      markChanged()
+    } catch (err) {
+      console.error("Avatar upload failed:", err)
+    }
+    e.target.value = ""
+  }
+
+  function toggleExercise(opt: string) {
+    setExercises((prev) => (prev.includes(opt) ? prev.filter((x) => x !== opt) : [...prev, opt]))
+    markChanged()
+  }
+
+  const displayName = nickname || name
+  const age = calcAge(birthday || null)
 
   /* Achievement helpers */
   function addAchievement() {
@@ -173,45 +241,53 @@ export default function SettingsPage() {
             プロフィール写真
           </h3>
           <div className="flex items-center gap-5">
-            <div className="relative group">
-              <div className="h-24 w-24 rounded-full border-2 border-border bg-secondary overflow-hidden flex items-center justify-center">
-                <span className="text-3xl font-black text-gold">
-                  {name.charAt(0) || "?"}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="absolute inset-0 flex items-center justify-center rounded-full bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label="写真を変更"
-              >
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              className="relative group h-24 w-24 shrink-0 rounded-full border-2 border-border bg-secondary overflow-hidden flex items-center justify-center"
+            >
+              {avatarPreviewUrl ? (
+                <Image src={avatarPreviewUrl} alt="" fill className="object-cover" unoptimized />
+              ) : (
+                <span className="text-3xl font-black text-gold">{displayName.charAt(0) || "?"}</span>
+              )}
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Camera className="h-5 w-5 text-foreground" />
-              </button>
-            </div>
+              </span>
+            </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
             <div className="flex flex-col gap-1.5">
               <button
                 type="button"
-                className="text-sm font-semibold text-gold hover:text-gold-light transition-colors"
+                onClick={() => avatarInputRef.current?.click()}
+                className="text-left text-sm font-semibold text-gold hover:text-gold-light transition-colors"
               >
                 写真をアップロード
               </button>
               <p className="text-xs text-muted-foreground">
-                JPG, PNG 形式。2MB以下
+                JPG, PNG, WebP。2MB以下
               </p>
             </div>
           </div>
         </div>
 
-        {/* Name & Email */}
+        {/* ニックネーム & Email */}
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <label htmlFor="s-name" className={labelClass}>
-              名前
+            <label htmlFor="s-nickname" className={labelClass}>
+              ニックネーム <span className="text-red-400">*</span>
             </label>
             <input
-              id="s-name"
+              id="s-nickname"
               type="text"
-              value={name}
-              onChange={(e) => { setName(e.target.value); markChanged() }}
+              value={nickname}
+              onChange={(e) => { setNickname(e.target.value); setName(e.target.value); markChanged() }}
               className={inputClass}
             />
           </div>
@@ -229,6 +305,54 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* 性別 */}
+        <div className="flex flex-col gap-2">
+          <span className={labelClass}>性別</span>
+          <div className="flex flex-wrap gap-4">
+            {GENDER_OPTIONS.map((opt) => (
+              <label key={opt.value} className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="gender"
+                  value={opt.value}
+                  checked={gender === opt.value}
+                  onChange={() => { setGender(opt.value); markChanged() }}
+                  className="h-4 w-4 border-border text-gold focus:ring-gold"
+                />
+                <span className="text-sm font-medium text-foreground">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* 誕生日 + 年齢 + 非公開 */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="s-birthday" className={labelClass}>誕生日</label>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              id="s-birthday"
+              type="date"
+              value={birthday}
+              onChange={(e) => { setBirthday(e.target.value); markChanged() }}
+              className={cn(inputClass, "flex-1 min-w-0")}
+            />
+            {age !== null && (
+              <span className="rounded-full bg-gold/10 px-3 py-1.5 text-sm font-bold text-gold">{age}歳</span>
+            )}
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!isAgePublic}
+              onChange={(e) => { setIsAgePublic(!e.target.checked); markChanged() }}
+              className="h-4 w-4 rounded border-border text-gold focus:ring-gold"
+            />
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Lock className="h-3 w-3" /> 年齢を非公開にする
+            </span>
+          </label>
+        </div>
+
         {/* Bio */}
         <div className="flex flex-col gap-2">
           <label htmlFor="s-bio" className={labelClass}>
@@ -239,8 +363,84 @@ export default function SettingsPage() {
             rows={3}
             value={bio}
             onChange={(e) => { setBio(e.target.value); markChanged() }}
+            placeholder="パワーリフティング中心。ベンチ100kg目標！今は週4でエニタイムに行ってます。"
             className={cn(inputClass, "resize-none")}
           />
+        </div>
+
+        {/* 住まい（都道府県） + 非公開 */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="s-prefecture" className={labelClass}>住まい（都道府県）</label>
+          <select
+            id="s-prefecture"
+            value={prefecture}
+            onChange={(e) => { setPrefecture(e.target.value); markChanged() }}
+            className={inputClass}
+          >
+            <option value="">選択してください</option>
+            {PREFECTURES.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!isPrefecturePublic}
+              onChange={(e) => { setIsPrefecturePublic(!e.target.checked); markChanged() }}
+              className="h-4 w-4 rounded border-border text-gold focus:ring-gold"
+            />
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Lock className="h-3 w-3" /> 住まいを非公開にする
+            </span>
+          </label>
+        </div>
+
+        {/* よく行くジム + 非公開 */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="s-home-gym" className={labelClass}>
+            <Dumbbell className="inline h-3 w-3 mr-1 text-gold/60" />
+            よく行くジム
+          </label>
+          <input
+            id="s-home-gym"
+            type="text"
+            value={homeGym}
+            onChange={(e) => { setHomeGym(e.target.value); markChanged() }}
+            className={inputClass}
+          />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!isHomeGymPublic}
+              onChange={(e) => { setIsHomeGymPublic(!e.target.checked); markChanged() }}
+              className="h-4 w-4 rounded border-border text-gold focus:ring-gold"
+            />
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Lock className="h-3 w-3" /> よく行くジムを非公開にする
+            </span>
+          </label>
+        </div>
+
+        {/* エクササイズ（複数選択） */}
+        <div className="flex flex-col gap-2">
+          <span className={labelClass}>やってる種目（複数選択可）</span>
+          <div className="flex flex-wrap gap-2">
+            {EXERCISE_OPTIONS.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => toggleExercise(opt)}
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all",
+                  exercises.includes(opt)
+                    ? "border-gold bg-gold/15 text-gold"
+                    : "border-border bg-secondary text-muted-foreground hover:border-foreground/20"
+                )}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Training years & Goal */}
@@ -323,36 +523,6 @@ export default function SettingsPage() {
               {(Number(bench) || 0) + (Number(squat) || 0) + (Number(deadlift) || 0)}
               kg
             </span>
-          </div>
-        </div>
-
-        {/* Area & Gym */}
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="s-area" className={labelClass}>
-              <MapPin className="inline h-3 w-3 mr-1 text-gold/60" />
-              活動エリア
-            </label>
-            <input
-              id="s-area"
-              type="text"
-              value={area}
-              onChange={(e) => { setArea(e.target.value); markChanged() }}
-              className={inputClass}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="s-gym" className={labelClass}>
-              <Dumbbell className="inline h-3 w-3 mr-1 text-gold/60" />
-              所属ジム
-            </label>
-            <input
-              id="s-gym"
-              type="text"
-              value={gym}
-              onChange={(e) => { setGym(e.target.value); markChanged() }}
-              className={inputClass}
-            />
           </div>
         </div>
 
@@ -511,7 +681,7 @@ export default function SettingsPage() {
   function renderNotification() {
     const items = [
       { label: "合トレの誘いを受け取る", desc: "他のユーザーからの合トレリクエスト通知", checked: notifWorkout, onChange: (v: boolean) => { setNotifWorkout(v); markChanged() } },
-      { label: "グループの新着メッセージ", desc: "所属部活の掲示板に新しい投稿があった時", checked: notifGroup, onChange: (v: boolean) => { setNotifGroup(v); markChanged() } },
+      { label: "グループの新着メッセージ", desc: "所属グループの掲示板に新しい投稿があった時", checked: notifGroup, onChange: (v: boolean) => { setNotifGroup(v); markChanged() } },
       { label: "運営からのお知らせ", desc: "FITPEAK からのアップデートやキャンペーン情報", checked: notifAdmin, onChange: (v: boolean) => { setNotifAdmin(v); markChanged() } },
       { label: "メール通知", desc: "重要な通知をメールでも受け取る", checked: notifEmail, onChange: (v: boolean) => { setNotifEmail(v); markChanged() } },
     ]

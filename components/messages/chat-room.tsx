@@ -30,16 +30,23 @@ interface ChatRoomProps {
   user: ChatUser;
   messages: Message[];
   onBack: () => void;
+  /** メッセージ送信時（Supabase に保存する場合は親で実施） */
+  onSend?: (text: string) => void | Promise<void>;
 }
 
 export default function ChatRoom({
   user,
   messages: initialMessages,
   onBack,
+  onSend: onSendProp,
 }: ChatRoomProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMessages(initialMessages);
+  }, [initialMessages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -48,10 +55,16 @@ export default function ChatRoom({
   }, [messages]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    const text = input.trim();
+    if (!text) return;
+    if (onSendProp) {
+      onSendProp(text);
+      setInput("");
+      return;
+    }
     const newMsg: Message = {
       id: `msg-${Date.now()}`,
-      text: input.trim(),
+      text,
       time: new Date().toLocaleTimeString("ja-JP", {
         hour: "2-digit",
         minute: "2-digit",

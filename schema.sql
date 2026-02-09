@@ -24,6 +24,15 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   deadlift_max integer,
   goal text,
   instagram_id text,
+  nickname text,
+  gender text,
+  birthday date,
+  prefecture text,
+  home_gym text,
+  exercises text[],
+  is_age_public boolean DEFAULT true,
+  is_prefecture_public boolean DEFAULT true,
+  is_home_gym_public boolean DEFAULT true,
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL
 );
@@ -34,6 +43,8 @@ CREATE INDEX IF NOT EXISTS idx_profiles_goal ON public.profiles(goal);
 CREATE INDEX IF NOT EXISTS idx_profiles_training_years ON public.profiles(training_years);
 CREATE INDEX IF NOT EXISTS idx_profiles_big3_total ON public.profiles(big3_total);
 CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
+CREATE INDEX IF NOT EXISTS profiles_search_idx ON public.profiles
+  USING GIN (to_tsvector('japanese', bio || ' ' || COALESCE(nickname, '') || ' ' || COALESCE(prefecture, '') || ' ' || COALESCE(home_gym, '')));
 
 COMMENT ON TABLE public.profiles IS '筋トレガチ勢向け詳細プロフィール';
 COMMENT ON COLUMN public.profiles.area IS '都道府県・活動エリア';
@@ -71,6 +82,8 @@ CREATE TABLE IF NOT EXISTS public.groups (
   description text,
   category text,
   created_by uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  is_private boolean DEFAULT false,
+  chat_room_id uuid,
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL
 );

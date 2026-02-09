@@ -20,6 +20,8 @@ interface ConversationListProps {
   onSelect: (id: string) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  /** 会話が0件 or 検索0件時に表示するメッセージ */
+  emptyMessage?: string;
 }
 
 export default function ConversationList({
@@ -28,6 +30,7 @@ export default function ConversationList({
   onSelect,
   searchQuery,
   onSearchChange,
+  emptyMessage,
 }: ConversationListProps) {
   const filtered = conversations.filter(
     (c) =>
@@ -135,7 +138,7 @@ export default function ConversationList({
         {filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground/50">
             <Search className="mb-2 h-8 w-8" />
-            <p className="text-sm font-medium">見つかりませんでした</p>
+            <p className="text-sm font-medium">{emptyMessage ?? "見つかりませんでした"}</p>
           </div>
         )}
       </div>
