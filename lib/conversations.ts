@@ -40,14 +40,16 @@ async function createNewConversation(
   myUserId: string,
   otherUserId: string
 ): Promise<string> {
-  const { data: conv, error: convErr } = await sb
+  // Supabase 型定義が conversations の insert を許可していないため any で実行
+  const sbAny = sb as any;
+  const { data: conv, error: convErr } = await sbAny
     .from("conversations")
     .insert({})
     .select("id")
     .single();
   if (convErr || !conv?.id) throw new Error(convErr?.message ?? "会話の作成に失敗しました");
 
-  const { error: pErr } = await sb.from("conversation_participants").insert([
+  const { error: pErr } = await sbAny.from("conversation_participants").insert([
     { conversation_id: conv.id, user_id: myUserId },
     { conversation_id: conv.id, user_id: otherUserId },
   ]);
