@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Dumbbell, Plus, Users } from "lucide-react";
+import { Dumbbell } from "lucide-react";
 import AuthForm from "@/components/auth-form";
 
 export default function Page() {
@@ -42,22 +41,6 @@ export default function Page() {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Community
           </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
-          <Link
-            href="/dashboard/recruit"
-            className="flex items-center justify-center gap-2 rounded-xl bg-gold px-6 py-4 text-sm font-black uppercase tracking-wider text-[#050505] shadow-lg shadow-gold/25 transition-all duration-300 hover:bg-gold-light hover:shadow-xl hover:shadow-gold/30 active:scale-[0.98]"
-          >
-            <Plus className="h-5 w-5" strokeWidth={2.5} />
-            合トレを募集する
-          </Link>
-          <Link
-            href="/dashboard/search"
-            className="flex items-center justify-center gap-2 rounded-xl border-2 border-gold/60 bg-gold/10 px-6 py-4 text-sm font-black uppercase tracking-wider text-gold transition-all duration-300 hover:bg-gold/20 hover:border-gold active:scale-[0.98]"
-          >
-            <Users className="h-5 w-5" strokeWidth={2.5} />
-            筋トレ仲間を探す
-          </Link>
         </div>
       </div>
 

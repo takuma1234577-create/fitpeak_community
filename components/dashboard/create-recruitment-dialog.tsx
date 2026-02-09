@@ -13,6 +13,15 @@ import { createClient } from "@/utils/supabase/client";
 import { useRecruitModal } from "@/contexts/recruit-modal-context";
 import { Loader2 } from "lucide-react";
 import { bodyParts } from "./filter-bar";
+import { PREFECTURES } from "@/lib/constants";
+
+const levelOptions = [
+  { value: "", label: "指定なし" },
+  { value: "beginner", label: "初心者" },
+  { value: "intermediate", label: "中級者" },
+  { value: "advanced", label: "上級者" },
+  { value: "competitor", label: "大会勢" },
+];
 
 export default function CreateRecruitmentDialog() {
   const { open, setOpen } = useRecruitModal();
@@ -22,6 +31,8 @@ export default function CreateRecruitmentDialog() {
   const [eventDate, setEventDate] = useState("");
   const [eventTime, setEventTime] = useState("");
   const [location, setLocation] = useState("");
+  const [area, setArea] = useState("");
+  const [level, setLevel] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +43,8 @@ export default function CreateRecruitmentDialog() {
     setEventDate("");
     setEventTime("");
     setLocation("");
+    setArea("");
+    setLevel("");
     setError(null);
   };
 
@@ -72,6 +85,8 @@ export default function CreateRecruitmentDialog() {
         target_body_part: targetBodyPart && targetBodyPart !== "all" ? targetBodyPart : null,
         event_date: eventDateTime,
         location: location.trim() || null,
+        area: area && area !== "all" ? area : null,
+        level: level || null,
         status: "open",
       });
       if (insertError) throw insertError;
@@ -135,6 +150,41 @@ export default function CreateRecruitmentDialog() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                エリア
+              </label>
+              <select
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+                className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
+              >
+                <option value="all">指定なし</option>
+                {PREFECTURES.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                レベル
+              </label>
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
+              >
+                {levelOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
