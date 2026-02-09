@@ -170,7 +170,7 @@ export default function CreateRecruitmentDialog() {
               onChange={(e) => setTargetBodyPart(e.target.value)}
               className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
             >
-              {(bodyParts || []).map((p) => (
+              {(Array.isArray(bodyParts) ? bodyParts : []).map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
                 </option>
@@ -188,7 +188,7 @@ export default function CreateRecruitmentDialog() {
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
                 <option value="all">指定なし</option>
-                {(PREFECTURES || []).map((p) => (
+                {(Array.isArray(PREFECTURES) ? PREFECTURES : []).map((p) => (
                   <option key={p} value={p}>
                     {p}
                   </option>
@@ -204,7 +204,7 @@ export default function CreateRecruitmentDialog() {
                 onChange={(e) => setLevel(e.target.value)}
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
-                {(levelOptions || []).map((opt) => (
+                {(Array.isArray(levelOptions) ? levelOptions : []).map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -256,7 +256,7 @@ export default function CreateRecruitmentDialog() {
                   <SelectValue placeholder="00:00〜23:30" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[240px] border-border bg-card">
-                  {(timeOptions || []).map((opt) => (
+                  {(Array.isArray(timeOptions) ? timeOptions : []).map((opt) => (
                     <SelectItem
                       key={opt.value}
                       value={opt.value}
