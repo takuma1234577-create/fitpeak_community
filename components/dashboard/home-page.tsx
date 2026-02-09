@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
+import { safeArray } from "@/lib/utils";
 import type {
   RecruitmentWithProfile,
   RecommendedUser,
@@ -86,7 +87,7 @@ function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-r from-gold/20 via-gold/10 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
       <div className="relative flex flex-col gap-4 px-6 py-8 sm:px-8 sm:py-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold/70">
+        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold/70" suppressHydrationWarning>
           {todayMotivation.date}
         </p>
         <h1 className="text-balance text-2xl font-black leading-tight text-foreground sm:text-3xl">
@@ -127,9 +128,10 @@ const EMPTY_MESSAGE =
 function RecommendedWorkoutsSection({
   posts,
 }: {
-  posts: RecruitmentWithProfile[];
+  posts: RecruitmentWithProfile[] | null | undefined;
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const safePosts = safeArray(posts);
   const scroll = (dir: "left" | "right") => {
     scrollRef.current?.scrollBy({
       left: dir === "left" ? -300 : 300,
@@ -146,7 +148,7 @@ function RecommendedWorkoutsSection({
             おすすめの合トレ (Recommended Workouts)
           </h2>
         </div>
-        {(posts ?? []).length > 0 && (
+        {safePosts.length > 0 && (
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -175,7 +177,7 @@ function RecommendedWorkoutsSection({
         )}
       </div>
 
-      {(posts ?? []).length === 0 ? (
+      {safePosts.length === 0 ? (
         <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
           <Dumbbell className="mx-auto h-10 w-10 text-muted-foreground/40" />
           <p className="mt-2 text-sm font-semibold text-muted-foreground">
@@ -195,7 +197,7 @@ function RecommendedWorkoutsSection({
           className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {(posts ?? []).map((post) => {
+          {safePosts.map((post) => {
             const profile = post?.profiles;
             const name = profile?.nickname || profile?.username || "ユーザー";
             const initial = name?.charAt(0) ?? "?";
@@ -339,9 +341,10 @@ function RecommendedUsersSection({
   users,
   myUserId,
 }: {
-  users: RecommendedUser[];
+  users: RecommendedUser[] | null | undefined;
   myUserId: string | null;
 }) {
+  const safeUsers = safeArray(users);
   return (
     <section className="flex flex-col gap-4">
       <SectionHeader
@@ -351,7 +354,7 @@ function RecommendedUsersSection({
         linkLabel="検索で仲間を探す"
       />
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {(users ?? []).map((user) => (
+        {safeArray(users).map((user) => (
           <RecommendedUserCard key={user.id} user={user} myUserId={myUserId} />
         ))}
       </div>
@@ -408,10 +411,11 @@ function NewArrivalUsersSection({
   users,
   myUserId,
 }: {
-  users: NewArrivalUser[];
+  users: NewArrivalUser[] | null | undefined;
   myUserId: string | null;
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const safeUsers = safeArray(users);
   const scroll = (dir: "left" | "right") => {
     scrollRef.current?.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" });
   };
@@ -425,7 +429,7 @@ function NewArrivalUsersSection({
             新規ユーザー (New Arrivals)
           </h2>
         </div>
-        {users.length > 0 && (
+        {safeUsers.length > 0 && (
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -453,7 +457,7 @@ function NewArrivalUsersSection({
           </div>
         )}
       </div>
-      {users.length === 0 ? (
+      {safeUsers.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground">まだ新規ユーザーはいません</p>
       ) : (
         <div
@@ -461,7 +465,7 @@ function NewArrivalUsersSection({
           className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {(users ?? []).map((user) => (
+          {safeUsers.map((user) => (
             <NewArrivalUserCard key={user.id} user={user} myUserId={myUserId} />
           ))}
         </div>
@@ -500,7 +504,7 @@ function YourGroupsSection() {
         .from("groups")
         .select("id, name")
         .in("id", ids);
-      const groupListTyped = (groupList ?? []) as { id: string; name: string }[];
+      const groupListTyped = safeArray(groupList) as { id: string; name: string }[];
       if (!cancelled) {
         if (error) {
           console.error("groups fetch:", error);
@@ -550,7 +554,7 @@ function YourGroupsSection() {
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            {(groups ?? []).map((group) => (
+            {safeArray(groups).map((group) => (
               <Link
                 key={group.id}
                 href={`/dashboard/groups/${group.id}`}

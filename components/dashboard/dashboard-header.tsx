@@ -30,15 +30,23 @@ export default function DashboardHeader() {
   const mobileRef = useRef<HTMLDivElement>(null);
 
   const fetchUnread = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { count } = await (supabase as any)
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("is_read", false);
-    setUnreadCount(typeof count === "number" ? count : 0);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { count, error } = await (supabase as any)
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_read", false);
+      if (error) {
+        setUnreadCount(0);
+        return;
+      }
+      setUnreadCount(typeof count === "number" ? count : 0);
+    } catch {
+      setUnreadCount(0);
+    }
   }, []);
 
   useEffect(() => {
