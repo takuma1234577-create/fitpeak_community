@@ -355,15 +355,10 @@ export default function IndividualChatView({
   const otherName = otherUser?.name ?? "ユーザー";
   const otherAvatar = otherUser?.avatar ?? "/placeholder.svg";
 
-  const containerClass = embedded
-    ? "flex h-[100dvh] flex-col bg-[#060606] overflow-hidden"
-    : "flex h-screen flex-col bg-[#060606]";
-
   return (
-    <div className={containerClass}>
-      <div className="flex flex-1 min-h-0">
-        <div className="flex flex-1 flex-col min-w-0 min-h-0">
-      <header className="sticky top-0 z-20 flex shrink-0 items-center gap-3 border-b border-border/30 bg-[#0c0c0c]/95 px-3 py-2.5 backdrop-blur-xl sm:px-4 md:py-3">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      {/* 1. ヘッダー (固定) */}
+      <header className="flex-none h-14 border-b border-border/30 flex items-center px-4 bg-background/95 backdrop-blur z-10">
         <Link
           href="/dashboard/messages"
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground -ml-1"
@@ -452,10 +447,11 @@ export default function IndividualChatView({
         )}
       </header>
 
+      {/* 2. メッセージエリア (スクロール領域) */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="relative flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain px-4 py-2 scrollbar-hide sm:px-6 min-h-0 touch-pan-y"
+        className="flex-1 overflow-y-auto overscroll-contain p-4 scroll-smooth min-h-0 touch-pan-y scrollbar-hide"
       >
         <DateChip label="Today" />
 
@@ -571,7 +567,7 @@ export default function IndividualChatView({
       </div>
 
       {showScrollBtn && (
-        <div className="absolute bottom-4 right-4 z-20 sm:bottom-6 sm:right-6">
+        <div className="absolute bottom-20 right-4 z-20 sm:bottom-20 sm:right-6">
           <button
             type="button"
             onClick={scrollToBottom}
@@ -583,8 +579,15 @@ export default function IndividualChatView({
         </div>
       )}
 
-      <div className="sticky bottom-0 z-10 shrink-0 border-t border-border/20 bg-[#0a0a0a]/95 px-3 py-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-5 sm:py-3">
-        <div className="flex items-end gap-2">
+      {/* 3. 入力エリア (下部固定) */}
+      <footer className="flex-none border-t border-border/30 bg-background p-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <form
+          className="flex gap-2 items-end"
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendText();
+          }}
+        >
           <input
             ref={fileInputRef}
             type="file"
@@ -592,132 +595,52 @@ export default function IndividualChatView({
             className="hidden"
             onChange={onFileChange}
           />
-          <div className="flex shrink-0 items-center gap-0.5 pb-1">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-secondary/50 hover:text-gold disabled:opacity-50"
-              aria-label="画像を添付"
-            >
-              {uploading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <ImagePlus className="h-5 w-5" />
-              )}
-            </button>
-          </div>
-
-          <div className="relative flex-1 min-w-0">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendText();
-                }
-              }}
-              placeholder="メッセージを入力..."
-              rows={1}
-              className="w-full resize-none rounded-[22px] border-0 bg-[#161616] px-4 py-2.5 text-[16px] text-foreground placeholder:text-muted-foreground/35 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-gold/25 max-h-[120px] md:text-sm"
-              style={{ minHeight: "42px" }}
-            />
-          </div>
-
-          <div className="shrink-0 pb-0.5">
-            <button
-              type="button"
-              onClick={sendText}
-              disabled={!input.trim() || sending}
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300",
-                input.trim() && !sending
-                  ? "bg-gold text-[#050505] shadow-md shadow-gold/20 hover:bg-gold-light active:scale-95"
-                  : "bg-transparent text-muted-foreground/25 cursor-default"
-              )}
-              aria-label="送信"
-            >
-              {sending ? (
-                <Loader2 className="h-[18px] w-[18px] animate-spin" />
-              ) : (
-                <Send className={cn("h-[18px] w-[18px]", input.trim() && "-translate-x-[1px]")} />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-        </div>
-
-        <aside className="hidden lg:block w-80 shrink-0 border-l border-border/30 bg-[#0a0a0a] overflow-y-auto">
-          <div className="sticky top-0 p-4">
-            <div className="rounded-xl border border-border/40 bg-[#111] p-4 shadow-sm">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <div className="relative h-24 w-24 overflow-hidden rounded-full ring-2 ring-border/40">
-                  {otherUser?.avatar ? (
-                    <Image
-                      src={otherAvatar}
-                      alt={otherName}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-secondary text-2xl font-bold text-foreground">
-                      {otherName.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                <span className="text-base font-bold text-foreground">{otherName}</span>
-              </div>
-              {otherUser?.bio && (
-                <p className="mt-3 text-sm text-muted-foreground leading-relaxed text-left whitespace-pre-wrap">
-                  {otherUser.bio}
-                </p>
-              )}
-              <dl className="mt-4 space-y-2.5 text-sm">
-                {otherUser?.home_gym && (
-                  <div className="flex items-start gap-2">
-                    <Dumbbell className="h-4 w-4 shrink-0 text-gold/70 mt-0.5" />
-                    <div>
-                      <dt className="text-muted-foreground/70">よく行くジム</dt>
-                      <dd className="font-medium text-foreground">{otherUser.home_gym}</dd>
-                    </div>
-                  </div>
-                )}
-                {otherUser?.exercises && otherUser.exercises.length > 0 && (
-                  <div className="flex items-start gap-2">
-                    <Dumbbell className="h-4 w-4 shrink-0 text-gold/70 mt-0.5" />
-                    <div className="min-w-0">
-                      <dt className="text-muted-foreground/70">エクササイズ</dt>
-                      <dd className="flex flex-wrap gap-1.5 mt-0.5">
-                        {otherUser.exercises.map((ex) => (
-                          <span
-                            key={ex}
-                            className="rounded-full bg-border/50 px-2.5 py-0.5 text-xs font-medium text-foreground"
-                          >
-                            {ex}
-                          </span>
-                        ))}
-                      </dd>
-                    </div>
-                  </div>
-                )}
-                {otherUser?.prefecture && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 shrink-0 text-gold/70 mt-0.5" />
-                    <div>
-                      <dt className="text-muted-foreground/70">住まい</dt>
-                      <dd className="font-medium text-foreground">{otherUser.prefecture}</dd>
-                    </div>
-                  </div>
-                )}
-              </dl>
-            </div>
-          </div>
-        </aside>
-      </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-secondary/50 hover:text-gold disabled:opacity-50"
+            aria-label="画像を添付"
+          >
+            {uploading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <ImagePlus className="h-5 w-5" />
+            )}
+          </button>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendText();
+              }
+            }}
+            placeholder="メッセージを入力..."
+            rows={1}
+            className="flex-1 min-h-[44px] max-h-32 p-2 border border-border rounded-2xl resize-none text-base focus:outline-none focus:ring-1 focus:ring-gold/25 bg-secondary text-foreground placeholder:text-muted-foreground"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || sending}
+            className={cn(
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all duration-300",
+              input.trim() && !sending
+                ? "bg-gold text-[#050505] shadow-md shadow-gold/20 hover:bg-gold-light active:scale-95"
+                : "bg-transparent text-muted-foreground/25 cursor-default"
+            )}
+            aria-label="送信"
+          >
+            {sending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className={cn("h-5 w-5", input.trim() && "-translate-x-[1px]")} />
+            )}
+          </button>
+        </form>
+      </footer>
     </div>
   );
 }
