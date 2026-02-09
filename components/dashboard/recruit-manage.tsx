@@ -83,7 +83,8 @@ export default function RecruitManage() {
           .eq("status", "pending");
         const byRec: Record<string, PendingParticipant[]> = {};
         ids.forEach((id) => (byRec[id] = []));
-        (pending ?? []).forEach((p: PendingParticipant) => {
+        const pendingList = Array.isArray(pending) ? pending : pending != null ? [pending] : [];
+        pendingList.forEach((p: PendingParticipant) => {
           if (!byRec[p.recruitment_id]) byRec[p.recruitment_id] = [];
           byRec[p.recruitment_id].push(p);
         });

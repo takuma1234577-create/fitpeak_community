@@ -58,9 +58,9 @@ export default function RecruitmentCard({
   const [reportOpen, setReportOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const spotsPercent = ((post.spots - post.spotsLeft) / post.spots) * 100;
-  const initial = post.user.initial ?? post.user.name.charAt(0);
-  const isCreator = myUserId && post.user_id === myUserId;
+  const spotsPercent = post?.spots != null && post.spots > 0 ? ((post.spots - (post.spotsLeft ?? 0)) / post.spots) * 100 : 0;
+  const initial = post?.user?.initial ?? post?.user?.name?.charAt(0) ?? "?";
+  const isCreator = myUserId && post?.user_id === myUserId;
 
   const buttonLabel =
     participantStatus === "approved"
@@ -187,7 +187,7 @@ export default function RecruitmentCard({
         </h3>
 
         <div className="flex flex-wrap gap-1.5">
-          {(post.tags || []).map((tag) => (
+          {(post?.tags ?? []).map((tag) => (
             <Badge
               key={tag}
               variant="secondary"
@@ -334,9 +334,9 @@ export default function RecruitmentCard({
                 {post.description}
               </p>
             )}
-            {(post.tags || []).length > 0 && (
+            {(post?.tags ?? []).length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {(post.tags || []).map((tag) => (
+                {(post?.tags ?? []).map((tag) => (
                   <Badge key={tag} variant="secondary" className="text-xs">
                     #{tag}
                   </Badge>

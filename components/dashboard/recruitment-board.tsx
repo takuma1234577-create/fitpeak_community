@@ -45,19 +45,22 @@ export default function RecruitmentBoard() {
         setLoading(false);
         return;
       }
-      const list: Record<string, unknown>[] = Array.isArray(rows)
-        ? (rows as Record<string, unknown>[])
-        : rows != null
-          ? [rows as Record<string, unknown>]
-          : [];
-      const mapped = list.map((r) => {
+      const rawList = Array.isArray(rows) ? rows : rows != null ? [rows] : [];
+      const list: Record<string, unknown>[] = (rawList as Record<string, unknown>[]) || [];
+      const mapped = (list || []).map((r) => {
+        if (!r || typeof r !== "object") return null;
         const eventDate = r.event_date != null ? String(r.event_date) : "";
         const d = eventDate ? new Date(eventDate) : new Date();
         const dateStr = Number.isNaN(d.getTime()) ? "—" : `${d.getMonth() + 1}/${d.getDate()}`;
         const timeStr = Number.isNaN(d.getTime()) ? "—" : d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) + "~";
         const prof = r.profiles as { id?: string; nickname?: string | null; username?: string | null; avatar_url?: string | null } | null | undefined;
         const name = (prof?.nickname ?? prof?.username ?? "ユーザー") as string;
-        const tags = r.target_body_part ? [String(r.target_body_part)] : [];
+        const tagsRaw = (r as { tags?: unknown; target_body_part?: unknown }).tags;
+        const tags = Array.isArray(tagsRaw)
+          ? tagsRaw.map((t) => String(t))
+          : r.target_body_part
+            ? [String(r.target_body_part)]
+            : [];
         return {
           id: String(r.id),
           title: String(r.title ?? ""),
@@ -65,7 +68,7 @@ export default function RecruitmentBoard() {
           date: dateStr,
           time: timeStr,
           location: r.location != null ? String(r.location) : "未設定",
-          tags,
+          tags: tags || [],
           user_id: String(r.user_id ?? ""),
           user: { name, title: "", initial: name.charAt(0) || "?", avatar: prof?.avatar_url ?? undefined },
           spots: 1,
@@ -73,10 +76,11 @@ export default function RecruitmentBoard() {
           event_date: eventDate,
         };
       });
-      setPosts(mapped);
+      const filtered = (mapped || []).filter((p): p is NonNullable<typeof p> => p != null) as RecruitmentPost[];
+      setPosts(filtered);
 
-      if (user && mapped.length > 0) {
-        const ids = mapped.map((p) => p.id);
+      if (user && filtered.length > 0) {
+        const ids = filtered.map((p) => p.id);
         const { data: parts } = await (supabase as any)
           .from("recruitment_participants")
           .select("recruitment_id, status")

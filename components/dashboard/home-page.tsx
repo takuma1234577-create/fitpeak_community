@@ -146,7 +146,7 @@ function RecommendedWorkoutsSection({
             おすすめの合トレ (Recommended Workouts)
           </h2>
         </div>
-        {posts.length > 0 && (
+        {(posts ?? []).length > 0 && (
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -175,7 +175,7 @@ function RecommendedWorkoutsSection({
         )}
       </div>
 
-      {posts.length === 0 ? (
+      {(posts ?? []).length === 0 ? (
         <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
           <Dumbbell className="mx-auto h-10 w-10 text-muted-foreground/40" />
           <p className="mt-2 text-sm font-semibold text-muted-foreground">
@@ -196,10 +196,15 @@ function RecommendedWorkoutsSection({
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {(posts ?? []).map((post) => {
-            const profile = post.profiles;
+            const profile = post?.profiles;
             const name = profile?.nickname || profile?.username || "ユーザー";
-            const initial = name.charAt(0);
-            const tags = post.target_body_part ? [post.target_body_part] : [];
+            const initial = name?.charAt(0) ?? "?";
+            const tagsRaw = (post as Record<string, unknown>).tags;
+            const tags = Array.isArray(tagsRaw)
+              ? (tagsRaw as string[]).map((t) => String(t))
+              : post?.target_body_part
+                ? [post.target_body_part]
+                : [];
             return (
               <Link
                 key={post.id}
@@ -482,7 +487,7 @@ function YourGroupsSection() {
         .from("group_members")
         .select("group_id")
         .eq("user_id", user.id);
-      const membersList = (members ?? []) as { group_id: string }[];
+      const membersList = (Array.isArray(members) ? members : []) as { group_id: string }[];
       if (memErr || !membersList.length) {
         if (!cancelled) {
           setGroups([]);
@@ -490,7 +495,7 @@ function YourGroupsSection() {
         }
         return;
       }
-      const ids = membersList.map((m) => m.group_id);
+      const ids = (membersList || []).map((m) => m.group_id);
       const { data: groupList, error } = await supabase
         .from("groups")
         .select("id, name")
