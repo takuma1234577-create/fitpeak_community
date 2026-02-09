@@ -16,25 +16,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import ReportDialog from "@/components/report-dialog";
 import { createClient } from "@/utils/supabase/client";
 import { safeArray } from "@/lib/utils";
+import type { RecruitmentPost } from "@/lib/recruit/types";
+import { applyToRecruitment, withdrawFromRecruitment } from "@/lib/recruit/api";
 
-export interface RecruitmentPost {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  location: string;
-  tags: string[];
-  description?: string;
-  user_id?: string;
-  user: {
-    name: string;
-    title: string;
-    avatar?: string;
-    initial?: string;
-  };
-  spots: number;
-  spotsLeft: number;
-}
+type Props = {
+  post: RecruitmentPost;
+  myUserId?: string | null;
+  myDisplayName?: string;
+  participantStatus?: "pending" | "approved" | "rejected" | "withdrawn";
+  onApplied?: () => void;
+  onWithdrawn?: () => void;
+};
 
 export default function RecruitmentCard({
   post,
@@ -43,14 +35,7 @@ export default function RecruitmentCard({
   participantStatus,
   onApplied,
   onWithdrawn,
-}: {
-  post: RecruitmentPost;
-  myUserId?: string | null;
-  myDisplayName?: string;
-  participantStatus?: "pending" | "approved" | "rejected" | "withdrawn";
-  onApplied?: () => void;
-  onWithdrawn?: () => void;
-}) {
+}: Props) {
   const [applyOpen, setApplyOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
@@ -59,9 +44,11 @@ export default function RecruitmentCard({
   const [reportOpen, setReportOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const spotsPercent = post?.spots != null && post.spots > 0 ? ((post.spots - (post.spotsLeft ?? 0)) / post.spots) * 100 : 0;
-  const initial = post?.user?.initial ?? post?.user?.name?.charAt(0) ?? "?";
-  const isCreator = myUserId && post?.user_id === myUserId;
+  const tags = safeArray(post.tags);
+  const spotsPercent =
+    post.spots != null && post.spots > 0 ? ((post.spots - (post.spotsLeft ?? 0)) / post.spots) * 100 : 0;
+  const initial = post.user?.initial ?? post.user?.name?.charAt(0) ?? "?";
+  const isCreator = myUserId && post.user_id === myUserId;
 
   const buttonLabel =
     participantStatus === "approved"
@@ -75,23 +62,18 @@ export default function RecruitmentCard({
     setSubmitting(true);
     setApplyError(null);
     const supabase = createClient();
-    const { error } = await (supabase as any)
-      .from("recruitment_participants")
-      .insert({ recruitment_id: post.id, user_id: myUserId, status: "pending" });
+    const { error } = await applyToRecruitment(
+      supabase,
+      post.id,
+      myUserId,
+      myDisplayName || "ユーザー",
+      post.user_id ?? ""
+    );
+    setSubmitting(false);
     if (error) {
-      setSubmitting(false);
-      setApplyError(error.message ?? "申請に失敗しました");
+      setApplyError(error);
       return;
     }
-    const applicantName = myDisplayName || "ユーザー";
-    await (supabase as any).from("notifications").insert({
-      user_id: post.user_id,
-      sender_id: myUserId,
-      type: "apply",
-      content: `${applicantName}さんから応募がありました`,
-      link: `/dashboard/recruit/manage?r=${post.id}`,
-    });
-    setSubmitting(false);
     setApplyOpen(false);
     onApplied?.();
   };
@@ -100,31 +82,13 @@ export default function RecruitmentCard({
     if (!myUserId || participantStatus !== "approved") return;
     setWithdrawing(true);
     const supabase = createClient();
-    const { data: recruitment } = await (supabase as any)
-      .from("recruitments")
-      .select("chat_room_id, user_id")
-      .eq("id", post.id)
-      .single();
-    await (supabase as any)
-      .from("recruitment_participants")
-      .update({ status: "withdrawn", updated_at: new Date().toISOString() })
-      .eq("recruitment_id", post.id)
-      .eq("user_id", myUserId);
-    if (recruitment?.chat_room_id) {
-      await (supabase as any)
-        .from("conversation_participants")
-        .delete()
-        .eq("conversation_id", recruitment.chat_room_id)
-        .eq("user_id", myUserId);
-    }
-    const myName = myDisplayName || "ユーザー";
-    await (supabase as any).from("notifications").insert({
-      user_id: recruitment?.user_id,
-      sender_id: myUserId,
-      type: "cancel",
-      content: `${myName}さんが「${post.title}」の参加を辞退しました`,
-      link: `/dashboard/recruit/manage?r=${post.id}`,
-    });
+    await withdrawFromRecruitment(
+      supabase,
+      post.id,
+      myUserId,
+      myDisplayName || "ユーザー",
+      post.user_id ?? ""
+    );
     setWithdrawing(false);
     setWithdrawConfirmOpen(false);
     onWithdrawn?.();
@@ -168,13 +132,12 @@ export default function RecruitmentCard({
           </Popover>
         )}
       </div>
+
       <div className="flex items-center justify-between border-b border-border/40 px-5 py-3.5">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 text-sm text-foreground">
-            <CalendarDays className="h-3.5 w-3.5 text-gold" />
-            <span className="font-bold">{post.date}</span>
-            <span className="text-muted-foreground">{post.time}</span>
-          </div>
+        <div className="flex items-center gap-1.5 text-sm text-foreground">
+          <CalendarDays className="h-3.5 w-3.5 text-gold" />
+          <span className="font-bold">{post.date}</span>
+          <span className="text-muted-foreground">{post.time}</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <MapPin className="h-3.5 w-3.5 text-gold/70" />
@@ -186,9 +149,8 @@ export default function RecruitmentCard({
         <h3 className="line-clamp-2 text-balance text-sm font-bold leading-snug text-foreground">
           {post.title}
         </h3>
-
         <div className="flex flex-wrap gap-1.5">
-          {safeArray(post?.tags).map((tag) => (
+          {tags.map((tag) => (
             <Badge
               key={tag}
               variant="secondary"
@@ -198,12 +160,9 @@ export default function RecruitmentCard({
             </Badge>
           ))}
         </div>
-
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted-foreground">
-              募集枠
-            </span>
+            <span className="text-[11px] font-semibold text-muted-foreground">募集枠</span>
             <span className="text-[11px] font-bold text-foreground">
               <span className="text-gold">{post.spotsLeft}</span>
               <span className="text-muted-foreground">/{post.spots}名</span>
@@ -221,22 +180,14 @@ export default function RecruitmentCard({
       <div className="flex items-center justify-between border-t border-border/40 px-5 py-3.5">
         <div className="flex items-center gap-2.5">
           <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border">
-            <AvatarImage
-              src={post.user.avatar || "/placeholder.svg"}
-              alt={post.user.name}
-            />
+            <AvatarImage src={post.user.avatar || "/placeholder.svg"} alt={post.user.name} />
             <AvatarFallback className="text-xs">{initial}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-foreground">
-              {post.user.name}
-            </span>
-            <span className="text-[10px] font-medium text-gold/80">
-              {post.user.title}
-            </span>
+            <span className="text-xs font-bold text-foreground">{post.user.name}</span>
+            <span className="text-[10px] font-medium text-gold/80">{post.user.title}</span>
           </div>
         </div>
-
         {isCreator ? (
           <Link
             href={`/dashboard/recruit/manage?r=${post.id}`}
@@ -252,7 +203,7 @@ export default function RecruitmentCard({
                 type="button"
                 disabled={withdrawing}
                 onClick={() => setWithdrawConfirmOpen(true)}
-                className="rounded-lg border border-red-500/40 bg-transparent px-2.5 py-1.5 text-xs font-bold text-red-500 transition-all hover:bg-red-500/10"
+                className="rounded-lg border border-red-500/40 bg-transparent px-2.5 py-1.5 text-xs font-bold text-red-500 transition-colors hover:bg-red-500/10"
               >
                 {withdrawing ? "処理中…" : "参加を辞退する"}
               </button>
@@ -260,16 +211,14 @@ export default function RecruitmentCard({
             <button
               type="button"
               disabled={participantStatus === "pending" || participantStatus === "approved"}
-              onClick={() => participantStatus ? undefined : setApplyOpen(true)}
-              className={`
-                flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-bold transition-all duration-300 active:scale-[0.97]
-                ${participantStatus === "approved"
-                  ? "border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400"
+              onClick={() => (participantStatus ? undefined : setApplyOpen(true))}
+              className={
+                participantStatus === "approved"
+                  ? "border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-400 flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-bold transition-all duration-300 active:scale-[0.97] cursor-default"
                   : participantStatus === "pending"
-                    ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 cursor-default"
-                    : "border-gold/40 bg-transparent text-gold hover:border-gold hover:bg-gold hover:text-[#050505]"
-                }
-              `}
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-bold transition-all duration-300 active:scale-[0.97] cursor-default"
+                    : "flex items-center gap-1.5 rounded-lg border border-gold/40 bg-transparent px-3.5 py-2 text-xs font-bold text-gold transition-all duration-300 hover:border-gold hover:bg-gold hover:text-[#050505] active:scale-[0.97]"
+              }
             >
               {buttonLabel}
               {participantStatus !== "pending" && participantStatus !== "approved" && (
@@ -331,13 +280,11 @@ export default function RecruitmentCard({
               {post.location}
             </p>
             {post.description && (
-              <p className="rounded-lg bg-secondary/50 p-3 text-foreground">
-                {post.description}
-              </p>
+              <p className="rounded-lg bg-secondary/50 p-3 text-foreground">{post.description}</p>
             )}
-            {safeArray(post?.tags).length > 0 && (
+            {tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {safeArray(post?.tags).map((tag) => (
+                {tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="text-xs">
                     #{tag}
                   </Badge>
@@ -345,9 +292,7 @@ export default function RecruitmentCard({
               </div>
             )}
           </div>
-          {applyError && (
-            <p className="text-sm text-destructive">{applyError}</p>
-          )}
+          {applyError && <p className="text-sm text-destructive">{applyError}</p>}
           <DialogFooter>
             <button
               type="button"

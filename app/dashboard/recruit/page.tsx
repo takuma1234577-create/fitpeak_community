@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import RecruitmentBoard from "@/components/dashboard/recruitment-board";
+import RecruitmentListPage from "@/components/recruit/RecruitmentListPage";
 
 export const metadata: Metadata = {
   title: "合トレ募集 - FITPEAK Community",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function RecruitPage() {
-  return <RecruitmentBoard />;
+  return <RecruitmentListPage />;
 }
