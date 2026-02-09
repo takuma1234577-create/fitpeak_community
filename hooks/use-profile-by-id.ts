@@ -19,14 +19,20 @@ export function useProfileById(profileId: string | null) {
       setProfile(null);
       return null;
     }
-    const sb = supabase as any;
-    const [followersRes, followingRes] = await Promise.all([
-      sb.from("follows").select("follower_id", { count: "exact", head: true }).eq("following_id", id),
-      sb.from("follows").select("following_id", { count: "exact", head: true }).eq("follower_id", id),
-    ]);
-    const followers_count = (followersRes as { count?: number }).count ?? 0;
-    const following_count = (followingRes as { count?: number }).count ?? 0;
     const row = data as Record<string, unknown> & { bench_press_max?: number };
+    let followers_count = 0;
+    let following_count = 0;
+    try {
+      const sb = supabase as any;
+      const [followersRes, followingRes] = await Promise.all([
+        sb.from("follows").select("follower_id", { count: "exact", head: true }).eq("following_id", id),
+        sb.from("follows").select("following_id", { count: "exact", head: true }).eq("follower_id", id),
+      ]);
+      followers_count = (followersRes as { count?: number })?.count ?? 0;
+      following_count = (followingRes as { count?: number })?.count ?? 0;
+    } catch (_e) {
+      // follows テーブルが無い or RLS で取得できない場合は 0 のまま
+    }
     const mapped: Profile = {
       ...row,
       name: (row.nickname ?? row.username ?? row.name) as string | null,
@@ -36,6 +42,7 @@ export function useProfileById(profileId: string | null) {
       achievements: Array.isArray(row.achievements) ? row.achievements : [],
       certifications: Array.isArray(row.certifications) ? row.certifications : [],
       email: (row.email as string) ?? null,
+      header_url: (row.header_url as string | null) ?? null,
       followers_count: (row.followers_count as number) ?? followers_count,
       following_count: (row.following_count as number) ?? following_count,
       collab_count: (row.collab_count as number) ?? 0,

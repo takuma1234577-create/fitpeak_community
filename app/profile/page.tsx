@@ -103,7 +103,8 @@ export default function ProfilePage() {
     );
   }
 
-  if (u && profileUserId && blockedIds.has(profileUserId)) {
+  const safeBlockedIds = blockedIds instanceof Set ? blockedIds : new Set<string>();
+  if (u && profileUserId && safeBlockedIds.has(profileUserId)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">このユーザーは表示できません</p>

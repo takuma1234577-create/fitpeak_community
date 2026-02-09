@@ -12,8 +12,10 @@ export default function ProfileDetails({
   achievements,
   certifications,
 }: ProfileDetailsProps) {
-  const hasAchievements = achievements.length > 0;
-  const hasCertifications = certifications.length > 0;
+  const safeAchievements = Array.isArray(achievements) ? achievements : [];
+  const safeCertifications = Array.isArray(certifications) ? certifications : [];
+  const hasAchievements = safeAchievements.length > 0;
+  const hasCertifications = safeCertifications.length > 0;
 
   if (!hasAchievements && !hasCertifications) return null;
 
@@ -28,7 +30,7 @@ export default function ProfileDetails({
             </h2>
           </div>
           <div className="flex flex-col gap-2.5">
-            {achievements.map((a, i) => (
+            {safeAchievements.map((a, i) => (
               <div
                 key={`${a.title}-${a.year}`}
                 className="flex items-center gap-4 rounded-xl border border-border/60 bg-card p-4 transition-colors hover:border-gold/20"
@@ -62,7 +64,7 @@ export default function ProfileDetails({
             </h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            {certifications.map((cert) => (
+            {safeCertifications.map((cert) => (
               <span
                 key={cert}
                 className="inline-flex items-center gap-1.5 rounded-full border border-gold/20 bg-gold/[0.06] px-3.5 py-1.5 text-xs font-bold text-gold"

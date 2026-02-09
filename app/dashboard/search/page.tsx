@@ -130,11 +130,11 @@ export default function SearchPage() {
     runSearch(query);
   };
 
-  const showKeywords = !searched || (!query.trim() && safeUsers.length === 0 && safeGroups.length === 0 && safeRecruitments.length === 0 && !loading);
-
   const safeUsers = Array.isArray(results.users) ? results.users : [];
   const safeRecruitments = Array.isArray(results.recruitments) ? results.recruitments : [];
   const safeGroups = Array.isArray(results.groups) ? results.groups : [];
+  const showKeywords = !searched || (!query.trim() && safeUsers.length === 0 && safeGroups.length === 0 && safeRecruitments.length === 0 && !loading);
+
   const filteredUsers = safeUsers.filter((u) => !blockedIds.has(u.id));
   const filteredRecruitments = safeRecruitments.filter((r) => !r.user_id || !blockedIds.has(r.user_id));
   const totalCount = filteredUsers.length + safeGroups.length + filteredRecruitments.length;

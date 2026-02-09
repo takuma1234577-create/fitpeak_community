@@ -147,7 +147,7 @@ export default function FollowListModal({
     }
   };
 
-  const list = tab === "followers" ? followers : following;
+  const list: FollowListItem[] = (tab === "followers" ? followers : following) ?? [];
   const displayName = (p: FollowListItem) => p.nickname || p.username || "ユーザー";
 
   return (
@@ -189,7 +189,7 @@ export default function FollowListModal({
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-gold" />
             </div>
-          ) : list.length === 0 ? (
+          ) : (list?.length ?? 0) === 0 ? (
             <p className="py-12 text-center text-sm text-muted-foreground">
               {tab === "followers" ? "フォロワーはいません" : "フォローしているユーザーはいません"}
             </p>

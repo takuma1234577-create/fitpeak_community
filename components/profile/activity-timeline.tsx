@@ -52,7 +52,7 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
       date: r.event_date,
       createdAt: r.created_at,
     }));
-    const groupItems: ActivityItem[] = members
+    const groupItems: ActivityItem[] = (members ?? [])
       .filter((m) => m.groups)
       .map((m) => ({
         type: "group",

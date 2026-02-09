@@ -45,8 +45,12 @@ export default function RecruitmentBoard() {
         setLoading(false);
         return;
       }
-      const list: unknown[] = Array.isArray(rows) ? rows : rows != null ? [rows] : [];
-      const mapped = list.map((r: Record<string, unknown>) => {
+      const list: Record<string, unknown>[] = Array.isArray(rows)
+        ? (rows as Record<string, unknown>[])
+        : rows != null
+          ? [rows as Record<string, unknown>]
+          : [];
+      const mapped = list.map((r) => {
         const eventDate = r.event_date != null ? String(r.event_date) : "";
         const d = eventDate ? new Date(eventDate) : new Date();
         const dateStr = Number.isNaN(d.getTime()) ? "—" : `${d.getMonth() + 1}/${d.getDate()}`;
