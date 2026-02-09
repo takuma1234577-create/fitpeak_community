@@ -41,6 +41,7 @@ export default function RecruitmentBoard() {
         .eq("status", "open")
         .order("created_at", { ascending: false });
       if (error) {
+        console.error("[合トレ募集] 一覧取得失敗:", error?.message, error);
         setPosts([]);
         setLoading(false);
         return;
@@ -95,7 +96,8 @@ export default function RecruitmentBoard() {
         setParticipantStatusByRecruitment(statusMap);
       }
     } catch (e) {
-      console.error("Recruitment board fetch error:", e);
+      console.error("[合トレ募集] 取得処理で例外:", e instanceof Error ? e.message : e, e);
+      if (e instanceof Error && e.stack) console.error("[合トレ募集] スタック:", e.stack);
       setPosts([]);
     } finally {
       setLoading(false);

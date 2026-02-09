@@ -57,6 +57,11 @@ export function useProfileById(profileId: string | null) {
       .eq("id", id)
       .single();
     if (error || !data) {
+      console.error("[プロフィール] 他ユーザー取得失敗:", {
+        profileId: id,
+        reason: error ? error.message : "data is null",
+        code: error?.code,
+      });
       setProfile(null);
       return null;
     }
@@ -71,17 +76,24 @@ export function useProfileById(profileId: string | null) {
       ]);
       followers_count = (followersRes as { count?: number })?.count ?? 0;
       following_count = (followingRes as { count?: number })?.count ?? 0;
-    } catch (_e) {
-      // follows テーブルが無い or RLS で取得できない場合は 0 のまま
+    } catch (e) {
+      console.warn("[プロフィール] フォロワー数取得でエラー (続行):", e);
     }
     const withCounts = {
       ...row,
       followers_count: (row.followers_count as number) ?? followers_count,
       following_count: (row.following_count as number) ?? following_count,
     };
-    const safeProfile = sanitizeProfile(withCounts);
-    setProfile(safeProfile);
-    return safeProfile;
+    try {
+      const safeProfile = sanitizeProfile(withCounts);
+      setProfile(safeProfile);
+      return safeProfile;
+    } catch (e) {
+      console.error("[プロフィール] データ正規化でエラー:", e);
+      if (e instanceof Error && e.stack) console.error("[プロフィール] スタック:", e.stack);
+      setProfile(null);
+      return null;
+    }
   }, []);
 
   useEffect(() => {

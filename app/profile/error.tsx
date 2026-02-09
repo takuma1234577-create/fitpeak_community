@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-export default function Error({
+export default function ProfileError({
   error,
   reset,
 }: {
@@ -10,15 +10,15 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[App] クラッシュの原因:", error?.message, error);
-    if (error?.stack) console.error("[App] スタック:", error.stack);
+    console.error("[プロフィール] クラッシュの原因:", error?.message, error);
+    if (error?.stack) console.error("[プロフィール] スタック:", error.stack);
   }, [error]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
-      <h2 className="text-lg font-bold text-foreground">問題が発生しました</h2>
+      <h2 className="text-lg font-bold text-foreground">プロフィールの表示で問題が発生しました</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        申し訳ありません。エラーが発生しました。
+        申し訳ありません。エラーが発生しました。コンソールに詳細を出力しています。
       </p>
       <button
         type="button"

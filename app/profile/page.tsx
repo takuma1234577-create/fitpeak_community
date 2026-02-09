@@ -96,6 +96,7 @@ export default function ProfilePage() {
   }
 
   if (u && !otherProfile) {
+    console.warn("[プロフィール] 他ユーザーが見つかりません:", { userId: u });
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <div className="rounded-xl border border-border/40 bg-card/50 px-6 py-8 text-center">
@@ -107,6 +108,7 @@ export default function ProfilePage() {
 
   const safeBlockedIds = blockedIds instanceof Set ? blockedIds : new Set<string>();
   if (u && profileUserId && safeBlockedIds.has(profileUserId)) {
+    console.warn("[プロフィール] ブロックにより非表示:", { profileUserId });
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">このユーザーは表示できません</p>
