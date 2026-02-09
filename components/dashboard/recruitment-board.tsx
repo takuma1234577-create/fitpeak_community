@@ -45,7 +45,7 @@ export default function RecruitmentBoard() {
         setLoading(false);
         return;
       }
-      const list = Array.isArray(rows) ? rows : [];
+      const list = Array.isArray(rows) ? rows : rows != null ? [rows] : [];
       const mapped = list.map((r: Record<string, unknown>) => {
         const eventDate = r.event_date != null ? String(r.event_date) : "";
         const d = eventDate ? new Date(eventDate) : new Date();
@@ -100,7 +100,8 @@ export default function RecruitmentBoard() {
 
   type PostWithDate = RecruitmentPost & { event_date?: string };
   const displayPosts = ((): RecruitmentPost[] => {
-    const withDate = (posts as PostWithDate[]).filter((p) => !p.user_id || !blockedIds.has(p.user_id));
+    const safePosts = Array.isArray(posts) ? posts : [];
+    const withDate = (safePosts as PostWithDate[]).filter((p) => !p.user_id || !blockedIds.has(p.user_id));
     if (sort === "newest") return withDate;
     const now = Date.now();
     const sorted = [...withDate].sort((a, b) => {
