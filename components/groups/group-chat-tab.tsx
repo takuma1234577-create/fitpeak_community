@@ -94,7 +94,8 @@ export default function GroupChatTab({
     if (!text) return;
     setInput("");
     const supabase = createClient();
-    const { data: inserted, error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: inserted, error } = await (supabase as any)
       .from("messages")
       .insert({
         conversation_id: conversationId,
@@ -107,23 +108,24 @@ export default function GroupChatTab({
       console.error("send group message:", error);
       return;
     }
+    const insertedRow = inserted as { id: string; sender_id: string; content: string; created_at: string } | null;
+    if (!insertedRow) return;
     const { data: prof } = await supabase
       .from("profiles")
       .select("nickname, username, avatar_url")
       .eq("id", myUserId)
       .single();
-    const name = (prof as { nickname: string | null; username: string | null } | null)?.nickname
-      || (prof as { username: string | null } | null)?.username
-      || "自分";
+    const profRow = prof as { nickname: string | null; username: string | null; avatar_url: string | null } | null;
+    const name = profRow?.nickname || profRow?.username || "自分";
     setMessages((prev) => [
       ...prev,
       {
-        id: inserted.id,
-        sender_id: inserted.sender_id,
-        content: inserted.content,
-        created_at: inserted.created_at,
+        id: insertedRow.id,
+        sender_id: insertedRow.sender_id,
+        content: insertedRow.content,
+        created_at: insertedRow.created_at,
         sender_name: name,
-        sender_avatar: (prof as { avatar_url: string | null } | null)?.avatar_url ?? null,
+        sender_avatar: profRow?.avatar_url ?? null,
       },
     ]);
   };

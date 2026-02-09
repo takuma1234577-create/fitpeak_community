@@ -116,7 +116,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
       .eq("user_id", myUserId)
       .single();
     if (isMember) {
-      await supabase.from("conversation_participants").insert({
+      await (supabase as any).from("conversation_participants").insert({
         conversation_id: group.chat_room_id,
         user_id: myUserId,
       });
@@ -128,12 +128,13 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
     setJoining(true);
     try {
       const supabase = createClient();
-      await supabase.from("group_members").insert({
+      const sb = supabase as any;
+      await sb.from("group_members").insert({
         group_id: group.id,
         user_id: myUserId,
       });
       if (group.chat_room_id) {
-        await supabase.from("conversation_participants").insert({
+        await sb.from("conversation_participants").insert({
           conversation_id: group.chat_room_id,
           user_id: myUserId,
         });

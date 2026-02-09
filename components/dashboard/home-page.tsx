@@ -322,24 +322,26 @@ function YourGroupsSection() {
         .from("group_members")
         .select("group_id")
         .eq("user_id", user.id);
-      if (memErr || !members?.length) {
+      const membersList = (members ?? []) as { group_id: string }[];
+      if (memErr || !membersList.length) {
         if (!cancelled) {
           setGroups([]);
           setLoading(false);
         }
         return;
       }
-      const ids = members.map((m) => m.group_id);
+      const ids = membersList.map((m) => m.group_id);
       const { data: groupList, error } = await supabase
         .from("groups")
         .select("id, name")
         .in("id", ids);
+      const groupListTyped = (groupList ?? []) as { id: string; name: string }[];
       if (!cancelled) {
         if (error) {
           console.error("groups fetch:", error);
           setGroups([]);
         } else {
-          setGroups((groupList ?? []).map((g) => ({ id: g.id, name: g.name, unread: 0 })));
+          setGroups(groupListTyped.map((g) => ({ id: g.id, name: g.name, unread: 0 })));
         }
         setLoading(false);
       }

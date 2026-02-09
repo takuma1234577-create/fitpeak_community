@@ -86,8 +86,10 @@ export default function CreateGroupDialog({
         setSubmitting(false);
         return;
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any;
       if (isEdit && editGroupId) {
-        const { error: updateErr } = await supabase
+        const { error: updateErr } = await sb
           .from("groups")
           .update({
             name: groupName.trim(),
@@ -112,7 +114,7 @@ export default function CreateGroupDialog({
         setSubmitting(false);
         return;
       }
-      const { data: conv, error: convErr } = await supabase
+      const { data: conv, error: convErr } = await sb
         .from("conversations")
         .insert({})
         .select("id")
@@ -122,7 +124,7 @@ export default function CreateGroupDialog({
         setSubmitting(false);
         return;
       }
-      const { data: group, error: groupErr } = await supabase
+      const { data: group, error: groupErr } = await sb
         .from("groups")
         .insert({
           name: groupName.trim(),
@@ -139,11 +141,11 @@ export default function CreateGroupDialog({
         setSubmitting(false);
         return;
       }
-      await supabase.from("group_members").insert({
+      await sb.from("group_members").insert({
         group_id: group.id,
         user_id: user.id,
       });
-      await supabase.from("conversation_participants").insert({
+      await sb.from("conversation_participants").insert({
         conversation_id: conv.id,
         user_id: user.id,
       });
