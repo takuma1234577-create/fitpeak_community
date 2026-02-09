@@ -16,7 +16,7 @@ export default function DashboardHeader() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showKeywords, setShowKeywords] = useState(false);
-  const desktopRef = useRef<HTMLDivElement>(null);
+  const desktopRef = useRef<HTMLFormElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
 
   const goSearch = (q: string) => {

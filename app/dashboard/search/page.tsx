@@ -33,7 +33,8 @@ export default function SearchPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.rpc("search_profiles", {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc("search_profiles", {
         search_text: term,
       });
       if (error) {

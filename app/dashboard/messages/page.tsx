@@ -22,6 +22,9 @@ function formatMessageTime(iso: string) {
   return d.toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
 }
 
+type MessageRow = { id: string; conversation_id?: string; sender_id: string; content: string; created_at: string };
+type ParticipantRow = { conversation_id: string; user_id: string; profiles: { id: string; nickname: string | null; username: string | null; avatar_url: string | null } | null };
+
 export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,10 +64,12 @@ export default function MessagesPage() {
       .in("conversation_id", convIds)
       .order("created_at", { ascending: false });
 
+    const lastMessagesList = (lastMessages ?? []) as MessageRow[];
     const lastByConv = new Map<string, { content: string; created_at: string }>();
-    for (const m of lastMessages ?? []) {
-      if (!lastByConv.has(m.conversation_id)) {
-        lastByConv.set(m.conversation_id, { content: m.content, created_at: m.created_at });
+    for (const m of lastMessagesList) {
+      const cid = m.conversation_id;
+      if (cid && !lastByConv.has(cid)) {
+        lastByConv.set(cid, { content: m.content, created_at: m.created_at });
       }
     }
 
@@ -73,12 +78,13 @@ export default function MessagesPage() {
       .select("conversation_id, user_id, profiles(id, nickname, username, avatar_url)")
       .in("conversation_id", convIds);
 
+    const participantsList = (participants ?? []) as ParticipantRow[];
     const otherByConv = new Map<string, { id: string; name: string; avatar: string | null }>();
-    for (const p of participants ?? []) {
-      if ((p as { user_id: string }).user_id === user.id) continue;
-      const prof = (p as { profiles: { id: string; nickname: string | null; username: string | null; avatar_url: string | null } | null }).profiles;
+    for (const p of participantsList) {
+      if (p.user_id === user.id) continue;
+      const prof = p.profiles;
       if (prof) {
-        otherByConv.set((p as { conversation_id: string }).conversation_id, {
+        otherByConv.set(p.conversation_id, {
           id: prof.id,
           name: prof.nickname || prof.username || "ユーザー",
           avatar: prof.avatar_url,
@@ -128,7 +134,8 @@ export default function MessagesPage() {
         setMessagesLoading(false);
         return;
       }
-      const list: Message[] = (msgs ?? []).map((m) => ({
+      const msgsList = (msgs ?? []) as { id: string; sender_id: string; content: string; created_at: string }[];
+      const list: Message[] = msgsList.map((m) => ({
         id: m.id,
         text: m.content,
         time: new Date(m.created_at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
@@ -177,7 +184,8 @@ export default function MessagesPage() {
     async (text: string) => {
       if (!activeId || !myUserId) return;
       const supabase = createClient();
-      const { data: inserted, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: inserted, error } = await (supabase as any)
         .from("messages")
         .insert({
           conversation_id: activeId,
@@ -190,12 +198,14 @@ export default function MessagesPage() {
         console.error("send message:", error);
         return;
       }
+      const row = inserted as { id: string; content: string; created_at: string } | null;
+      if (!row) return;
       setMessages((prev) => [
         ...prev,
         {
-          id: inserted.id,
-          text: inserted.content,
-          time: new Date(inserted.created_at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
+          id: row.id,
+          text: row.content,
+          time: new Date(row.created_at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
           isMe: true,
         },
       ]);
