@@ -265,7 +265,7 @@ export default function RecruitManage() {
         </div>
       ) : (
         <ul className="space-y-4">
-          {(list ?? []).map((r) => {
+          {(list || []).map((r) => {
             const d = new Date(r.event_date);
             const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
             const timeStr = d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
@@ -324,7 +324,7 @@ export default function RecruitManage() {
                       承認待ち ({pendingList.length}名)
                     </p>
                     <ul className="space-y-2">
-                      {(Array.isArray(pendingList) ? pendingList : []).map((p) => {
+                      {(pendingList || []).map((p) => {
                         const name = p.profiles?.nickname || p.profiles?.username || "ユーザー";
                         const key = `${r.id}-${p.user_id}`;
                         const isLoading = actionLoading === key;
@@ -402,7 +402,7 @@ export default function RecruitManage() {
                 onChange={(e) => setEditTargetBodyPart(e.target.value)}
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
-                {(Array.isArray(bodyParts) ? bodyParts : []).map((p) => (
+                {(bodyParts || []).map((p) => (
                   <option key={p.value} value={p.value}>
                     {p.label}
                   </option>

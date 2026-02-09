@@ -159,7 +159,7 @@ export default function RecruitmentBoard() {
         <div className="flex justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
         </div>
-      ) : displayRecruitments.length === 0 ? (
+      ) : !displayRecruitments || displayRecruitments.length === 0 ? (
         <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">まだ募集はありません</p>
           <button
@@ -172,7 +172,7 @@ export default function RecruitmentBoard() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {displayRecruitments.map((post) => (
+          {(displayRecruitments || []).map((post) => (
             <RecruitmentCard
               key={post.id}
               post={post}
