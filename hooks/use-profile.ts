@@ -96,12 +96,20 @@ export function useProfile() {
         if ((updates as { instagram_id?: string }).instagram_id !== undefined) {
           dbUpdates.instagram_id = (updates as { instagram_id: string }).instagram_id;
         }
+        if ((updates as { youtube_url?: string }).youtube_url !== undefined) {
+          dbUpdates.youtube_url = (updates as { youtube_url: string }).youtube_url;
+        }
+        if ((updates as { twitter_url?: string }).twitter_url !== undefined) {
+          dbUpdates.twitter_url = (updates as { twitter_url: string }).twitter_url;
+        }
+        if ((updates as { tiktok_url?: string }).tiktok_url !== undefined) {
+          dbUpdates.tiktok_url = (updates as { tiktok_url: string }).tiktok_url;
+        }
+        if ((updates as { facebook_url?: string }).facebook_url !== undefined) {
+          dbUpdates.facebook_url = (updates as { facebook_url: string }).facebook_url;
+        }
 
-        const { error } = await supabase
-          .from("profiles")
-          // @ts-expect-error - Supabase JS update() expects never when generic is not inferred
-          .update(dbUpdates)
-          .eq("id", user.id);
+        const { error } = await (supabase as any).from("profiles").update(dbUpdates).eq("id", user.id);
 
         if (error) throw error;
         const next = await fetchProfile();

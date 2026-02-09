@@ -11,15 +11,18 @@ import {
   Flame,
   Shield,
   Clock,
-  Sparkles,
   MessageCircle,
+  Dumbbell,
+  Users,
   Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
-import type { RecruitmentsRow } from "@/types/supabase";
-import type { ProfilesRow } from "@/types/supabase";
+import type {
+  RecruitmentWithProfile,
+  RecommendedUser,
+} from "@/lib/recommendations";
 
 const todayMotivation = {
   greeting: "おかえりなさい。",
@@ -115,42 +118,15 @@ function MyScheduleSection() {
   );
 }
 
-type RecruitmentWithProfile = RecruitmentsRow & { profiles: ProfilesRow | null };
+const EMPTY_MESSAGE =
+  "まだおすすめはありません。プロフィールを充実させましょう！";
 
-function RecommendedSection() {
-  const [posts, setPosts] = useState<RecruitmentWithProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+function RecommendedWorkoutsSection({
+  posts,
+}: {
+  posts: RecruitmentWithProfile[];
+}) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      const { data, error } = await supabase
-        .from("recruitments")
-        .select("*, profiles(*)")
-        .eq("status", "open")
-        .neq("user_id", user.id)
-        .order("event_date", { ascending: true })
-        .limit(10);
-      if (!cancelled) {
-        if (error) {
-          console.error("recruitments fetch:", error);
-          setPosts([]);
-        } else {
-          setPosts((data as RecruitmentWithProfile[]) ?? []);
-        }
-        setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
   const scroll = (dir: "left" | "right") => {
     scrollRef.current?.scrollBy({
       left: dir === "left" ? -300 : 300,
@@ -158,149 +134,195 @@ function RecommendedSection() {
     });
   };
 
-  if (loading) {
-    return (
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <Sparkles className="h-5 w-5 text-gold" />
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <Dumbbell className="h-5 w-5 text-gold" />
           <h2 className="text-lg font-extrabold tracking-wide text-foreground">
-            あなたへのおすすめ
+            おすすめの合トレ (Recommended Workouts)
           </h2>
         </div>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-gold/60" />
-        </div>
-      </section>
-    );
-  }
+        {posts.length > 0 && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => scroll("left")}
+              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
+              aria-label="前へスクロール"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scroll("right")}
+              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
+              aria-label="次へスクロール"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <Link
+              href="/dashboard/recruit"
+              className="ml-2 flex items-center gap-1 text-xs font-semibold text-gold/80 transition-colors hover:text-gold"
+            >
+              すべて見る
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        )}
+      </div>
 
-  if (posts.length === 0) {
-    return (
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <Sparkles className="h-5 w-5 text-gold" />
-          <h2 className="text-lg font-extrabold tracking-wide text-foreground">
-            あなたへのおすすめ
-          </h2>
-        </div>
+      {posts.length === 0 ? (
         <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
-          <Sparkles className="mx-auto h-10 w-10 text-muted-foreground/40" />
+          <Dumbbell className="mx-auto h-10 w-10 text-muted-foreground/40" />
           <p className="mt-2 text-sm font-semibold text-muted-foreground">
-            いま募集中の募集はありません
+            {EMPTY_MESSAGE}
           </p>
           <Link
             href="/dashboard/recruit"
             className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-gold transition-colors hover:text-gold-light"
           >
-            合トレ募集を見る
+            合トレ募集を探す
             <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
-      </section>
-    );
-  }
+      ) : (
+        <div
+          ref={scrollRef}
+          className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {posts.map((post) => {
+            const profile = post.profiles;
+            const name = profile?.nickname || profile?.username || "ユーザー";
+            const initial = name.charAt(0);
+            const tags = post.target_body_part ? [post.target_body_part] : [];
+            return (
+              <Link
+                key={post.id}
+                href={`/dashboard/recruit?r=${post.id}`}
+                className="group flex w-[300px] shrink-0 flex-col rounded-xl border border-border/60 bg-card transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/[0.04]"
+              >
+                <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
+                  <div className="flex items-center gap-1.5 text-sm text-foreground">
+                    <CalendarDays className="h-3.5 w-3.5 text-gold" />
+                    <span className="font-bold">{formatRecruitDate(post.event_date)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatRecruitTime(post.event_date)}
+                    </span>
+                  </div>
+                  {post.location && (
+                    <div className="flex max-w-[100px] items-center gap-1 truncate text-[11px] text-muted-foreground">
+                      <MapPin className="h-3 w-3 shrink-0 text-gold/70" />
+                      <span className="truncate font-medium">{post.location}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-1 flex-col gap-3 px-4 py-3.5">
+                  <h3 className="line-clamp-2 text-sm font-bold leading-snug text-foreground">
+                    {post.title}
+                  </h3>
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {tags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="border-0 bg-gold/10 px-2 py-0.5 text-[11px] font-semibold text-gold/90 hover:bg-gold/20"
+                        >
+                          #{tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between border-t border-border/40 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="relative h-7 w-7 shrink-0 ring-1 ring-border">
+                      <AvatarImage src={profile?.avatar_url ?? undefined} alt={name} />
+                      <AvatarFallback className="text-[10px]">{initial}</AvatarFallback>
+                    </Avatar>
+                    <span className="max-w-[140px] truncate text-xs font-semibold text-muted-foreground">
+                      {name}
+                    </span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-gold/60" />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
 
+function RecommendedUsersSection({ users }: { users: RecommendedUser[] }) {
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <Sparkles className="h-5 w-5 text-gold" />
-          <h2 className="text-lg font-extrabold tracking-wide text-foreground">
-            あなたへのおすすめ
-          </h2>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => scroll("left")}
-            className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
-            aria-label="前へスクロール"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scroll("right")}
-            className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
-            aria-label="次へスクロール"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+      <SectionHeader
+        icon={Users}
+        title="おすすめのユーザー (Recommended Users)"
+        href="/dashboard/search"
+        linkLabel="検索で仲間を探す"
+      />
+
+      {users.length === 0 ? (
+        <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
+          <Users className="mx-auto h-10 w-10 text-muted-foreground/40" />
+          <p className="mt-2 text-sm font-semibold text-muted-foreground">
+            {EMPTY_MESSAGE}
+          </p>
           <Link
-            href="/dashboard/recruit"
-            className="ml-2 flex items-center gap-1 text-xs font-semibold text-gold/80 transition-colors hover:text-gold"
+            href="/dashboard/settings"
+            className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-gold transition-colors hover:text-gold-light"
           >
-            すべて見る
+            プロフィールを編集
             <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
-      </div>
-
-      <div
-        ref={scrollRef}
-        className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-      >
-        {posts.map((post) => {
-          const profile = post.profiles;
-          const name = profile?.nickname || profile?.username || "ユーザー";
-          const initial = name.charAt(0);
-          const tags = post.target_body_part ? [post.target_body_part] : [];
-          return (
-            <Link
-              key={post.id}
-              href={`/dashboard/recruit#${post.id}`}
-              className="group flex w-[300px] shrink-0 flex-col rounded-xl border border-border/60 bg-card transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/[0.04]"
-            >
-              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
-                <div className="flex items-center gap-1.5 text-sm text-foreground">
-                  <CalendarDays className="h-3.5 w-3.5 text-gold" />
-                  <span className="font-bold">{formatRecruitDate(post.event_date)}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatRecruitTime(post.event_date)}
-                  </span>
-                </div>
-                {post.location && (
-                  <div className="flex max-w-[100px] items-center gap-1 truncate text-[11px] text-muted-foreground">
-                    <MapPin className="h-3 w-3 shrink-0 text-gold/70" />
-                    <span className="truncate font-medium">{post.location}</span>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {users.map((user) => {
+            const name = user.nickname || user.username || "ユーザー";
+            const initial = name.charAt(0);
+            return (
+              <Link
+                key={user.id}
+                href={`/profile?u=${user.id}`}
+                className="flex items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80"
+              >
+                <Avatar className="h-12 w-12 shrink-0 ring-1 ring-border/60">
+                  <AvatarImage src={user.avatar_url ?? undefined} alt={name} />
+                  <AvatarFallback className="bg-secondary text-sm font-bold">
+                    {initial}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-foreground">{name}</p>
+                  {user.bio && (
+                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                      {user.bio}
+                    </p>
+                  )}
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
+                    {user.prefecture && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3 text-gold/70" />
+                        {user.prefecture}
+                      </span>
+                    )}
+                    {user.home_gym && (
+                      <span className="truncate">{user.home_gym}</span>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="flex flex-1 flex-col gap-3 px-4 py-3.5">
-                <h3 className="line-clamp-2 text-sm font-bold leading-snug text-foreground">
-                  {post.title}
-                </h3>
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="border-0 bg-gold/10 px-2 py-0.5 text-[11px] font-semibold text-gold/90 hover:bg-gold/20"
-                      >
-                        #{tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center justify-between border-t border-border/40 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <Avatar className="relative h-7 w-7 shrink-0 ring-1 ring-border">
-                    <AvatarImage src={profile?.avatar_url ?? undefined} alt={name} />
-                    <AvatarFallback className="text-[10px]">{initial}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs font-semibold text-muted-foreground truncate max-w-[140px]">
-                    {name}
-                  </span>
                 </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-gold/60" />
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
@@ -437,12 +459,21 @@ function YourGroupsSection() {
   );
 }
 
-export default function HomePage() {
+type HomePageProps = {
+  recommendedWorkouts: RecruitmentWithProfile[];
+  recommendedUsers: RecommendedUser[];
+};
+
+export default function HomePage({
+  recommendedWorkouts,
+  recommendedUsers,
+}: HomePageProps) {
   return (
     <div className="flex flex-col gap-8">
       <HeroSection />
       <MyScheduleSection />
-      <RecommendedSection />
+      <RecommendedWorkoutsSection posts={recommendedWorkouts} />
+      <RecommendedUsersSection users={recommendedUsers} />
       <YourGroupsSection />
     </div>
   );

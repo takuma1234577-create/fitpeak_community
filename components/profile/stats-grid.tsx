@@ -11,8 +11,6 @@ export default function StatsGrid({
   squatMax,
   deadliftMax,
 }: StatsGridProps) {
-  const totalWeight = benchMax + squatMax + deadliftMax;
-
   const big3Stats = [
     { label: "ベンチプレス", value: benchMax, unit: "kg" },
     { label: "スクワット", value: squatMax, unit: "kg" },
@@ -26,18 +24,6 @@ export default function StatsGrid({
         <h2 className="text-lg font-extrabold tracking-tight text-foreground">
           BIG3 記録
         </h2>
-      </div>
-
-      <div className="relative mb-4 overflow-hidden rounded-xl border border-gold/20 bg-gradient-to-br from-gold/[0.08] to-transparent p-6">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-gold/70">
-          BIG3 Total
-        </p>
-        <div className="flex items-baseline gap-2">
-          <span className="tabular-nums text-6xl font-black leading-none text-foreground sm:text-7xl">
-            {totalWeight}
-          </span>
-          <span className="text-2xl font-bold text-muted-foreground">kg</span>
-        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">

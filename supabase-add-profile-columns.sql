@@ -18,3 +18,8 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_age_public boolean DEFAU
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_prefecture_public boolean DEFAULT true;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_home_gym_public boolean DEFAULT true;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+-- SNS リンク（URL または ID を保存）
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS youtube_url text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS twitter_url text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS tiktok_url text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS facebook_url text;

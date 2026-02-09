@@ -1,8 +1,10 @@
+import Link from "next/link";
+import { Dumbbell, Plus, Users } from "lucide-react";
 import AuthForm from "@/components/auth-form";
 
 export default function Page() {
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-16">
+    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-background px-4 py-12 md:py-16">
       <div
         className="absolute inset-0"
         style={{ pointerEvents: "none" }}
@@ -27,6 +29,38 @@ export default function Page() {
           }}
         />
       </div>
+
+      {/* ヒーローセクション + CTA */}
+      <div className="relative z-10 mb-10 w-full max-w-[440px] text-center">
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="flex items-center gap-3">
+            <Dumbbell className="h-10 w-10 text-gold" strokeWidth={2.5} />
+            <h1 className="text-4xl font-black tracking-[0.2em] text-gold md:text-5xl">
+              FITPEAK
+            </h1>
+          </div>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Community
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
+          <Link
+            href="/dashboard/recruit"
+            className="flex items-center justify-center gap-2 rounded-xl bg-gold px-6 py-4 text-sm font-black uppercase tracking-wider text-[#050505] shadow-lg shadow-gold/25 transition-all duration-300 hover:bg-gold-light hover:shadow-xl hover:shadow-gold/30 active:scale-[0.98]"
+          >
+            <Plus className="h-5 w-5" strokeWidth={2.5} />
+            合トレを募集する
+          </Link>
+          <Link
+            href="/dashboard/search"
+            className="flex items-center justify-center gap-2 rounded-xl border-2 border-gold/60 bg-gold/10 px-6 py-4 text-sm font-black uppercase tracking-wider text-gold transition-all duration-300 hover:bg-gold/20 hover:border-gold active:scale-[0.98]"
+          >
+            <Users className="h-5 w-5" strokeWidth={2.5} />
+            筋トレ仲間を探す
+          </Link>
+        </div>
+      </div>
+
       <div className="relative z-10 w-full" style={{ pointerEvents: "auto" }}>
         <AuthForm />
       </div>

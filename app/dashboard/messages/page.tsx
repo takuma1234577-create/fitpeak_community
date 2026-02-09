@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import ConversationList, {
   type Conversation,
 } from "@/components/messages/conversation-list";
@@ -26,6 +27,7 @@ type MessageRow = { id: string; conversation_id?: string; sender_id: string; con
 type ParticipantRow = { conversation_id: string; user_id: string; profiles: { id: string; nickname: string | null; username: string | null; avatar_url: string | null } | null };
 
 export default function MessagesPage() {
+  const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -143,32 +145,41 @@ export default function MessagesPage() {
       }));
       setMessages(list);
 
+      const { data: parts } = await supabase
+        .from("conversation_participants")
+        .select("user_id, profiles(id, nickname, username, avatar_url)")
+        .eq("conversation_id", conversationId)
+        .neq("user_id", myUserId)
+        .limit(1)
+        .maybeSingle();
+      const part = parts as { profiles: { id: string; nickname: string | null; username: string | null; avatar_url: string | null } | null } | null;
+      const prof = part?.profiles;
       const conv = conversations.find((c) => c.id === conversationId);
-      if (conv) {
-        const { data: parts } = await supabase
-          .from("conversation_participants")
-          .select("user_id, profiles(id, nickname, username, avatar_url)")
-          .eq("conversation_id", conversationId)
-          .neq("user_id", myUserId)
-          .limit(1)
-          .single();
-        const prof = (parts as { profiles: { id: string; nickname: string | null; username: string | null; avatar_url: string | null } | null } | null)?.profiles;
-        setOtherUser(
-          prof
-            ? {
-                id: prof.id,
-                name: prof.nickname || prof.username || "ユーザー",
-                avatar: prof.avatar_url ?? "/placeholder.svg",
-                title: "",
-                online: false,
-              }
-            : { id: "", name: conv.name, avatar: conv.avatar, title: "", online: false }
-        );
-      }
+      setOtherUser(
+        prof
+          ? {
+              id: prof.id,
+              name: prof.nickname || prof.username || "ユーザー",
+              avatar: prof.avatar_url ?? "/placeholder.svg",
+              title: "",
+              online: false,
+            }
+          : conv
+            ? { id: "", name: conv.name, avatar: conv.avatar, title: "", online: false }
+            : { id: "", name: "ユーザー", avatar: "/placeholder.svg", title: "", online: false }
+      );
       setMessagesLoading(false);
     },
     [myUserId, conversations]
   );
+
+  const cFromUrl = searchParams.get("c");
+  useEffect(() => {
+    if (!cFromUrl || !myUserId) return;
+    setActiveId(cFromUrl);
+    setShowChat(true);
+    loadMessages(cFromUrl);
+  }, [cFromUrl, myUserId, loadMessages]);
 
   const handleSelect = (id: string) => {
     setActiveId(id);

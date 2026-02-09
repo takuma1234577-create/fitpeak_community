@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -8,18 +9,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SlidersHorizontal } from "lucide-react";
+import { PREFECTURES } from "@/lib/constants";
 
-const areas = [
-  { value: "all", label: "全エリア" },
-  { value: "shibuya", label: "渋谷" },
-  { value: "shinjuku", label: "新宿" },
-  { value: "ikebukuro", label: "池袋" },
-  { value: "roppongi", label: "六本木" },
-  { value: "ginza", label: "銀座" },
-  { value: "yokohama", label: "横浜" },
-];
-
-const bodyParts = [
+export const bodyParts = [
   { value: "all", label: "全部位" },
   { value: "chest", label: "胸" },
   { value: "back", label: "背中" },
@@ -38,6 +30,8 @@ const levels = [
 ];
 
 export default function FilterBar() {
+  const [prefecture, setPrefecture] = useState<string>("all");
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
       <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
@@ -46,18 +40,21 @@ export default function FilterBar() {
       </div>
 
       <div className="flex flex-1 flex-wrap gap-2">
-        <Select defaultValue="all">
-          <SelectTrigger className="h-9 w-full border-border/60 bg-secondary/60 text-sm font-semibold focus:border-gold/50 focus:ring-gold/20 sm:w-[140px] [&>span]:text-foreground">
-            <SelectValue placeholder="エリア" />
+        <Select value={prefecture} onValueChange={setPrefecture}>
+          <SelectTrigger className="h-9 w-full border-border/60 bg-secondary/60 text-sm font-semibold focus:border-gold/50 focus:ring-gold/20 sm:w-[160px] [&>span]:text-foreground">
+            <SelectValue placeholder="都道府県" />
           </SelectTrigger>
-          <SelectContent className="border-border bg-card">
-            {areas.map((area) => (
+          <SelectContent className="border-border bg-card max-h-[300px]">
+            <SelectItem value="all" className="font-medium focus:bg-gold/10 focus:text-gold">
+              全県
+            </SelectItem>
+            {PREFECTURES.map((p) => (
               <SelectItem
-                key={area.value}
-                value={area.value}
+                key={p}
+                value={p}
                 className="font-medium focus:bg-gold/10 focus:text-gold"
               >
-                {area.label}
+                {p}
               </SelectItem>
             ))}
           </SelectContent>

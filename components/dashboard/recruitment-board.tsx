@@ -1,9 +1,11 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import FilterBar from "@/components/dashboard/filter-bar";
 import RecruitmentCard, {
   type RecruitmentPost,
 } from "@/components/dashboard/recruitment-card";
+import { useRecruitModal } from "@/contexts/recruit-modal-context";
 
 const mockPosts: RecruitmentPost[] = [
   {
@@ -42,8 +44,20 @@ const mockPosts: RecruitmentPost[] = [
 ];
 
 export default function RecruitmentBoard() {
+  const { openModal } = useRecruitModal();
+
   return (
     <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="button"
+          onClick={openModal}
+          className="flex items-center justify-center gap-2 rounded-lg bg-gold px-5 py-3.5 text-sm font-black uppercase tracking-wider text-[#050505] shadow-lg shadow-gold/25 transition-all duration-300 hover:bg-gold-light hover:shadow-xl hover:shadow-gold/30 active:scale-[0.98]"
+        >
+          <Plus className="h-5 w-5" strokeWidth={2.5} />
+          合トレを募集する
+        </button>
+      </div>
       <FilterBar />
       <div className="grid gap-4 sm:grid-cols-2">
         {mockPosts.map((post) => (

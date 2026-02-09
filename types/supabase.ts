@@ -29,6 +29,10 @@ export interface Database {
           deadlift_max: number | null;
           goal: string | null;
           instagram_id: string | null;
+          youtube_url: string | null;
+          twitter_url: string | null;
+          tiktok_url: string | null;
+          facebook_url: string | null;
           nickname: string | null;
           gender: string | null;
           birthday: string | null;
@@ -55,6 +59,10 @@ export interface Database {
           deadlift_max?: number | null;
           goal?: string | null;
           instagram_id?: string | null;
+          youtube_url?: string | null;
+          twitter_url?: string | null;
+          tiktok_url?: string | null;
+          facebook_url?: string | null;
           nickname?: string | null;
           gender?: string | null;
           birthday?: string | null;
@@ -81,6 +89,10 @@ export interface Database {
           deadlift_max?: number | null;
           goal?: string | null;
           instagram_id?: string | null;
+          youtube_url?: string | null;
+          twitter_url?: string | null;
+          tiktok_url?: string | null;
+          facebook_url?: string | null;
           nickname?: string | null;
           gender?: string | null;
           birthday?: string | null;

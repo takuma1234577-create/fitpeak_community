@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Dumbbell, Search, Bell, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useProfile } from "@/hooks/use-profile";
 import { POPULAR_SEARCH_KEYWORDS } from "@/lib/search-constants";
 
 function stripHash(kw: string) {
@@ -13,7 +14,13 @@ function stripHash(kw: string) {
 
 export default function DashboardHeader() {
   const router = useRouter();
+  const { profile } = useProfile();
   const [searchOpen, setSearchOpen] = useState(false);
+  const avatarSrc = profile?.avatar_url
+    ? `${profile.avatar_url}${profile.avatar_url.includes("?") ? "&" : "?"}v=${(profile as { updated_at?: string }).updated_at || Date.now()}`
+    : null;
+  const displayName = profile?.nickname || profile?.name || "U";
+  const initial = displayName.charAt(0).toUpperCase();
   const [searchQuery, setSearchQuery] = useState("");
   const [showKeywords, setShowKeywords] = useState(false);
   const desktopRef = useRef<HTMLFormElement>(null);
@@ -110,9 +117,9 @@ export default function DashboardHeader() {
 
           <Link href="/profile" className="ml-1">
             <Avatar className="h-9 w-9 ring-2 ring-border transition-all hover:ring-gold/50">
-              <AvatarImage src="/placeholder.svg" alt="プロフィール" />
+              <AvatarImage src={avatarSrc ?? undefined} alt="プロフィール" />
               <AvatarFallback className="bg-secondary text-xs font-bold text-foreground">
-                U
+                {initial}
               </AvatarFallback>
             </Avatar>
           </Link>

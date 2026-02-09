@@ -1,6 +1,11 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useProfile } from "@/hooks/use-profile";
+import { useProfileById } from "@/hooks/use-profile-by-id";
+import { useFollow } from "@/hooks/use-follow";
+import { getOrCreateConversation } from "@/lib/conversations";
 import ProfileHeader from "@/components/profile/profile-header";
 import StatsGrid from "@/components/profile/stats-grid";
 import MyGears from "@/components/profile/my-gears";
@@ -43,7 +48,26 @@ const fallback = {
 };
 
 export default function ProfilePage() {
-  const { profile, isLoading } = useProfile();
+  const searchParams = useSearchParams();
+  const u = searchParams.get("u");
+  const { profile: myProfile, isLoading: myLoading } = useProfile();
+  const { profile: otherProfile, isLoading: otherLoading } = useProfileById(u || null);
+  const displayProfile = u ? otherProfile : myProfile;
+  const isLoading = u ? (myLoading || otherLoading) : myLoading;
+  const isOwnProfile = !u || (myProfile?.id === u);
+  const profileUserId = displayProfile?.id ?? u ?? null;
+  const { isFollowing, toggle: onFollow, loading: followLoading } = useFollow(profileUserId, myProfile?.id ?? null);
+  const router = useRouter();
+
+  const handleMessage = async () => {
+    if (!myProfile?.id || !profileUserId || myProfile.id === profileUserId) return;
+    try {
+      const conversationId = await getOrCreateConversation(myProfile.id, profileUserId);
+      router.push(`/dashboard/messages?c=${conversationId}`);
+    } catch (err) {
+      console.error("getOrCreateConversation:", err);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -58,14 +82,22 @@ export default function ProfilePage() {
     );
   }
 
-  const p = profile ?? fallback;
+  if (u && !otherProfile) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">ユーザーが見つかりません</p>
+      </main>
+    );
+  }
+
+  const p = displayProfile ?? fallback;
   const benchMax =
-    (profile as { bench_press_max?: number } | null)?.bench_press_max ??
+    (displayProfile as { bench_press_max?: number } | null)?.bench_press_max ??
     fallback.bench_max;
   const squatMax =
-    (profile as { squat_max?: number } | null)?.squat_max ?? fallback.squat_max;
+    (displayProfile as { squat_max?: number } | null)?.squat_max ?? fallback.squat_max;
   const deadliftMax =
-    (profile as { deadlift_max?: number } | null)?.deadlift_max ??
+    (displayProfile as { deadlift_max?: number } | null)?.deadlift_max ??
     fallback.deadlift_max;
   const safeAchievements = Array.isArray((p as { achievements?: unknown }).achievements)
     ? (p as { achievements: typeof fallback.achievements }).achievements
@@ -93,6 +125,7 @@ export default function ProfilePage() {
           name={p.name ?? "名前未設定"}
           bio={p.bio}
           avatarUrl={p.avatar_url}
+          avatarUpdatedAt={(p as { updated_at?: string }).updated_at}
           area={displayArea}
           gym={displayGym}
           ageDisplay={ageDisplay}
@@ -101,6 +134,19 @@ export default function ProfilePage() {
           followersCount={p.followers_count ?? 0}
           followingCount={p.following_count ?? 0}
           collabCount={p.collab_count ?? 0}
+          snsLinks={{
+            instagram_id: (p as { instagram_id?: string | null }).instagram_id,
+            youtube_url: (p as { youtube_url?: string | null }).youtube_url,
+            twitter_url: (p as { twitter_url?: string | null }).twitter_url,
+            tiktok_url: (p as { tiktok_url?: string | null }).tiktok_url,
+            facebook_url: (p as { facebook_url?: string | null }).facebook_url,
+          }}
+          isOwnProfile={isOwnProfile}
+          profileUserId={profileUserId ?? undefined}
+          isFollowing={isFollowing}
+          onFollow={onFollow}
+          followLoading={followLoading}
+          onMessage={handleMessage}
         />
 
         <div className="mx-5 h-px bg-border/40 sm:mx-8" />
@@ -126,7 +172,7 @@ export default function ProfilePage() {
 
         <div className="mx-5 h-px bg-border/40 sm:mx-8" />
 
-        <ActivityTimeline />
+        <ActivityTimeline profileId={profileUserId ?? undefined} />
 
         <div className="h-8" />
       </div>

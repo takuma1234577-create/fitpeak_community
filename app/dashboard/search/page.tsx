@@ -3,12 +3,54 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { Search, Loader2, User, MapPin, Dumbbell } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  User,
+  MapPin,
+  Dumbbell,
+  Users,
+  FolderOpen,
+  CalendarDays,
+  ChevronRight,
+} from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { POPULAR_SEARCH_KEYWORDS } from "@/lib/search-constants";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import type { ProfilesRow } from "@/types/supabase";
+
+type ProfileRow = {
+  id: string;
+  nickname: string | null;
+  username: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  prefecture: string | null;
+  home_gym: string | null;
+  exercises: string[] | null;
+};
+
+type GroupRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+};
+
+type RecruitmentRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  target_body_part: string | null;
+  event_date: string;
+  location: string | null;
+  status: string;
+};
+
+type SearchResults = {
+  users: ProfileRow[];
+  groups: GroupRow[];
+  recruitments: RecruitmentRow[];
+};
 
 function stripHash(kw: string) {
   return kw.startsWith("#") ? kw.slice(1) : kw;
@@ -17,8 +59,13 @@ function stripHash(kw: string) {
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const qParam = searchParams.get("q") ?? "";
+  const viewParam = searchParams.get("view") ?? ""; // "users" | ""
   const [query, setQuery] = useState(qParam);
-  const [results, setResults] = useState<ProfilesRow[]>([]);
+  const [results, setResults] = useState<SearchResults>({
+    users: [],
+    groups: [],
+    recruitments: [],
+  });
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
@@ -27,22 +74,40 @@ export default function SearchPage() {
     setQuery(term);
     setSearched(true);
     if (!term) {
-      setResults([]);
+      setResults({ users: [], groups: [], recruitments: [] });
       return;
     }
     setLoading(true);
     try {
       const supabase = createClient();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any).rpc("search_profiles", {
-        search_text: term,
+      const sb = supabase as any;
+      const pattern = `%${term}%`;
+
+      const [profilesRes, groupsRes, recruitmentsRes] = await Promise.all([
+        sb.rpc("search_profiles", { search_text: term }),
+        sb
+          .from("groups")
+          .select("id, name, description, category")
+          .or(`name.ilike.${pattern},category.ilike.${pattern},description.ilike.${pattern}`),
+        sb
+          .from("recruitments")
+          .select("id, title, description, target_body_part, event_date, location, status")
+          .eq("status", "open")
+          .or(`title.ilike.${pattern},target_body_part.ilike.${pattern},location.ilike.${pattern},description.ilike.${pattern}`),
+      ]);
+
+      setResults({
+        users: (profilesRes.data ?? []) as ProfileRow[],
+        groups: (groupsRes.data ?? []) as GroupRow[],
+        recruitments: (recruitmentsRes.data ?? []) as RecruitmentRow[],
       });
-      if (error) {
-        console.error("search_profiles:", error);
-        setResults([]);
-        return;
-      }
-      setResults((data as ProfilesRow[]) ?? []);
+
+      if (profilesRes.error) console.error("search_profiles:", profilesRes.error);
+      if (groupsRes.error) console.error("groups search:", groupsRes.error);
+      if (recruitmentsRes.error) console.error("recruitments search:", recruitmentsRes.error);
+    } catch (err) {
+      console.error("Search error:", err);
+      setResults({ users: [], groups: [], recruitments: [] });
     } finally {
       setLoading(false);
     }
@@ -50,7 +115,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (qParam) runSearch(qParam);
-  }, [qParam]); // eslint-disable-line react-hooks/exhaustive-deps -- run once when q param is set
+  }, [qParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleKeywordClick = (kw: string) => {
     const term = stripHash(kw);
@@ -62,7 +127,14 @@ export default function SearchPage() {
     runSearch(query);
   };
 
-  const showKeywords = !searched || (!query.trim() && results.length === 0 && !loading);
+  const showKeywords = !searched || (!query.trim() && results.users.length === 0 && results.groups.length === 0 && results.recruitments.length === 0 && !loading);
+
+  const totalCount = results.users.length + results.groups.length + results.recruitments.length;
+  const userPreviewCount = 5;
+  const showUserMore = results.users.length > userPreviewCount;
+  const usersToShow = viewParam === "users" ? results.users : results.users.slice(0, userPreviewCount);
+
+  const hasAnyResults = totalCount > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,7 +143,7 @@ export default function SearchPage() {
           検索
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          ニックネーム・自己紹介・住まい・ジム・種目で検索
+          ユーザー・グループ・合トレ募集をまとめて検索
         </p>
       </div>
 
@@ -115,70 +187,182 @@ export default function SearchPage() {
       )}
 
       {!loading && searched && query.trim() && (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm font-semibold text-muted-foreground">
-            「{query}」で {results.length} 件
-          </p>
-          {results.length === 0 ? (
+        <div className="flex flex-col gap-8">
+          {!hasAnyResults ? (
             <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-12 text-center">
               <Search className="mx-auto h-10 w-10 text-muted-foreground/40" />
               <p className="mt-2 text-sm font-semibold text-muted-foreground">
-                該当するユーザーはいません
+                「{query}」に一致する結果はありませんでした
               </p>
             </div>
           ) : (
-            <ul className="flex flex-col gap-2">
-              {results.map((profile) => {
-                const name = profile.nickname || profile.username || "ユーザー";
-                const initial = name.charAt(0);
-                return (
-                  <li key={profile.id}>
-                    <Link
-                      href={profile.id ? `/profile?u=${profile.id}` : "/profile"}
-                      className="flex items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80"
+            <>
+              <p className="text-sm font-semibold text-muted-foreground">
+                「{query}」で {totalCount} 件
+              </p>
+
+              {/* 1. ユーザー検索 (Users) */}
+              <section className="flex flex-col gap-3">
+                <h2 className="flex items-center gap-2 text-base font-black tracking-tight text-foreground">
+                  <Users className="h-4 w-4 text-gold" />
+                  Users / ユーザー
+                </h2>
+                {results.users.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">該当するユーザーはいません</p>
+                ) : (
+                  <>
+                    <div
+                      className={
+                        viewParam === "users"
+                          ? "flex flex-col gap-2"
+                          : "flex gap-3 overflow-x-auto pb-2 scrollbar-thin md:grid md:grid-cols-2 md:overflow-visible lg:grid-cols-3"
+                      }
                     >
-                      <Avatar className="h-12 w-12 shrink-0 ring-1 ring-border/60">
-                        <AvatarImage src={profile.avatar_url ?? undefined} alt={name} />
-                        <AvatarFallback className="bg-secondary text-sm font-bold">
-                          {initial}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-foreground">
-                          {name}
-                        </p>
-                        {profile.bio && (
-                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                            {profile.bio}
-                          </p>
-                        )}
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
-                          {profile.prefecture && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3 text-gold/70" />
-                              {profile.prefecture}
-                            </span>
+                      {usersToShow.map((profile) => {
+                        const name = profile.nickname || profile.username || "ユーザー";
+                        const initial = name.charAt(0);
+                        return (
+                          <Link
+                            key={profile.id}
+                            href={profile.id ? `/profile?u=${profile.id}` : "/profile"}
+                            className="flex shrink-0 items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80 md:shrink"
+                          >
+                            <Avatar className="h-12 w-12 shrink-0 ring-1 ring-border/60">
+                              <AvatarImage src={profile.avatar_url ?? undefined} alt={name} />
+                              <AvatarFallback className="bg-secondary text-sm font-bold">
+                                {initial}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-bold text-foreground">{name}</p>
+                              {profile.bio && (
+                                <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                                  {profile.bio}
+                                </p>
+                              )}
+                              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
+                                {profile.prefecture && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3 text-gold/70" />
+                                    {profile.prefecture}
+                                  </span>
+                                )}
+                                {profile.home_gym && (
+                                  <span className="flex items-center gap-1">
+                                    <Dumbbell className="h-3 w-3 text-gold/70" />
+                                    {profile.home_gym}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
+                          </Link>
+                        );
+                      })}
+                    </div>
+                    {showUserMore && viewParam !== "users" && (
+                      <Link
+                        href={`/dashboard/search?q=${encodeURIComponent(query)}&view=users`}
+                        className="self-start rounded-lg border border-gold/40 bg-gold/10 px-4 py-2 text-sm font-bold text-gold transition-colors hover:bg-gold/20"
+                      >
+                        もっと見る（ユーザー {results.users.length} 件）
+                      </Link>
+                    )}
+                  </>
+                )}
+              </section>
+
+              {/* 2. グループ検索 (Groups) */}
+              <section className="flex flex-col gap-3">
+                <h2 className="flex items-center gap-2 text-base font-black tracking-tight text-foreground">
+                  <FolderOpen className="h-4 w-4 text-gold" />
+                  Groups / グループ
+                </h2>
+                {results.groups.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">該当するグループはありません</p>
+                ) : (
+                  <ul className="grid gap-2 sm:grid-cols-2">
+                    {results.groups.map((group) => (
+                      <li key={group.id}>
+                        <Link
+                          href={`/dashboard/groups/${group.id}`}
+                          className="flex flex-col gap-1.5 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80"
+                        >
+                          <p className="font-bold text-foreground">{group.name}</p>
+                          {group.category && (
+                            <span className="text-xs text-gold">{group.category}</span>
                           )}
-                          {profile.home_gym && (
-                            <span className="flex items-center gap-1">
-                              <Dumbbell className="h-3 w-3 text-gold/70" />
-                              {profile.home_gym}
-                            </span>
+                          {group.description && (
+                            <p className="line-clamp-2 text-xs text-muted-foreground">
+                              {group.description}
+                            </p>
                           )}
-                          {profile.exercises && profile.exercises.length > 0 && (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3 text-gold/70" />
-                              {profile.exercises.slice(0, 2).join("・")}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <span className="shrink-0 text-muted-foreground/40">→</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+                          <span className="mt-1 flex items-center text-xs text-muted-foreground/80">
+                            詳細 <ChevronRight className="h-3 w-3" />
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              {/* 3. 合トレ検索 (Recruitments) */}
+              <section className="flex flex-col gap-3">
+                <h2 className="flex items-center gap-2 text-base font-black tracking-tight text-foreground">
+                  <CalendarDays className="h-4 w-4 text-gold" />
+                  Recruitments / 合トレ募集
+                </h2>
+                {results.recruitments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">該当する募集はありません</p>
+                ) : (
+                  <ul className="grid gap-2 sm:grid-cols-2">
+                    {results.recruitments.map((rec) => {
+                      const eventDate = rec.event_date
+                        ? new Date(rec.event_date).toLocaleDateString("ja-JP", {
+                            month: "numeric",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "";
+                      return (
+                        <li key={rec.id}>
+                          <Link
+                            href={`/dashboard/recruit?r=${rec.id}`}
+                            className="flex flex-col gap-1.5 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80"
+                          >
+                            <p className="font-bold text-foreground">{rec.title}</p>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                              {rec.target_body_part && (
+                                <span className="text-gold">{rec.target_body_part}</span>
+                              )}
+                              {rec.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {rec.location}
+                                </span>
+                              )}
+                              {eventDate && (
+                                <span className="flex items-center gap-1">
+                                  <CalendarDays className="h-3 w-3" />
+                                  {eventDate}
+                                </span>
+                              )}
+                            </div>
+                            {rec.description && (
+                              <p className="line-clamp-2 text-xs text-muted-foreground">
+                                {rec.description}
+                              </p>
+                            )}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+            </>
           )}
         </div>
       )}

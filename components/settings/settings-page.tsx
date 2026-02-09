@@ -92,6 +92,11 @@ export default function SettingsPage() {
   const [goal, setGoal] = useState("")
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [certifications, setCertifications] = useState<string[]>([])
+  const [instagramId, setInstagramId] = useState("")
+  const [youtubeUrl, setYoutubeUrl] = useState("")
+  const [twitterUrl, setTwitterUrl] = useState("")
+  const [tiktokUrl, setTiktokUrl] = useState("")
+  const [facebookUrl, setFacebookUrl] = useState("")
 
   /* new achievement form */
   const [newAchTitle, setNewAchTitle] = useState("")
@@ -138,6 +143,11 @@ export default function SettingsPage() {
       setGoal(profile.goal ?? "")
       setAchievements(Array.isArray(profile.achievements) ? profile.achievements : [])
       setCertifications(Array.isArray(profile.certifications) ? profile.certifications : [])
+      setInstagramId((profile as { instagram_id?: string | null }).instagram_id ?? "")
+      setYoutubeUrl((profile as { youtube_url?: string | null }).youtube_url ?? "")
+      setTwitterUrl((profile as { twitter_url?: string | null }).twitter_url ?? "")
+      setTiktokUrl((profile as { tiktok_url?: string | null }).tiktok_url ?? "")
+      setFacebookUrl((profile as { facebook_url?: string | null }).facebook_url ?? "")
     }
   }, [profile])
 
@@ -169,6 +179,11 @@ export default function SettingsPage() {
         goal,
         achievements,
         certifications,
+        instagram_id: instagramId || undefined,
+        youtube_url: youtubeUrl || undefined,
+        twitter_url: twitterUrl || undefined,
+        tiktok_url: tiktokUrl || undefined,
+        facebook_url: facebookUrl || undefined,
       })
       setHasChanges(false)
     } catch (e) {
@@ -185,7 +200,8 @@ export default function SettingsPage() {
       const url = await uploadAvatar(profile.id, file)
       setAvatarPreviewUrl(url)
       await updateProfile({ avatar_url: url })
-      markChanged()
+      router.refresh()
+      window.location.reload()
     } catch (err) {
       console.error("Avatar upload failed:", err)
     }
@@ -440,6 +456,38 @@ export default function SettingsPage() {
                 {opt}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* SNS リンク */}
+        <div>
+          <h3 className="text-sm font-bold text-foreground mb-3">
+            SNS リンク
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            プロフィールに表示するリンクを入力（空欄は非表示）
+          </p>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="s-instagram" className={labelClass}>Instagram</label>
+              <input id="s-instagram" type="text" value={instagramId} onChange={(e) => { setInstagramId(e.target.value); markChanged() }} placeholder="https://instagram.com/username または @username" className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="s-youtube" className={labelClass}>YouTube</label>
+              <input id="s-youtube" type="url" value={youtubeUrl} onChange={(e) => { setYoutubeUrl(e.target.value); markChanged() }} placeholder="https://youtube.com/@channel" className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="s-twitter" className={labelClass}>X (Twitter)</label>
+              <input id="s-twitter" type="url" value={twitterUrl} onChange={(e) => { setTwitterUrl(e.target.value); markChanged() }} placeholder="https://x.com/username" className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="s-tiktok" className={labelClass}>TikTok</label>
+              <input id="s-tiktok" type="url" value={tiktokUrl} onChange={(e) => { setTiktokUrl(e.target.value); markChanged() }} placeholder="https://tiktok.com/@username" className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="s-facebook" className={labelClass}>Facebook</label>
+              <input id="s-facebook" type="url" value={facebookUrl} onChange={(e) => { setFacebookUrl(e.target.value); markChanged() }} placeholder="https://facebook.com/username" className={inputClass} />
+            </div>
           </div>
         </div>
 

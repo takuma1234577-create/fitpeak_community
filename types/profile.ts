@@ -34,6 +34,11 @@ export interface Profile {
   is_age_public: boolean;
   is_prefecture_public: boolean;
   is_home_gym_public: boolean;
+  instagram_id?: string | null;
+  youtube_url?: string | null;
+  twitter_url?: string | null;
+  tiktok_url?: string | null;
+  facebook_url?: string | null;
 }
 
 export type ProfileUpdate = Partial<
