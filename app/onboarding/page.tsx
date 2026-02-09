@@ -187,12 +187,27 @@ export default function OnboardingPage() {
       }
       window.location.href = "/dashboard";
     } catch (err: unknown) {
-      console.error("Profile save error:", err);
-      const message = err && typeof err === "object" && "message" in err ? String((err as { message: unknown }).message) : "";
+      const errObj = err as Record<string, unknown> | null;
+      const message =
+        typeof err === "string"
+          ? err
+          : err instanceof Error
+            ? err.message
+            : errObj?.message != null
+              ? String(errObj.message)
+              : errObj?.error != null && typeof errObj.error === "object" && errObj.error !== null && "message" in errObj.error
+                ? String((errObj.error as { message: unknown }).message)
+                : errObj?.code != null
+                  ? `[${errObj.code}] ${String(errObj.details ?? errObj.message ?? "")}`
+                  : "";
+      console.error("Profile save error:", err, "extracted:", message);
+      if (!message && err && typeof err === "object") {
+        console.error("Error keys:", Object.keys(err), "full:", JSON.stringify(err, null, 2));
+      }
       setSaveError(
         message
-          ? `プロフィールの保存に失敗しました。${message}`
-          : "プロフィールの保存に失敗しました。もう一度お試しください。"
+          ? `プロフィールの保存に失敗しました。（${message}）`
+          : "プロフィールの保存に失敗しました。もう一度お試しください。ブラウザの開発者ツール（F12）→ Console にエラーが出ていないか確認してください。"
       );
     } finally {
       setIsSubmitting(false);
