@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Dumbbell, Search, Bell, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useProfile } from "@/hooks/use-profile";
 import { POPULAR_SEARCH_KEYWORDS } from "@/lib/search-constants";
+import { createClient } from "@/utils/supabase/client";
 
 function stripHash(kw: string) {
   return kw.startsWith("#") ? kw.slice(1) : kw;
@@ -23,8 +24,31 @@ export default function DashboardHeader() {
   const initial = displayName.charAt(0).toUpperCase();
   const [searchQuery, setSearchQuery] = useState("");
   const [showKeywords, setShowKeywords] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const desktopRef = useRef<HTMLFormElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
+
+  const fetchUnread = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { count } = await (supabase as any)
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false);
+    setUnreadCount(typeof count === "number" ? count : 0);
+  }, []);
+
+  useEffect(() => {
+    fetchUnread();
+  }, [fetchUnread]);
+
+  useEffect(() => {
+    const onFocus = () => fetchUnread();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [fetchUnread]);
 
   const goSearch = (q: string) => {
     const term = q.trim();
@@ -106,14 +130,18 @@ export default function DashboardHeader() {
             )}
           </button>
 
-          <button
-            type="button"
+          <Link
+            href="/dashboard/notifications"
             className="relative flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label="通知"
           >
             <Bell className="h-5 w-5" />
-            <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-gold ring-2 ring-background" />
-          </button>
+            {unreadCount > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-background">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </Link>
 
           <Link href="/profile" className="ml-1">
             <Avatar className="h-9 w-9 ring-2 ring-border transition-all hover:ring-gold/50">

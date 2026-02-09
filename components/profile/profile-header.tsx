@@ -15,6 +15,7 @@ import {
   MessageCircle,
   Loader2,
 } from "lucide-react";
+import UserActionsMenu from "@/components/user-actions-menu";
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -91,6 +92,10 @@ interface ProfileHeaderProps {
   followLoading?: boolean;
   /** メッセージボタン押下（会話取得 or 作成後に遷移） */
   onMessage?: () => void;
+  /** 他人プロフィール時: ブロック済みなら true */
+  isBlocked?: boolean;
+  /** ブロック/ブロック解除後のコールバック */
+  onBlockChange?: () => void;
 }
 
 function toFullUrl(kind: keyof SnsLinks, value: string): string {
@@ -125,6 +130,8 @@ export default function ProfileHeader({
   onFollow,
   followLoading,
   onMessage,
+  isBlocked,
+  onBlockChange,
 }: ProfileHeaderProps) {
   const router = useRouter();
   const showFollowMessage = !isOwnProfile && profileUserId;
@@ -163,14 +170,23 @@ export default function ProfileHeader({
             >
               <Share2 className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              onClick={() => router.push("/dashboard/settings")}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-background/60 text-foreground backdrop-blur-md transition-colors hover:bg-background/80"
-              aria-label="設定"
-            >
-              <Settings className="h-4 w-4" />
-            </button>
+            {showFollowMessage && profileUserId ? (
+              <UserActionsMenu
+                targetUserId={profileUserId}
+                targetName={name}
+                isBlocked={isBlocked ?? false}
+                onBlockChange={onBlockChange}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => router.push("/dashboard/settings")}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-background/60 text-foreground backdrop-blur-md transition-colors hover:bg-background/80"
+                aria-label="設定"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>

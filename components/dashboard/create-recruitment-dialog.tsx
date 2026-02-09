@@ -9,9 +9,19 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { createClient } from "@/utils/supabase/client";
 import { useRecruitModal } from "@/contexts/recruit-modal-context";
-import { Loader2 } from "lucide-react";
+import { Loader2, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { bodyParts } from "./filter-bar";
 import { PREFECTURES } from "@/lib/constants";
 
@@ -22,6 +32,13 @@ const levelOptions = [
   { value: "advanced", label: "上級者" },
   { value: "competitor", label: "大会勢" },
 ];
+
+const timeOptions: { value: string; label: string }[] = [];
+for (let h = 0; h < 24; h++) {
+  const hh = h.toString().padStart(2, "0");
+  timeOptions.push({ value: `${hh}:00`, label: `${hh}:00` });
+  timeOptions.push({ value: `${hh}:30`, label: `${hh}:30` });
+}
 
 export default function CreateRecruitmentDialog() {
   const { open, setOpen } = useRecruitModal();
@@ -35,6 +52,7 @@ export default function CreateRecruitmentDialog() {
   const [level, setLevel] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dateOpen, setDateOpen] = useState(false);
 
   const reset = () => {
     setTitle("");
@@ -61,12 +79,12 @@ export default function CreateRecruitmentDialog() {
       return;
     }
     const dateStr = eventDate?.trim();
-    const timeStr = eventTime?.trim();
+    const timeStr = eventTime || "12:00";
     if (!dateStr) {
       setError("日付を選択してください");
       return;
     }
-    const dateTime = timeStr ? `${dateStr}T${timeStr}:00` : `${dateStr}T12:00:00`;
+    const dateTime = `${dateStr}T${timeStr}:00`;
     const eventDateTime = new Date(dateTime).toISOString();
 
     setIsSubmitting(true);
@@ -78,6 +96,14 @@ export default function CreateRecruitmentDialog() {
         return;
       }
       const sb = supabase as any;
+      await sb.from("profiles").upsert({ id: user.id }, { onConflict: "id" });
+      const { data: conv, error: convErr } = await sb.from("conversations").insert({}).select("id").single();
+      if (convErr || !conv?.id) {
+        setError("チャットルームの作成に失敗しました");
+        setIsSubmitting(false);
+        return;
+      }
+      await sb.from("conversation_participants").insert({ conversation_id: conv.id, user_id: user.id });
       const baseRow = {
         user_id: user.id,
         title: title.trim(),
@@ -86,6 +112,7 @@ export default function CreateRecruitmentDialog() {
         event_date: eventDateTime,
         location: location.trim() || null,
         status: "open",
+        chat_room_id: conv.id,
       };
       const { error: insertError } = await sb.from("recruitments").insert(baseRow);
       if (insertError) throw insertError;
@@ -190,23 +217,56 @@ export default function CreateRecruitmentDialog() {
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 日付 <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
-                className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
-              />
+              <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20 flex items-center gap-2",
+                      !eventDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="h-4 w-4 shrink-0 text-gold/70" />
+                    {eventDate ? new Date(eventDate + "T12:00:00").toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" }) : "日付を選択"}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 border-border bg-card" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={eventDate ? new Date(eventDate + "T12:00:00") : undefined}
+                    onSelect={(d) => {
+                      if (d) {
+                        const y = d.getFullYear();
+                        const m = (d.getMonth() + 1).toString().padStart(2, "0");
+                        const day = d.getDate().toString().padStart(2, "0");
+                        setEventDate(`${y}-${m}-${day}`);
+                        setDateOpen(false);
+                      }
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 時間
               </label>
-              <input
-                type="time"
-                value={eventTime}
-                onChange={(e) => setEventTime(e.target.value)}
-                className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
-              />
+              <Select value={eventTime || "12:00"} onValueChange={setEventTime}>
+                <SelectTrigger className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:ring-1 focus:ring-gold/20">
+                  <SelectValue placeholder="00:00〜23:30" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[240px] border-border bg-card">
+                  {timeOptions.map((opt) => (
+                    <SelectItem
+                      key={opt.value}
+                      value={opt.value}
+                      className="text-foreground focus:bg-gold/10 focus:text-gold"
+                    >
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div>

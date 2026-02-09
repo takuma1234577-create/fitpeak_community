@@ -25,6 +25,7 @@ import type {
   NewArrivalUser,
 } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
+import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 
 const todayMotivation = {
   greeting: "おかえりなさい。",
@@ -609,13 +610,18 @@ export default function HomePage({
   newArrivalUsers,
   myUserId,
 }: HomePageProps) {
+  const { blockedIds } = useBlockedUserIds();
+  const filteredWorkouts = recommendedWorkouts.filter((r) => !blockedIds.has(r.user_id));
+  const filteredRecommendedUsers = recommendedUsers.filter((u) => !blockedIds.has(u.id));
+  const filteredNewArrivalUsers = newArrivalUsers.filter((u) => !blockedIds.has(u.id));
+
   return (
     <div className="flex flex-col gap-8">
       <HeroSection />
       <MyScheduleSection />
-      <RecommendedWorkoutsSection posts={recommendedWorkouts} />
-      <RecommendedUsersSection users={recommendedUsers} myUserId={myUserId} />
-      <NewArrivalUsersSection users={newArrivalUsers} myUserId={myUserId} />
+      <RecommendedWorkoutsSection posts={filteredWorkouts} />
+      <RecommendedUsersSection users={filteredRecommendedUsers} myUserId={myUserId} />
+      <NewArrivalUsersSection users={filteredNewArrivalUsers} myUserId={myUserId} />
       <YourGroupsSection />
     </div>
   );

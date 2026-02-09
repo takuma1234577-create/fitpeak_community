@@ -12,6 +12,7 @@ import ChatRoom, {
 import { MessageCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
+import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 
 function formatMessageTime(iso: string) {
   const d = new Date(iso);
@@ -38,6 +39,7 @@ export default function MessagesPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [otherUser, setOtherUser] = useState<ChatUser | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const { blockedIds } = useBlockedUserIds();
 
   const loadConversations = useCallback(async () => {
     const supabase = createClient();
@@ -100,6 +102,7 @@ export default function MessagesPage() {
       const other = otherByConv.get(cid);
       return {
         id: cid,
+        otherUserId: other?.id,
         name: other?.name ?? "不明",
         avatar: other?.avatar ?? "/placeholder.svg",
         lastMessage: last?.content ?? "",
@@ -223,7 +226,10 @@ export default function MessagesPage() {
     [activeId, myUserId, loadConversations, loadMessages]
   );
 
-  const filteredConversations = conversations.filter(
+  const blockedFiltered = conversations.filter(
+    (c) => !c.otherUserId || !blockedIds.has(c.otherUserId)
+  );
+  const filteredConversations = blockedFiltered.filter(
     (c) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())

@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 
 export interface Conversation {
   id: string;
+  /** 1:1 の相手の user_id（ブロックフィルター用） */
+  otherUserId?: string;
   name: string;
   avatar: string;
   lastMessage: string;

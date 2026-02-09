@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useProfile } from "@/hooks/use-profile";
 import { useProfileById } from "@/hooks/use-profile-by-id";
 import { useFollow } from "@/hooks/use-follow";
+import { useBlockStatus } from "@/hooks/use-block-status";
+import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { getOrCreateConversation } from "@/lib/conversations";
 import ProfileHeader from "@/components/profile/profile-header";
 import StatsGrid from "@/components/profile/stats-grid";
@@ -57,6 +59,8 @@ export default function ProfilePage() {
   const isOwnProfile = !u || (myProfile?.id === u);
   const profileUserId = displayProfile?.id ?? u ?? null;
   const { isFollowing, toggle: onFollow, loading: followLoading } = useFollow(profileUserId, myProfile?.id ?? null);
+  const { isBlocked, refetch: refetchBlock } = useBlockStatus(isOwnProfile ? null : profileUserId);
+  const { blockedIds } = useBlockedUserIds();
   const router = useRouter();
 
   const handleMessage = async () => {
@@ -86,6 +90,14 @@ export default function ProfilePage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">ユーザーが見つかりません</p>
+      </main>
+    );
+  }
+
+  if (u && profileUserId && blockedIds.has(profileUserId)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">このユーザーは表示できません</p>
       </main>
     );
   }
@@ -147,6 +159,8 @@ export default function ProfilePage() {
           onFollow={onFollow}
           followLoading={followLoading}
           onMessage={handleMessage}
+          isBlocked={isBlocked}
+          onBlockChange={refetchBlock}
         />
 
         <div className="mx-5 h-px bg-border/40 sm:mx-8" />

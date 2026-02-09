@@ -15,6 +15,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { POPULAR_SEARCH_KEYWORDS } from "@/lib/search-constants";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
@@ -38,6 +39,7 @@ type GroupRow = {
 
 type RecruitmentRow = {
   id: string;
+  user_id?: string;
   title: string;
   description: string | null;
   target_body_part: string | null;
@@ -68,6 +70,7 @@ export default function SearchPage() {
   });
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const { blockedIds } = useBlockedUserIds();
 
   const runSearch = useCallback(async (searchText: string) => {
     const term = searchText.trim();
@@ -91,7 +94,7 @@ export default function SearchPage() {
           .or(`name.ilike.${pattern},category.ilike.${pattern},description.ilike.${pattern}`),
         sb
           .from("recruitments")
-          .select("id, title, description, target_body_part, event_date, location, status")
+          .select("id, user_id, title, description, target_body_part, event_date, location, status")
           .eq("status", "open")
           .or(`title.ilike.${pattern},target_body_part.ilike.${pattern},location.ilike.${pattern},description.ilike.${pattern}`),
       ]);
@@ -129,10 +132,12 @@ export default function SearchPage() {
 
   const showKeywords = !searched || (!query.trim() && results.users.length === 0 && results.groups.length === 0 && results.recruitments.length === 0 && !loading);
 
-  const totalCount = results.users.length + results.groups.length + results.recruitments.length;
+  const filteredUsers = results.users.filter((u) => !blockedIds.has(u.id));
+  const filteredRecruitments = results.recruitments.filter((r) => !r.user_id || !blockedIds.has(r.user_id));
+  const totalCount = filteredUsers.length + results.groups.length + filteredRecruitments.length;
   const userPreviewCount = 5;
-  const showUserMore = results.users.length > userPreviewCount;
-  const usersToShow = viewParam === "users" ? results.users : results.users.slice(0, userPreviewCount);
+  const showUserMore = filteredUsers.length > userPreviewCount;
+  const usersToShow = viewParam === "users" ? filteredUsers : filteredUsers.slice(0, userPreviewCount);
 
   const hasAnyResults = totalCount > 0;
 
@@ -207,7 +212,7 @@ export default function SearchPage() {
                   <Users className="h-4 w-4 text-gold" />
                   Users / ユーザー
                 </h2>
-                {results.users.length === 0 ? (
+                {filteredUsers.length === 0 ? (
                   <p className="text-sm text-muted-foreground">該当するユーザーはいません</p>
                 ) : (
                   <>
@@ -265,7 +270,7 @@ export default function SearchPage() {
                         href={`/dashboard/search?q=${encodeURIComponent(query)}&view=users`}
                         className="self-start rounded-lg border border-gold/40 bg-gold/10 px-4 py-2 text-sm font-bold text-gold transition-colors hover:bg-gold/20"
                       >
-                        もっと見る（ユーザー {results.users.length} 件）
+                        もっと見る（ユーザー {filteredUsers.length} 件）
                       </Link>
                     )}
                   </>
@@ -313,11 +318,11 @@ export default function SearchPage() {
                   <CalendarDays className="h-4 w-4 text-gold" />
                   Recruitments / 合トレ募集
                 </h2>
-                {results.recruitments.length === 0 ? (
+                {filteredRecruitments.length === 0 ? (
                   <p className="text-sm text-muted-foreground">該当する募集はありません</p>
                 ) : (
                   <ul className="grid gap-2 sm:grid-cols-2">
-                    {results.recruitments.map((rec) => {
+                    {filteredRecruitments.map((rec) => {
                       const eventDate = rec.event_date
                         ? new Date(rec.event_date).toLocaleDateString("ja-JP", {
                             month: "numeric",

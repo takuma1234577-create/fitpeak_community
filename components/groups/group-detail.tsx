@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Users, Crown, Loader2, MessageCircle, Info, Pencil } from "lucide-react";
+import { ArrowLeft, Users, Crown, Loader2, MessageCircle, Info, Pencil, MoreHorizontal, Flag } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import ReportDialog from "@/components/report-dialog";
 import { createClient } from "@/utils/supabase/client";
 import GroupChatTab from "@/components/groups/group-chat-tab";
 import CreateGroupDialog from "@/components/groups/create-group-dialog";
@@ -36,6 +38,8 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const loadGroup = useCallback(async () => {
     const supabase = createClient();
@@ -205,6 +209,37 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
             </button>
           </CreateGroupDialog>
         )}
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary text-foreground transition-colors hover:bg-secondary/80"
+              aria-label="メニュー"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-0" align="end">
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setReportOpen(true);
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary"
+            >
+              <Flag className="h-4 w-4" />
+              このグループを通報する
+            </button>
+          </PopoverContent>
+        </Popover>
+        <ReportDialog
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          targetId={group.id}
+          type="group"
+          title={group.name}
+        />
       </div>
 
       <div className="flex gap-2 border-b border-border/40">
