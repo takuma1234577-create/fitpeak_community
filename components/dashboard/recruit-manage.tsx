@@ -57,7 +57,7 @@ export default function RecruitManage() {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const listRef = useRef<Record<string, HTMLDivElement | null>>({});
+  const listRef = useRef<Record<string, HTMLLIElement | null>>({});
 
   const fetchList = useCallback(async () => {
     const supabase = createClient();

@@ -85,7 +85,7 @@ export default function RecruitmentBoard() {
         .select("recruitment_id, status")
         .eq("user_id", user.id)
         .in("recruitment_id", ids);
-      const statusMap: Record<string, "pending" | "approved" | "rejected"> = {};
+      const statusMap: Record<string, "pending" | "approved" | "rejected" | "withdrawn"> = {};
       (parts ?? []).forEach((p: { recruitment_id: string; status: string }) => {
         if (["pending", "approved", "rejected", "withdrawn"].includes(p.status)) {
           statusMap[p.recruitment_id] = p.status as "pending" | "approved" | "rejected" | "withdrawn";
