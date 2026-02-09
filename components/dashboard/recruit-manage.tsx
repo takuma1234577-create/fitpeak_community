@@ -71,9 +71,10 @@ export default function RecruitManage() {
       .select("id, title, description, target_body_part, event_date, location, status, created_at, chat_room_id")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-    if (!error && Array.isArray(data)) {
-      setList(data as RecruitmentRow[]);
-      const ids = (data as RecruitmentRow[]).map((r) => r.id);
+    const safeList = Array.isArray(data) ? (data as RecruitmentRow[]) : [];
+    if (!error) {
+      setList(safeList);
+      const ids = safeList.map((r) => r.id);
       if (ids.length > 0) {
         const { data: pending } = await (supabase as any)
           .from("recruitment_participants")
@@ -88,6 +89,8 @@ export default function RecruitManage() {
         });
         setPendingByRecruitment(byRec);
       }
+    } else {
+      setList([]);
     }
     setLoading(false);
   }, []);
@@ -262,11 +265,11 @@ export default function RecruitManage() {
         </div>
       ) : (
         <ul className="space-y-4">
-          {list.map((r) => {
+          {(list ?? []).map((r) => {
             const d = new Date(r.event_date);
             const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
             const timeStr = d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-            const pendingList = pendingByRecruitment[r.id] ?? [];
+            const pendingList = (pendingByRecruitment[r.id] ?? []) as PendingParticipant[];
             return (
               <li
                 key={r.id}
@@ -321,7 +324,7 @@ export default function RecruitManage() {
                       承認待ち ({pendingList.length}名)
                     </p>
                     <ul className="space-y-2">
-                      {pendingList.map((p) => {
+                      {(Array.isArray(pendingList) ? pendingList : []).map((p) => {
                         const name = p.profiles?.nickname || p.profiles?.username || "ユーザー";
                         const key = `${r.id}-${p.user_id}`;
                         const isLoading = actionLoading === key;
@@ -399,7 +402,7 @@ export default function RecruitManage() {
                 onChange={(e) => setEditTargetBodyPart(e.target.value)}
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
-                {bodyParts.map((p) => (
+                {(Array.isArray(bodyParts) ? bodyParts : []).map((p) => (
                   <option key={p.value} value={p.value}>
                     {p.label}
                   </option>

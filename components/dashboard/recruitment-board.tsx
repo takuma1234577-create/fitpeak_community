@@ -45,7 +45,7 @@ export default function RecruitmentBoard() {
         setLoading(false);
         return;
       }
-      const list = Array.isArray(rows) ? rows : rows != null ? [rows] : [];
+      const list: unknown[] = Array.isArray(rows) ? rows : rows != null ? [rows] : [];
       const mapped = list.map((r: Record<string, unknown>) => {
         const eventDate = r.event_date != null ? String(r.event_date) : "";
         const d = eventDate ? new Date(eventDate) : new Date();
@@ -113,6 +113,7 @@ export default function RecruitmentBoard() {
     });
     return sorted.map(({ event_date: _ed, ...p }) => p);
   })();
+  const displayRecruitments = Array.isArray(displayPosts) ? displayPosts : [];
 
   return (
     <div className="space-y-6">
@@ -154,7 +155,7 @@ export default function RecruitmentBoard() {
         <div className="flex justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
         </div>
-      ) : displayPosts.length === 0 ? (
+      ) : displayRecruitments.length === 0 ? (
         <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">まだ募集はありません</p>
           <button
@@ -167,7 +168,7 @@ export default function RecruitmentBoard() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {(Array.isArray(displayPosts) ? displayPosts : []).map((post) => (
+          {displayRecruitments.map((post) => (
             <RecruitmentCard
               key={post.id}
               post={post}

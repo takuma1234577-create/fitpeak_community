@@ -195,7 +195,7 @@ function RecommendedWorkoutsSection({
           className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {posts.map((post) => {
+          {(posts ?? []).map((post) => {
             const profile = post.profiles;
             const name = profile?.nickname || profile?.username || "ユーザー";
             const initial = name.charAt(0);
@@ -225,9 +225,9 @@ function RecommendedWorkoutsSection({
                   <h3 className="line-clamp-2 text-sm font-bold leading-snug text-foreground">
                     {post.title}
                   </h3>
-                  {tags.length > 0 && (
+                  {Array.isArray(tags) && tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
-                      {tags.map((tag) => (
+                      {(tags ?? []).map((tag) => (
                         <Badge
                           key={tag}
                           variant="secondary"
@@ -346,7 +346,7 @@ function RecommendedUsersSection({
         linkLabel="検索で仲間を探す"
       />
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {users.map((user) => (
+        {(users ?? []).map((user) => (
           <RecommendedUserCard key={user.id} user={user} myUserId={myUserId} />
         ))}
       </div>
@@ -456,7 +456,7 @@ function NewArrivalUsersSection({
           className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {users.map((user) => (
+          {(users ?? []).map((user) => (
             <NewArrivalUserCard key={user.id} user={user} myUserId={myUserId} />
           ))}
         </div>
@@ -545,7 +545,7 @@ function YourGroupsSection() {
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            {groups.map((group) => (
+            {(groups ?? []).map((group) => (
               <Link
                 key={group.id}
                 href={`/dashboard/groups/${group.id}`}

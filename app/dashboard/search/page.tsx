@@ -130,11 +130,14 @@ export default function SearchPage() {
     runSearch(query);
   };
 
-  const showKeywords = !searched || (!query.trim() && results.users.length === 0 && results.groups.length === 0 && results.recruitments.length === 0 && !loading);
+  const showKeywords = !searched || (!query.trim() && safeUsers.length === 0 && safeGroups.length === 0 && safeRecruitments.length === 0 && !loading);
 
-  const filteredUsers = results.users.filter((u) => !blockedIds.has(u.id));
-  const filteredRecruitments = results.recruitments.filter((r) => !r.user_id || !blockedIds.has(r.user_id));
-  const totalCount = filteredUsers.length + results.groups.length + filteredRecruitments.length;
+  const safeUsers = Array.isArray(results.users) ? results.users : [];
+  const safeRecruitments = Array.isArray(results.recruitments) ? results.recruitments : [];
+  const safeGroups = Array.isArray(results.groups) ? results.groups : [];
+  const filteredUsers = safeUsers.filter((u) => !blockedIds.has(u.id));
+  const filteredRecruitments = safeRecruitments.filter((r) => !r.user_id || !blockedIds.has(r.user_id));
+  const totalCount = filteredUsers.length + safeGroups.length + filteredRecruitments.length;
   const userPreviewCount = 5;
   const showUserMore = filteredUsers.length > userPreviewCount;
   const usersToShow = viewParam === "users" ? filteredUsers : filteredUsers.slice(0, userPreviewCount);
@@ -283,11 +286,11 @@ export default function SearchPage() {
                   <FolderOpen className="h-4 w-4 text-gold" />
                   Groups / グループ
                 </h2>
-                {results.groups.length === 0 ? (
+                {safeGroups.length === 0 ? (
                   <p className="text-sm text-muted-foreground">該当するグループはありません</p>
                 ) : (
                   <ul className="grid gap-2 sm:grid-cols-2">
-                    {results.groups.map((group) => (
+                    {safeGroups.map((group) => (
                       <li key={group.id}>
                         <Link
                           href={`/dashboard/groups/${group.id}`}
@@ -322,7 +325,7 @@ export default function SearchPage() {
                   <p className="text-sm text-muted-foreground">該当する募集はありません</p>
                 ) : (
                   <ul className="grid gap-2 sm:grid-cols-2">
-                    {filteredRecruitments.map((rec) => {
+                    {(filteredRecruitments ?? []).map((rec) => {
                       const eventDate = rec.event_date
                         ? new Date(rec.event_date).toLocaleDateString("ja-JP", {
                             month: "numeric",
