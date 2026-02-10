@@ -113,6 +113,7 @@ export default function ProfilePage() {
             onFollow={onFollow}
             followLoading={followLoading}
             isOwnProfile={false}
+            onMessage={handleMessage}
           />
         </div>
       </main>

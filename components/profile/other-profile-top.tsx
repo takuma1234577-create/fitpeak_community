@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronLeft, Users, Loader2 } from "lucide-react";
+import { ChevronLeft, Users, Loader2, MessageCircle } from "lucide-react";
 
 export interface OtherProfileTopProps {
   /** ヘッダー画像URL。未設定時はグラデーション */
@@ -26,6 +26,8 @@ export interface OtherProfileTopProps {
   followLoading?: boolean;
   /** 自分自身のプロフィールの場合はフォローボタンを非表示 */
   isOwnProfile?: boolean;
+  /** チャットボタン押下（その人との個別チャットへ遷移） */
+  onMessage?: () => void;
 }
 
 export default function OtherProfileTop({
@@ -40,6 +42,7 @@ export default function OtherProfileTop({
   onFollow,
   followLoading = false,
   isOwnProfile = false,
+  onMessage,
 }: OtherProfileTopProps) {
   const initial = (name || "?").charAt(0).toUpperCase();
   const avatarSrc = avatarUrl
@@ -122,26 +125,38 @@ export default function OtherProfileTop({
           ))}
         </div>
 
-        {/* フォローボタン（他ユーザーのときのみ） */}
-        {!isOwnProfile && onFollow != null && (
-          <div className="mt-5">
-            <button
-              type="button"
-              onClick={onFollow}
-              disabled={followLoading}
-              className={`flex w-full items-center justify-center gap-2 rounded-lg border py-3 text-sm font-bold tracking-wide transition-all active:scale-[0.98] disabled:opacity-60 ${
-                isFollowing
-                  ? "border-gold/50 bg-gold/10 text-gold hover:bg-gold/20"
-                  : "border-border bg-transparent text-foreground hover:border-gold/30 hover:bg-secondary"
-              }`}
-            >
-              {followLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Users className="h-4 w-4" />
-              )}
-              {isFollowing ? "フォロー中" : "フォローする"}
-            </button>
+        {/* フォローボタン・チャットボタン（他ユーザーのときのみ） */}
+        {!isOwnProfile && (onFollow != null || onMessage != null) && (
+          <div className="mt-5 flex gap-3">
+            {onFollow != null && (
+              <button
+                type="button"
+                onClick={onFollow}
+                disabled={followLoading}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg border py-3 text-sm font-bold tracking-wide transition-all active:scale-[0.98] disabled:opacity-60 ${
+                  isFollowing
+                    ? "border-gold/50 bg-gold/10 text-gold hover:bg-gold/20"
+                    : "border-border bg-transparent text-foreground hover:border-gold/30 hover:bg-secondary"
+                }`}
+              >
+                {followLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Users className="h-4 w-4" />
+                )}
+                {isFollowing ? "フォロー中" : "フォローする"}
+              </button>
+            )}
+            {onMessage != null && (
+              <button
+                type="button"
+                onClick={onMessage}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gold py-3 text-sm font-bold tracking-wide text-[#050505] transition-all hover:bg-gold-light active:scale-[0.98]"
+              >
+                <MessageCircle className="h-4 w-4" />
+                チャット
+              </button>
+            )}
           </div>
         )}
       </div>
