@@ -118,6 +118,28 @@ export default function AuthForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const CONFIRM_EMAIL_MESSAGE = "確認メールを送信しました。メール内のリンクから認証を完了してください。迷惑メールフォルダもご確認ください。";
+
+  const handleResendConfirmation = async () => {
+    if (!email.trim() || resendLoading) return;
+    setResendLoading(true);
+    setAuthError(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resend({ type: "signup", email: email.trim() });
+      if (error) {
+        setAuthError(error.message === "Email rate limit exceeded" ? "送信回数の上限に達しました。しばらく待ってからお試しください。" : error.message);
+        return;
+      }
+      setAuthSuccess("確認メールを再送信しました。届かない場合は迷惑メールフォルダをご確認ください。");
+    } catch (e) {
+      setAuthError(e instanceof Error ? e.message : "再送信に失敗しました");
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const handleLoginOrSignup = async () => {
     setAuthError(null);
@@ -171,7 +193,7 @@ export default function AuthForm() {
           const hasProfile = await checkProfileCreated(supabase, data.user.id);
           window.location.href = hasProfile ? "/dashboard" : "/onboarding";
         } else {
-          setAuthSuccess("確認メールを送信しました。メール内のリンクから認証を完了してください。");
+          setAuthSuccess(CONFIRM_EMAIL_MESSAGE);
         }
       } catch (e) {
         setAuthError(e instanceof Error ? e.message : "登録に失敗しました");
@@ -232,7 +254,21 @@ export default function AuthForm() {
             onToggle={() => setShowPassword(!showPassword)}
           />
           {authError && <p className="text-sm text-red-400" role="alert">{authError}</p>}
-          {authSuccess && <p className="text-sm text-green-400" role="status">{authSuccess}</p>}
+          {authSuccess && (
+            <div className="space-y-2">
+              <p className="text-sm text-green-400" role="status">{authSuccess}</p>
+              {authSuccess.startsWith("確認メールを送信しました") && (
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={resendLoading}
+                  className="text-xs font-semibold text-gold transition-colors hover:text-gold-light disabled:opacity-60"
+                >
+                  {resendLoading ? "送信中…" : "確認メールを再送信する"}
+                </button>
+              )}
+            </div>
+          )}
           <button
             type="button"
             disabled={isSubmitting}

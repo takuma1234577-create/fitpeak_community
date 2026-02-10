@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import CreateGroupDialog from "@/components/groups/create-group-dialog";
 import GroupCard, { type Group } from "@/components/groups/group-card";
 import GroupDetailModal from "@/components/groups/group-detail-modal";
 import { createClient } from "@/utils/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, UserCircle } from "lucide-react";
 
 export default function GroupList() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -63,16 +64,25 @@ export default function GroupList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-black tracking-tight text-foreground">グループ</h1>
-        <CreateGroupDialog onCreated={loadGroups}>
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-lg border border-gold/40 bg-transparent px-4 py-2.5 text-sm font-bold text-gold transition-all hover:border-gold hover:bg-gold hover:text-[#050505]"
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/groups/my"
+            className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-bold text-foreground transition-all hover:border-gold/40 hover:bg-gold/10"
           >
-            グループを作る
-          </button>
-        </CreateGroupDialog>
+            <UserCircle className="h-4 w-4" />
+            自分のグループ
+          </Link>
+          <CreateGroupDialog onCreated={loadGroups}>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg border border-gold/40 bg-transparent px-4 py-2.5 text-sm font-bold text-gold transition-all hover:border-gold hover:bg-gold hover:text-[#050505]"
+            >
+              グループを作る
+            </button>
+          </CreateGroupDialog>
+        </div>
       </div>
       {loading ? (
         <div className="flex items-center justify-center py-16">
