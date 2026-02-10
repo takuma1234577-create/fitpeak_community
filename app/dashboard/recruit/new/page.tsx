@@ -3,11 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { PREFECTURES } from "@/lib/constants";
 import { BODY_PARTS, LEVELS } from "@/lib/recruit-constants";
 import { safeArray } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+const TIME_OPTIONS: string[] = [];
+for (let h = 0; h < 24; h++) {
+  for (let m = 0; m < 60; m += 15) {
+    TIME_OPTIONS.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  }
+}
 
 export default function NewRecruitPage() {
   const router = useRouter();
@@ -15,8 +25,9 @@ export default function NewRecruitPage() {
   const [area, setArea] = useState("");
   const [bodyPart, setBodyPart] = useState("all");
   const [level, setLevel] = useState("all");
-  const [eventDate, setEventDate] = useState("");
+  const [eventDate, setEventDate] = useState<string>("");
   const [eventTime, setEventTime] = useState("12:00");
+  const [dateOpen, setDateOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -165,28 +176,59 @@ export default function NewRecruitPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="eventDate" className="mb-1.5 block text-sm font-bold text-foreground">
+            <label className="mb-1.5 block text-sm font-bold text-foreground">
               日付
             </label>
-            <input
-              id="eventDate"
-              type="date"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-              className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
-            />
+            <Popover open={dateOpen} onOpenChange={setDateOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20",
+                    !eventDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4 shrink-0 text-gold/70" />
+                  {eventDate
+                    ? new Date(eventDate + "T12:00:00").toLocaleDateString("ja-JP", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
+                    : "日付を選択"}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={eventDate ? new Date(eventDate + "T12:00:00") : undefined}
+                  onSelect={(d) => {
+                    if (d) {
+                      setEventDate(d.toISOString().slice(0, 10));
+                      setDateOpen(false);
+                    }
+                  }}
+                  disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div>
             <label htmlFor="eventTime" className="mb-1.5 block text-sm font-bold text-foreground">
               時間
             </label>
-            <input
+            <select
               id="eventTime"
-              type="time"
               value={eventTime}
               onChange={(e) => setEventTime(e.target.value)}
               className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
-            />
+            >
+              {TIME_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
