@@ -1,8 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
-import { ChevronLeft, Users, Loader2, MessageCircle, MapPin, Dumbbell, Calendar, Target } from "lucide-react";
+import { ChevronLeft, Users, Loader2, MessageCircle, MapPin, Dumbbell, Calendar, Target, Settings, Ban, Flag, Share2 } from "lucide-react";
 import { toGenderLabel } from "@/lib/constants";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import ReportDialog from "@/components/report-dialog";
+import { blockUser } from "@/actions/safety";
 
 export interface OtherProfileTopProps {
   /** ヘッダー画像URL。未設定時はグラデーション */
@@ -47,6 +58,10 @@ export interface OtherProfileTopProps {
   onFollowersClick?: () => void;
   /** フォロー中数をクリックしたとき（一覧モーダル用） */
   onFollowingClick?: () => void;
+  /** 他ユーザー時のメニュー用: 対象ユーザーID（指定時のみ歯車メニュー表示） */
+  profileUserIdForActions?: string | null;
+  /** ブロック実行後に呼ぶ（ブロック一覧の再取得など） */
+  onBlockChange?: () => void | Promise<void>;
 }
 
 export default function OtherProfileTop({
@@ -71,7 +86,62 @@ export default function OtherProfileTop({
   onMessage,
   onFollowersClick,
   onFollowingClick,
+  profileUserIdForActions,
+  onBlockChange,
 }: OtherProfileTopProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+
+  const handleBlockClick = () => {
+    setMenuOpen(false);
+    setBlockConfirmOpen(true);
+  };
+
+  const handleBlockConfirm = async () => {
+    if (!profileUserIdForActions) return;
+    setBlockLoading(true);
+    const res = await blockUser(profileUserIdForActions);
+    setBlockLoading(false);
+    setBlockConfirmOpen(false);
+    if (res?.error) {
+      console.error("block:", res.error);
+      return;
+    }
+    await onBlockChange?.();
+  };
+
+  const handleReportClick = () => {
+    setMenuOpen(false);
+    setReportOpen(true);
+  };
+
+  const handleShareClick = async () => {
+    setMenuOpen(false);
+    if (!profileUserIdForActions) return;
+    const url = typeof window !== "undefined" ? `${window.location.origin}/profile?u=${encodeURIComponent(profileUserIdForActions)}` : "";
+    const title = `${name || "ユーザー"}のプロフィール`;
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ title, url });
+      } else if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        alert("リンクをコピーしました");
+      } else {
+        alert(url);
+      }
+    } catch (e) {
+      if ((e as Error)?.name !== "AbortError") {
+        console.error("share:", e);
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(url);
+          alert("リンクをコピーしました");
+        }
+      }
+    }
+  };
+
   const initial = (name || "?").charAt(0).toUpperCase();
   const avatarSrc = avatarUrl
     ? `${avatarUrl}${avatarUrl.includes("?") ? "&" : "?"}v=${Date.now()}`
@@ -101,9 +171,9 @@ export default function OtherProfileTop({
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
 
-        {/* 戻るボタン */}
-        {onBack && (
-          <div className="absolute inset-x-0 top-0 z-10 flex items-center p-4">
+        {/* 戻るボタン + 歯車メニュー */}
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4">
+          {onBack ? (
             <button
               type="button"
               onClick={onBack}
@@ -112,9 +182,92 @@ export default function OtherProfileTop({
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-          </div>
-        )}
+          ) : (
+            <div />
+          )}
+          {profileUserIdForActions && (
+            <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-background/60 text-foreground backdrop-blur-md transition-colors hover:bg-background/80"
+                  aria-label="メニュー"
+                >
+                  <Settings className="h-5 w-5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-0" align="end" side="bottom">
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={handleBlockClick}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary"
+                  >
+                    <Ban className="h-4 w-4" />
+                    ブロックする
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleReportClick}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary"
+                  >
+                    <Flag className="h-4 w-4" />
+                    通報する
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleShareClick}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    プロフィールを共有
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
       </div>
+
+      {/* ブロック確認ダイアログ */}
+      <Dialog open={blockConfirmOpen} onOpenChange={setBlockConfirmOpen}>
+        <DialogContent className="max-w-sm border-border/60 bg-card">
+          <DialogHeader>
+            <DialogTitle>ブロックしますか？</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            ブロックすると、このユーザーのプロフィール・募集・チャットが表示されなくなります。
+          </p>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <button
+              type="button"
+              onClick={() => setBlockConfirmOpen(false)}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary"
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              onClick={handleBlockConfirm}
+              disabled={blockLoading}
+              className="flex items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+            >
+              {blockLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "ブロックする"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 通報ダイアログ */}
+      {profileUserIdForActions && (
+        <ReportDialog
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          targetId={profileUserIdForActions}
+          type="user"
+          title={name || undefined}
+        />
+      )}
 
       {/* アバター + 名前 */}
       <div className="relative px-5 pb-4 sm:px-8">

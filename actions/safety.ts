@@ -37,6 +37,12 @@ export async function unblockUser(targetUserId: string): Promise<{ error?: strin
   return error ? { error: error.message } : {};
 }
 
+/**
+ * 通報を保存する。
+ * 運用: 同一 target_id に対し 72時間以内に異なるユーザーから 10件以上通報された場合、
+ * アカウントBan（ログイン不可・同一メールで再登録不可）とする処理は
+ * バックエンドの cron / Edge Function / DB トリガーで実装する想定。
+ */
 export async function reportContent(
   targetId: string,
   type: ReportType,
