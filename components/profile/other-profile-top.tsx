@@ -99,7 +99,6 @@ export default function OtherProfileTop({
         ) : (
           <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
 
         {/* 戻るボタン */}
         {onBack && (

@@ -171,8 +171,6 @@ export default function ProfileHeader({
         ) : (
           <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-gold/20 via-transparent to-background" />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background" />
 
         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4">
           <button
