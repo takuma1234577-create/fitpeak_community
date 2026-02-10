@@ -20,11 +20,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { safeArray, safeList } from "@/lib/utils";
-import type { NewArrivalUser } from "@/lib/recommendations";
-import { useFollow } from "@/hooks/use-follow";
-import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
-import { useProfileModal } from "@/contexts/profile-modal-context";
-import UserMatchingCarousel from "@/components/dashboard/user-matching-carousel";
 
 function SectionHeader({
   icon: Icon,
@@ -284,139 +279,6 @@ function MyScheduleSection() {
   );
 }
 
-function formatRegisteredAt(createdAt: string): string {
-  if (!createdAt) return "登録日不明";
-  const d = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-  if (diffDays === 0) return "今日登録";
-  if (diffDays === 1) return "1日前に登録";
-  if (diffDays < 7) return `${diffDays}日前に登録`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}週間前に登録`;
-  return `${Math.floor(diffDays / 30)}ヶ月前に登録`;
-}
-
-function NewArrivalUserCard({
-  user,
-  myUserId,
-  onOpenProfile,
-}: {
-  user: NewArrivalUser;
-  myUserId: string | null;
-  onOpenProfile: (userId: string) => void;
-}) {
-  const { isFollowing, toggle, loading } = useFollow(user.id, myUserId);
-  const name = user.nickname || user.username || "ユーザー";
-  const initial = name.charAt(0);
-  const showFollow = myUserId && myUserId !== user.id;
-
-  return (
-    <div className="flex w-[160px] shrink-0 flex-col items-center gap-2 rounded-xl border border-border/40 bg-card px-4 py-4 transition-all hover:border-gold/30 hover:bg-card/80">
-      <button
-        type="button"
-        onClick={() => onOpenProfile(user.id)}
-        className="flex flex-col items-center gap-2 w-full"
-      >
-        <Avatar className="h-14 w-14 shrink-0 ring-2 ring-border/60">
-          <AvatarImage src={user.avatar_url ?? undefined} alt={name} />
-          <AvatarFallback className="bg-secondary text-sm font-bold">{initial}</AvatarFallback>
-        </Avatar>
-        <p className="w-full truncate text-center text-sm font-bold text-foreground">{name}</p>
-        <span className="text-[11px] text-muted-foreground">
-          {formatRegisteredAt(user.created_at)}
-        </span>
-      </button>
-      {showFollow && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            toggle();
-          }}
-          disabled={loading}
-          className={`w-full rounded-lg border px-2 py-1.5 text-[11px] font-bold transition-all disabled:opacity-60 ${
-            isFollowing
-              ? "border-gold/50 bg-gold/10 text-gold"
-              : "border-border bg-secondary text-foreground hover:border-gold/30"
-          }`}
-        >
-          {isFollowing ? "フォロー中" : "フォローする"}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function NewArrivalUsersSection({
-  users,
-  myUserId,
-  onOpenProfile,
-}: {
-  users: NewArrivalUser[] | null | undefined;
-  myUserId: string | null;
-  onOpenProfile: (userId: string) => void;
-}) {
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-  const safeUsers = safeArray(users);
-  const scroll = (dir: "left" | "right") => {
-    scrollRef.current?.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" });
-  };
-
-  return (
-    <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <Users className="h-5 w-5 text-gold" />
-          <h2 className="text-lg font-extrabold tracking-wide text-foreground">
-            新規ユーザー
-          </h2>
-        </div>
-        {safeUsers.length > 0 && (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => scroll("left")}
-              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
-              aria-label="前へスクロール"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => scroll("right")}
-              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
-              aria-label="次へスクロール"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <Link
-              href="/dashboard/search"
-              className="ml-2 flex items-center gap-1 text-xs font-semibold text-foreground transition-colors hover:text-gold"
-            >
-              検索で仲間を探す
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        )}
-      </div>
-      {safeUsers.length === 0 ? (
-        <p className="text-center text-sm text-muted-foreground">まだ新規ユーザーはいません</p>
-      ) : (
-        <div
-          ref={scrollRef}
-          className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          {safeUsers.map((user) => (
-            <NewArrivalUserCard key={user.id} user={user} myUserId={myUserId} onOpenProfile={onOpenProfile} />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
 function YourGroupsSection() {
   const [groups, setGroups] = useState<{ id: string; name: string; unread: number; chat_room_id: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -556,25 +418,11 @@ function YourGroupsSection() {
   );
 }
 
-type HomePageProps = {
-  newArrivalUsers: NewArrivalUser[];
-  myUserId: string | null;
-};
-
-export default function HomePage({
-  newArrivalUsers,
-  myUserId,
-}: HomePageProps) {
-  const { blockedIds } = useBlockedUserIds();
-  const { openProfileModal } = useProfileModal();
-  const filteredNewArrivalUsers = newArrivalUsers.filter((u) => !blockedIds.has(u.id));
-
+export default function HomePage() {
   return (
     <div className="flex flex-col gap-8">
-      <UserMatchingCarousel myUserId={myUserId} onOpenProfile={openProfileModal} blockedIds={blockedIds} />
       <RecommendedRecruitmentsSection />
       <MyScheduleSection />
-      <NewArrivalUsersSection users={filteredNewArrivalUsers} myUserId={myUserId} onOpenProfile={openProfileModal} />
       <YourGroupsSection />
     </div>
   );
