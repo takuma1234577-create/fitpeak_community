@@ -2,13 +2,20 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Loader2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Plus, Loader2, CalendarDays, MapPin, User } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { safeList } from "@/lib/utils";
 import RecruitFilterBar, {
   DEFAULT_FILTERS,
   type RecruitFilters,
 } from "@/components/dashboard/recruit-filter-bar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type RecruitmentRow = {
   id: string;
@@ -22,10 +29,19 @@ type RecruitmentRow = {
   profiles: { nickname: string | null; username: string | null; avatar_url: string | null } | null;
 };
 
+type RecruitmentDetail = RecruitmentRow & { level?: string | null };
+
 export default function RecruitBoard() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const detailId = searchParams.get("r");
+
   const [filters, setFilters] = useState<RecruitFilters>(DEFAULT_FILTERS);
   const [list, setList] = useState<RecruitmentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<RecruitmentDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const modalOpen = !!detailId;
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -65,6 +81,59 @@ export default function RecruitBoard() {
   useEffect(() => {
     fetchList();
   }, [fetchList]);
+
+  useEffect(() => {
+    if (!detailId) {
+      setDetail(null);
+      return;
+    }
+    let cancelled = false;
+    setDetailLoading(true);
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await (supabase as any)
+          .from("recruitments")
+          .select("id, title, description, target_body_part, event_date, location, status, user_id, level, profiles(nickname, username, avatar_url)")
+          .eq("id", detailId)
+          .maybeSingle();
+        if (cancelled) return;
+        if (error || !data) {
+          setDetail(null);
+          return;
+        }
+        setDetail(data as RecruitmentDetail);
+      } catch {
+        if (!cancelled) setDetail(null);
+      } finally {
+        if (!cancelled) setDetailLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [detailId]);
+
+  const closeDetail = useCallback(() => {
+    router.push("/dashboard/recruit", { scroll: false });
+  }, [router]);
+
+  const formatDetailDate = (d: string) =>
+    d
+      ? new Date(d).toLocaleDateString("ja-JP", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "—";
+
+  const levelLabel: Record<string, string> = {
+    beginner: "初心者",
+    intermediate: "中級者",
+    advanced: "上級者",
+    competitor: "大会勢",
+  };
 
   return (
     <div className="space-y-6">
@@ -137,6 +206,64 @@ export default function RecruitBoard() {
           })}
         </ul>
       )}
+
+      <Dialog open={modalOpen} onOpenChange={(open) => !open && closeDetail()}>
+        <DialogContent className="max-w-md border-border/60 bg-card sm:rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="sr-only">募集詳細</DialogTitle>
+          </DialogHeader>
+          {detailLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-gold/60" />
+            </div>
+          ) : detail ? (
+            <div className="space-y-4">
+              <h2 className="text-lg font-black tracking-tight text-foreground">
+                {detail.title}
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {detail.target_body_part && (
+                  <span className="rounded-full bg-gold/10 px-3 py-1 text-xs font-bold text-gold">
+                    {detail.target_body_part}
+                  </span>
+                )}
+                {detail.level && levelLabel[detail.level] && (
+                  <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground">
+                    {levelLabel[detail.level]}
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 shrink-0 text-gold/70" />
+                  {formatDetailDate(detail.event_date)}
+                </p>
+                {detail.location && (
+                  <p className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 shrink-0 text-gold/70" />
+                    {detail.location}
+                  </p>
+                )}
+                <p className="flex items-center gap-2">
+                  <User className="h-4 w-4 shrink-0 text-gold/70" />
+                  {detail.profiles?.nickname || detail.profiles?.username || "ユーザー"}
+                </p>
+              </div>
+              {detail.description && (
+                <div className="rounded-lg border border-border/40 bg-secondary/30 p-3">
+                  <p className="whitespace-pre-wrap text-sm text-foreground">
+                    {detail.description}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              募集が見つかりませんでした
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
