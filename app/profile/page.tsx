@@ -16,6 +16,7 @@ import StatsGrid from "@/components/profile/stats-grid";
 import MyGears from "@/components/profile/my-gears";
 import ActivityTimeline from "@/components/profile/activity-timeline";
 import ProfileDetails from "@/components/profile/profile-details";
+import OtherProfileTop from "@/components/profile/other-profile-top";
 import { Loader2 } from "lucide-react";
 import { safeArray } from "@/lib/utils";
 import type { Achievement } from "@/types/profile";
@@ -34,6 +35,7 @@ function calcAge(birthday: string | null): number | null {
 export default function ProfilePage() {
   const searchParams = useSearchParams();
   const u = searchParams.get("u");
+  const router = useRouter();
   const { profile: myProfile, isLoading: myLoading, refreshProfile } = useProfile();
   const { profile: otherProfile, isLoading: otherLoading, refresh: refreshOtherProfile } = useProfileById(u || null);
   const displayProfile = u ? otherProfile : myProfile;
@@ -46,7 +48,6 @@ export default function ProfilePage() {
   });
   const { isBlocked, refetch: refetchBlock } = useBlockStatus(isOwnProfile ? null : profileUserId);
   const { blockedIds } = useBlockedUserIds();
-  const router = useRouter();
   const [followModalOpen, setFollowModalOpen] = useState(false);
   const [followModalTab, setFollowModalTab] = useState<FollowTab>("followers");
 
@@ -60,36 +61,62 @@ export default function ProfilePage() {
     }
   };
 
+  // ---------- 他ユーザープロフィール（?u=xxx）：上部分のみ ----------
+  if (u) {
+    if (isLoading) {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-gold" />
+            <p className="text-sm font-semibold text-muted-foreground">読み込み中...</p>
+          </div>
+        </main>
+      );
+    }
+    if (!otherProfile) {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-background">
+          <div className="rounded-xl border border-border/40 bg-card/50 px-6 py-8 text-center">
+            <p className="text-sm font-semibold text-muted-foreground">ユーザーが見つかりません</p>
+          </div>
+        </main>
+      );
+    }
+    const safeBlockedIds = blockedIds instanceof Set ? blockedIds : new Set<string>();
+    if (profileUserId && safeBlockedIds.has(profileUserId)) {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-background">
+          <p className="text-sm text-muted-foreground">このユーザーは表示できません</p>
+        </main>
+      );
+    }
+    const name =
+      ((otherProfile as { nickname?: string | null }).nickname ||
+        (otherProfile as { username?: string | null }).username ||
+        (otherProfile as { name?: string | null }).name) ??
+      "名前未設定";
+    return (
+      <main className="min-h-screen bg-background">
+        <div className="mx-auto max-w-lg">
+          <OtherProfileTop
+            headerUrl={(otherProfile as { header_url?: string | null }).header_url ?? null}
+            avatarUrl={otherProfile.avatar_url ?? null}
+            name={name}
+            onBack={() => router.push("/dashboard")}
+          />
+        </div>
+      </main>
+    );
+  }
+
+  // ---------- 自分のプロフィール：従来どおりフル表示 ----------
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-gold" />
-          <p className="text-sm font-semibold text-muted-foreground">
-            読み込み中...
-          </p>
+          <p className="text-sm font-semibold text-muted-foreground">読み込み中...</p>
         </div>
-      </main>
-    );
-  }
-
-  if (u && !otherProfile) {
-    console.warn("[プロフィール] 他ユーザーが見つかりません:", { userId: u });
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background">
-        <div className="rounded-xl border border-border/40 bg-card/50 px-6 py-8 text-center">
-          <p className="text-sm font-semibold text-muted-foreground">ユーザーが見つかりません</p>
-        </div>
-      </main>
-    );
-  }
-
-  const safeBlockedIds = blockedIds instanceof Set ? blockedIds : new Set<string>();
-  if (u && profileUserId && safeBlockedIds.has(profileUserId)) {
-    console.warn("[プロフィール] ブロックにより非表示:", { profileUserId });
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">このユーザーは表示できません</p>
       </main>
     );
   }
@@ -98,12 +125,8 @@ export default function ProfilePage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <div className="mx-auto max-w-lg rounded-xl border border-border/40 bg-card/50 px-6 py-12 text-center">
-          <p className="text-sm font-semibold text-muted-foreground">
-            プロフィールがありません
-          </p>
-          <p className="mt-2 text-xs text-muted-foreground/80">
-            設定からプロフィールを登録してください
-          </p>
+          <p className="text-sm font-semibold text-muted-foreground">プロフィールがありません</p>
+          <p className="mt-2 text-xs text-muted-foreground/80">設定からプロフィールを登録してください</p>
           <a
             href="/dashboard/settings"
             className="mt-4 inline-block rounded-lg bg-gold px-5 py-2.5 text-sm font-bold text-[#050505] transition-colors hover:bg-gold-light"
@@ -121,14 +144,12 @@ export default function ProfilePage() {
   const deadliftMax = (p as { deadlift_max?: number }).deadlift_max ?? 0;
   const safeAchievements = safeArray(((p as { achievements?: unknown }).achievements) as unknown[] | null | undefined);
   const safeCertifications = safeArray(((p as { certifications?: unknown }).certifications) as unknown[] | null | undefined);
-
   const isPrefecturePublic = (p as { is_prefecture_public?: boolean }).is_prefecture_public !== false;
   const isHomeGymPublic = (p as { is_home_gym_public?: boolean }).is_home_gym_public !== false;
   const isAgePublic = (p as { is_age_public?: boolean }).is_age_public !== false;
   const prefecture = (p as { prefecture?: string | null }).prefecture ?? (p as { area?: string | null }).area;
   const homeGym = (p as { home_gym?: string | null }).home_gym ?? (p as { gym?: string | null }).gym;
   const birthday = (p as { birthday?: string | null }).birthday ?? null;
-
   const displayArea =
     prefecture || (p as { area?: string | null }).area
       ? isPrefecturePublic
@@ -143,7 +164,6 @@ export default function ProfilePage() {
       : null;
   const ageNum = calcAge(birthday);
   const ageDisplay = birthday ? (isAgePublic && ageNum !== null ? `${ageNum}歳` : "非公開") : null;
-
   const name =
     ((p as { nickname?: string | null }).nickname ||
       (p as { username?: string | null }).username ||
@@ -198,11 +218,7 @@ export default function ProfilePage() {
 
         <div className="mx-5 h-px bg-border/40 sm:mx-8" />
 
-        <StatsGrid
-          benchMax={benchMax}
-          squatMax={squatMax}
-          deadliftMax={deadliftMax}
-        />
+        <StatsGrid benchMax={benchMax} squatMax={squatMax} deadliftMax={deadliftMax} />
 
         <div className="mx-5 h-px bg-border/40 sm:mx-8" />
 
