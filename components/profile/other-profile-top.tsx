@@ -201,7 +201,9 @@ export default function OtherProfileTop({
                 type="button"
                 onClick={onFollow}
                 disabled={followLoading}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-lg border py-3 text-sm font-bold tracking-wide transition-all active:scale-[0.98] disabled:opacity-60 ${
+                title={isFollowing ? "クリックでフォロー解除" : undefined}
+                aria-label={isFollowing ? "フォロー解除" : "フォローする"}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-lg border py-3 text-sm font-bold tracking-wide transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer ${
                   isFollowing
                     ? "border-gold/50 bg-gold/10 text-gold hover:bg-gold/20"
                     : "border-border bg-transparent text-foreground hover:border-gold/30 hover:bg-secondary"
