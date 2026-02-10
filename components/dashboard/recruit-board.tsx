@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Loader2, CalendarDays, MapPin, User, ArrowUpDown } from "lucide-react";
+import { Plus, Loader2, CalendarDays, MapPin, User, Users, ChevronRight, ArrowUpDown } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { safeList } from "@/lib/utils";
 import RecruitFilterBar, {
   DEFAULT_FILTERS,
@@ -432,45 +433,72 @@ export default function RecruitBoard() {
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
           {sortedList.map((r) => {
-            const name = r.profiles?.nickname || r.profiles?.username || "ユーザー";
-            const date = r.event_date
-              ? new Date(r.event_date).toLocaleDateString("ja-JP", {
-                  month: "numeric",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+            const organizer = r.profiles?.nickname || r.profiles?.username || "ユーザー";
+            const organizerInitial = organizer.charAt(0);
+            const avatarUrl = r.profiles?.avatar_url ?? null;
+            const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+            const d = r.event_date ? new Date(r.event_date) : null;
+            const dateStr = d
+              ? `${d.getMonth() + 1}/${d.getDate()} (${weekdays[d.getDay()]}) ${d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false })}`
               : "—";
-            const createdLabel = r.created_at
-              ? new Date(r.created_at).toLocaleDateString("ja-JP", {
-                  year: "numeric",
-                  month: "numeric",
-                  day: "numeric",
-                })
-              : "—";
-            const maxLabel =
-              r.max_participants != null ? `${r.max_participants}人` : "制限なし";
+            const approvedCount = r.approvedCount ?? 0;
+            const maxDisplay = r.max_participants != null ? String(r.max_participants) : "制限なし";
             return (
               <li key={r.id}>
                 <Link
                   href={`/dashboard/recruit?r=${r.id}`}
-                  className="block rounded-xl border border-border/40 bg-card p-4 transition-all hover:border-gold/30 hover:bg-card/80"
+                  className="group relative block w-full overflow-hidden rounded-2xl bg-card text-left shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98]"
                 >
-                  <p className="font-bold text-foreground">{r.title}</p>
-                  {r.target_body_part && (
-                    <span className="mt-1 inline-block text-xs text-foreground">
-                      {r.target_body_part}
-                    </span>
-                  )}
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {date} {r.location && `・${r.location}`}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground/90">
-                    <span>参加人数: {r.approvedCount ?? 0}人</span>
-                    <span>募集人数: {maxLabel}</span>
-                    <span>作成日: {createdLabel}</span>
+                  <div className="h-1 w-full bg-gradient-to-r from-gold to-gold-light" />
+                  <div className="flex flex-col gap-3 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        {r.target_body_part && (
+                          <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-gold/10 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-foreground">
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
+                            {r.target_body_part}
+                          </span>
+                        )}
+                        <h3 className="line-clamp-2 text-[15px] font-bold leading-snug text-card-foreground">
+                          {r.title}
+                        </h3>
+                      </div>
+                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors group-hover:bg-gold/10 group-hover:text-gold">
+                        <ChevronRight className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                          <CalendarDays className="h-3.5 w-3.5 text-gold" />
+                        </div>
+                        <span className="font-medium">{dateStr}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                          <MapPin className="h-3.5 w-3.5 text-gold" />
+                        </div>
+                        <span className="font-medium">{r.location || "—"}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border pt-3">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6 shrink-0 ring-1 ring-border/60">
+                          <AvatarImage src={avatarUrl ?? undefined} alt={organizer} />
+                          <AvatarFallback className="bg-gold/10 text-xs font-bold text-gold">
+                            {organizerInitial}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-medium text-muted-foreground">{organizer}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Users className="h-3.5 w-3.5" />
+                        <span className="font-semibold text-card-foreground">{approvedCount}</span>
+                        <span>/</span>
+                        <span>{maxDisplay}</span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground/80">{name}</p>
                 </Link>
               </li>
             );

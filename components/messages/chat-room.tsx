@@ -212,7 +212,7 @@ export default function ChatRoom({
                           !isFirst && isLast && "rounded-[20px] rounded-tr-[6px]"
                         )
                       : cn(
-                          "bg-[#1e1e1e] text-foreground",
+                          "bg-secondary text-foreground",
                           isFirst && isLast && "rounded-[20px]",
                           isFirst && !isLast && "rounded-[20px] rounded-bl-[6px]",
                           !isFirst && !isLast && "rounded-[20px] rounded-l-[6px]",
@@ -250,7 +250,7 @@ export default function ChatRoom({
           <button
             type="button"
             onClick={scrollToBottom}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1e1e1e] text-muted-foreground shadow-lg ring-1 ring-border/30 transition-all hover:bg-[#2a2a2a] hover:text-foreground"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground shadow-lg ring-1 ring-border/30 transition-all hover:bg-secondary/80 hover:text-foreground"
             aria-label="最新メッセージへ"
           >
             <ChevronDown className="h-4 w-4" />

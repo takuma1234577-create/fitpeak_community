@@ -25,6 +25,7 @@ import type { RecommendedUser, NewArrivalUser } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { useProfileModal } from "@/contexts/profile-modal-context";
+import UserMatchingCarousel from "@/components/dashboard/user-matching-carousel";
 
 function SectionHeader({
   icon: Icon,
@@ -66,7 +67,8 @@ type RecruitmentItem = {
   location: string | null;
   created_at: string;
   max_participants?: number | null;
-  profiles: { nickname: string | null; username: string | null } | null;
+  approvedCount?: number;
+  profiles: { nickname: string | null; username: string | null; avatar_url: string | null } | null;
 };
 
 function formatRecruitDate(eventDate: string): string {
@@ -89,27 +91,47 @@ function RecommendedRecruitmentsSection() {
       const supabase = createClient();
       let { data, error } = await (supabase as any)
         .from("recruitments")
-        .select("id, title, target_body_part, event_date, location, created_at, max_participants, profiles(nickname, username)")
+        .select("id, title, target_body_part, event_date, location, created_at, max_participants, profiles(nickname, username, avatar_url)")
         .eq("status", "open")
         .order("created_at", { ascending: false })
         .limit(10);
       if (error && (error.message?.includes("max_participants") || error.message?.includes("column"))) {
         const res = await (supabase as any)
           .from("recruitments")
-          .select("id, title, target_body_part, event_date, location, created_at, profiles(nickname, username)")
+          .select("id, title, target_body_part, event_date, location, created_at, profiles(nickname, username, avatar_url)")
           .eq("status", "open")
           .order("created_at", { ascending: false })
           .limit(10);
         data = res.data;
         error = res.error;
       }
-      if (!cancelled) {
-        if (error) {
-          console.error("recruitments fetch:", error);
-          setList([]);
-        } else {
-          setList(safeList((data ?? []) as RecruitmentItem[]));
+      if (!cancelled && error) {
+        console.error("recruitments fetch:", error);
+        setList([]);
+        setLoading(false);
+        return;
+      }
+      const rows = safeList((data ?? []) as RecruitmentItem[]);
+      const ids = rows.map((r) => r.id);
+      const approvedByRec: Record<string, number> = {};
+      if (ids.length > 0) {
+        const { data: partData } = await (supabase as any)
+          .from("recruitment_participants")
+          .select("recruitment_id")
+          .in("recruitment_id", ids)
+          .eq("status", "approved");
+        const partList = safeList(partData as { recruitment_id: string }[] | null);
+        for (const p of partList) {
+          approvedByRec[p.recruitment_id] = (approvedByRec[p.recruitment_id] ?? 0) + 1;
         }
+      }
+      if (!cancelled) {
+        setList(
+          rows.map((r) => ({
+            ...r,
+            approvedCount: approvedByRec[r.id] ?? 0,
+          }))
+        );
         setLoading(false);
       }
     })();
@@ -166,71 +188,76 @@ function RecommendedRecruitmentsSection() {
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {list.map((r) => {
-            const organizer = r.profiles?.nickname || r.profiles?.username || "ユーザー";
-            const dateStr = r.event_date ? formatRecruitDate(r.event_date) : "—";
-            const maxLabel = r.max_participants != null ? r.max_participants : "—";
-            return (
-              <Link
-                key={r.id}
-                href={`/dashboard/recruit?r=${r.id}`}
-                className="group relative w-full overflow-hidden rounded-2xl bg-card text-left shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98]"
-              >
-                {/* 上部アクセントバー（サイトのゴールド） */}
-                <div className="h-1 w-full bg-gradient-to-r from-gold to-gold-light" />
-                <div className="flex flex-col gap-3 p-4">
-                  {/* ヘッダー: タイトル + 矢印 */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      {r.target_body_part && (
-                        <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-gold/10 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-foreground">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
-                          {r.target_body_part}
-                        </span>
-                      )}
-                      <h3 className="line-clamp-2 text-[15px] font-bold leading-snug text-card-foreground">
-                        {r.title}
-                      </h3>
+        <div className="scrollbar-hide -mx-4 snap-x snap-mandatory overflow-x-auto overflow-y-hidden px-4 pb-2">
+          <div className="flex gap-3">
+            {list.map((r) => {
+              const organizer = r.profiles?.nickname || r.profiles?.username || "ユーザー";
+              const organizerInitial = organizer.charAt(0);
+              const avatarUrl = r.profiles?.avatar_url ?? null;
+              const dateStr = r.event_date ? formatRecruitDate(r.event_date) : "—";
+              const approvedCount = r.approvedCount ?? 0;
+              const maxDisplay = r.max_participants != null ? String(r.max_participants) : "制限なし";
+              return (
+                <Link
+                  key={r.id}
+                  href={`/dashboard/recruit?r=${r.id}`}
+                  className="group relative w-full min-w-[85%] max-w-[320px] shrink-0 snap-start overflow-hidden rounded-2xl bg-card text-left shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98]"
+                >
+                  {/* 上部アクセントバー（サイトのゴールド） */}
+                  <div className="h-1 w-full bg-gradient-to-r from-gold to-gold-light" />
+                  <div className="flex flex-col gap-3 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        {r.target_body_part && (
+                          <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-gold/10 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-foreground">
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
+                            {r.target_body_part}
+                          </span>
+                        )}
+                        <h3 className="line-clamp-2 text-[15px] font-bold leading-snug text-card-foreground">
+                          {r.title}
+                        </h3>
+                      </div>
+                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors group-hover:bg-gold/10 group-hover:text-gold">
+                        <ChevronRight className="h-4 w-4" />
+                      </div>
                     </div>
-                    <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors group-hover:bg-gold/10 group-hover:text-gold">
-                      <ChevronRight className="h-4 w-4" />
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                          <CalendarDays className="h-3.5 w-3.5 text-gold" />
+                        </div>
+                        <span className="font-medium">{dateStr}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                          <MapPin className="h-3.5 w-3.5 text-gold" />
+                        </div>
+                        <span className="font-medium">{r.location || "—"}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border pt-3">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6 shrink-0 ring-1 ring-border/60">
+                          <AvatarImage src={avatarUrl ?? undefined} alt={organizer} />
+                          <AvatarFallback className="bg-gold/10 text-xs font-bold text-gold">
+                            {organizerInitial}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-medium text-muted-foreground">{organizer}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Users className="h-3.5 w-3.5" />
+                        <span className="font-semibold text-card-foreground">{approvedCount}</span>
+                        <span>/</span>
+                        <span>{maxDisplay}</span>
+                      </div>
                     </div>
                   </div>
-                  {/* 日時・場所 */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                        <CalendarDays className="h-3.5 w-3.5 text-gold" />
-                      </div>
-                      <span className="font-medium">{dateStr}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                        <MapPin className="h-3.5 w-3.5 text-gold" />
-                      </div>
-                      <span className="font-medium">{r.location || "—"}</span>
-                    </div>
-                  </div>
-                  {/* フッター: 募集者 + 参加人数 */}
-                  <div className="flex items-center justify-between border-t border-border pt-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gold/10 text-gold">
-                        <User className="h-3 w-3" />
-                      </div>
-                      <span className="text-xs font-medium text-muted-foreground">{organizer}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Users className="h-3.5 w-3.5" />
-                      <span className="font-semibold text-card-foreground">—</span>
-                      <span>/</span>
-                      <span>{maxLabel}</span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
     </section>
@@ -638,6 +665,7 @@ export default function HomePage({
 
   return (
     <div className="flex flex-col gap-8">
+      <UserMatchingCarousel myUserId={myUserId} onOpenProfile={openProfileModal} blockedIds={blockedIds} />
       <RecommendedRecruitmentsSection />
       <MyScheduleSection />
       <RecommendedUsersSection users={filteredRecommendedUsers} myUserId={myUserId} onOpenProfile={openProfileModal} />
