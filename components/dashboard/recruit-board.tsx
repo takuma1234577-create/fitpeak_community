@@ -213,7 +213,7 @@ export default function RecruitBoard() {
         sender_id: user.id,
         type: "apply",
         content: `${applicantDisplay}が「${detail.title}」に参加申請しました`,
-        link: `/dashboard/recruit/manage`,
+        link: `/dashboard/recruit/manage?r=${detailId}&u=${user.id}`,
       });
 
       try {

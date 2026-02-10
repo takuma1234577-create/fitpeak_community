@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   Loader2,
@@ -15,7 +15,7 @@ import {
   ChevronRight,
   User,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { safeList } from "@/lib/utils";
@@ -66,6 +66,7 @@ function participantKey(recId: string, userId: string) {
 
 export default function RecruitManagePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [createdList, setCreatedList] = useState<RecruitmentRow[]>([]);
   const [appliedList, setAppliedList] = useState<{ recruitment: RecruitmentRow; myStatus: string }[]>([]);
@@ -75,6 +76,7 @@ export default function RecruitManagePage() {
   const [detailModalId, setDetailModalId] = useState<string | null>(null);
   const [approving, setApproving] = useState<string | null>(null);
   const [expandedParticipantKey, setExpandedParticipantKey] = useState<string | null>(null);
+  const notificationDeepLinkApplied = useRef(false);
 
   const fetchCreated = useCallback(async (userId: string) => {
     const supabase = createClient();
@@ -169,6 +171,18 @@ export default function RecruitManagePage() {
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  // 通知クリックで ?r=募集ID&u=申請者ID で遷移した場合、該当募集のモーダルを開き申請者の参加理由・自己紹介を表示
+  useEffect(() => {
+    if (loading || notificationDeepLinkApplied.current) return;
+    const r = searchParams.get("r");
+    const u = searchParams.get("u");
+    if (!r || !u) return;
+    notificationDeepLinkApplied.current = true;
+    setDetailModalId(r);
+    setExpandedParticipantKey(participantKey(r, u));
+    router.replace("/dashboard/recruit/manage", { scroll: false });
+  }, [loading, searchParams, router]);
 
   const handleCloseRecruitment = useCallback(
     async (id: string) => {
