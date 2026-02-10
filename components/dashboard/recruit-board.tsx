@@ -53,7 +53,7 @@ export default function RecruitBoard() {
       const supabase = createClient();
       let q = (supabase as any)
         .from("recruitments")
-        .select("id, title, description, target_body_part, event_date, location, status, user_id, level, profiles(nickname, username, avatar_url)")
+        .select("id, title, description, target_body_part, event_date, location, status, user_id, profiles(nickname, username, avatar_url)")
         .eq("status", "open")
         .order("created_at", { ascending: false });
 
@@ -63,9 +63,8 @@ export default function RecruitBoard() {
       if (filters.bodyPart !== "all") {
         q = q.eq("target_body_part", filters.bodyPart);
       }
-      if (filters.level !== "all") {
-        q = q.eq("level", filters.level);
-      }
+      // level フィルターは recruitments.level カラムがある DB のみ（supabase-recruitments-area-level.sql 適用後）
+      // カラムがないと 400 になるため、ここでは使わない
 
       const { data, error } = await q;
       if (error) {
@@ -107,7 +106,7 @@ export default function RecruitBoard() {
         const supabase = createClient();
         const { data: recData, error: recError } = await (supabase as any)
           .from("recruitments")
-          .select("id, title, description, target_body_part, event_date, location, status, user_id, level")
+          .select("id, title, description, target_body_part, event_date, location, status, user_id")
           .eq("id", detailId)
           .maybeSingle();
         if (cancelled) return;
