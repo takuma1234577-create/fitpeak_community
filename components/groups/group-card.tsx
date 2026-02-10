@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Users, Dumbbell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -36,16 +35,37 @@ const categoryStyles: Record<string, string> = {
   その他: "border-border bg-secondary text-muted-foreground",
 };
 
-export default function GroupCard({ group }: { group: Group }) {
-  const groupHref = `/dashboard/groups/${group.id}`;
+export default function GroupCard({
+  group,
+  onSelect,
+}: {
+  group: Group;
+  onSelect?: (groupId: string) => void;
+}) {
   const showRecruitmentTag = isRecruitmentGroup(group.category);
+  const handleClick = () => onSelect?.(group.id);
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/[0.04]">
-      <Link
-        href={groupHref}
-        className="relative block aspect-[16/9] overflow-hidden"
-      >
+    <article
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      onClick={onSelect ? handleClick : undefined}
+      onKeyDown={
+        onSelect
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleClick();
+              }
+            }
+          : undefined
+      }
+      className={cn(
+        "group flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/[0.04]",
+        onSelect && "cursor-pointer"
+      )}
+    >
+      <div className="relative block aspect-[16/9] overflow-hidden">
         <Image
           src={group.image || "/placeholder.svg"}
           alt={group.name}
@@ -73,14 +93,12 @@ export default function GroupCard({ group }: { group: Group }) {
             {group.category}
           </Badge>
         </div>
-      </Link>
+      </div>
 
       <div className="flex flex-1 flex-col gap-3 p-5">
-        <Link href={groupHref}>
-          <h3 className="line-clamp-2 text-balance text-sm font-bold leading-snug text-foreground transition-colors group-hover:text-gold">
-            {group.name}
-          </h3>
-        </Link>
+        <h3 className="line-clamp-2 text-balance text-sm font-bold leading-snug text-foreground transition-colors group-hover:text-gold">
+          {group.name}
+        </h3>
         <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
           {group.description}
         </p>

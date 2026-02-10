@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import CreateGroupDialog from "@/components/groups/create-group-dialog";
 import GroupCard, { type Group } from "@/components/groups/group-card";
+import GroupDetailModal from "@/components/groups/group-detail-modal";
 import { createClient } from "@/utils/supabase/client";
 import { Loader2 } from "lucide-react";
 
 export default function GroupList() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
   const loadGroups = async () => {
     const supabase = createClient();
@@ -84,10 +86,21 @@ export default function GroupList() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {groups.map((group) => (
-            <GroupCard key={group.id} group={group} />
+            <GroupCard
+              key={group.id}
+              group={group}
+              onSelect={(id) => setSelectedGroupId(id)}
+            />
           ))}
         </div>
       )}
+
+      <GroupDetailModal
+        groupId={selectedGroupId}
+        open={selectedGroupId !== null}
+        onOpenChange={(open) => !open && setSelectedGroupId(null)}
+        onJoined={loadGroups}
+      />
     </div>
   );
 }
