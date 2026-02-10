@@ -17,24 +17,24 @@
 
 @layer base {
   :root {
-    --background: 0 0% 2%;
-    --foreground: 0 0% 93%;
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 93%;
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 93%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
     --primary: 46 67% 52%;
-    --primary-foreground: 0 0% 2%;
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 93%;
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 55%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
     --accent: 46 67% 52%;
-    --accent-foreground: 0 0% 2%;
+    --accent-foreground: 0 0% 9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 18%;
-    --input: 0 0% 14%;
+    --border: 0 0% 90%;
+    --input: 0 0% 96%;
     --ring: 46 67% 52%;
     --radius: 0.5rem;
   }
@@ -42,29 +42,29 @@
 
 @layer base {
   html {
-    background-color: #050505;
+    background-color: #ffffff;
   }
   body {
     @apply bg-background text-foreground;
-    background-color: #050505;
-    color: #ededed;
+    background-color: #ffffff;
+    color: #171717;
   }
 }
 
 /* ログイン・共通フォールバック（Tailwind 未適用時用） */
-.bg-background { background-color: #050505 !important; }
-.text-foreground { color: #ededed !important; }
-.bg-card { background-color: #1a1a1a !important; }
-.bg-secondary { background-color: #242424 !important; }
+.bg-background { background-color: #ffffff !important; }
+.text-foreground { color: #171717 !important; }
+.bg-card { background-color: #fafafa !important; }
+.bg-secondary { background-color: #f5f5f5 !important; }
 .text-gold { color: #D4AF37 !important; }
 .bg-gold { background-color: #D4AF37 !important; }
 .text-muted-foreground { color: #737373 !important; }
-.border-border { border-color: #2e2e2e !important; }
-.border-border\/60 { border-color: rgba(46, 46, 46, 0.6) !important; }
-.bg-secondary\/80 { background-color: rgba(36, 36, 36, 0.8) !important; }
-.bg-gold\/30 { background-color: rgba(212, 175, 55, 0.3) !important; }
+.border-border { border-color: #e5e5e5 !important; }
+.border-border\/60 { border-color: rgba(229, 229, 229, 0.8) !important; }
+.bg-secondary\/80 { background-color: rgba(245, 245, 245, 0.8) !important; }
+.bg-gold\/30 { background-color: rgba(212, 175, 55, 0.2) !important; }
 .hover\:bg-gold-light:hover { background-color: #E5C76B !important; }
-.hover\:text-foreground:hover { color: #ededed !important; }
+.hover\:text-foreground:hover { color: #171717 !important; }
 .placeholder\:text-muted-foreground\/50::placeholder { color: rgba(115,115,115,0.5) !important; }
 .text-\[\#050505\] { color: #050505 !important; }
 .rounded-2xl { border-radius: 1rem !important; }
@@ -128,16 +128,16 @@
 .outline-none { outline: none !important; }
 body input,
 body textarea {
-  background-color: #242424;
-  border: 1px solid #2e2e2e;
-  color: #ededed;
+  background-color: #ffffff;
+  border: 1px solid #e5e5e5;
+  color: #171717;
   border-radius: 0.5rem;
   padding: 0.875rem 1rem;
   padding-left: 2.75rem;
 }
 body input::placeholder,
 body textarea::placeholder {
-  color: rgba(115, 115, 115, 0.5);
+  color: rgba(115, 115, 115, 0.6);
 }
 body main button[type="button"],
 body main button[type="submit"] {

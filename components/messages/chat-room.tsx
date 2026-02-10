@@ -259,7 +259,7 @@ export default function ChatRoom({
       )}
 
       {/* ── Input area (V0 style) ── */}
-      <div className="relative z-10 border-t border-border/20 bg-[#0a0a0a]/95 px-3 py-2.5 backdrop-blur-xl sm:px-5 sm:py-3">
+      <div className="relative z-10 border-t border-border/20 bg-background/95 px-3 py-2.5 backdrop-blur-xl sm:px-5 sm:py-3">
         <div className="flex items-end gap-2">
           <div className="flex shrink-0 items-center gap-0.5 pb-1">
             <button

@@ -67,7 +67,7 @@ export default function ConversationList({
             placeholder="ユーザーを検索..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="h-10 w-full rounded-lg border border-border/60 bg-[#0a0a0a] pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground/50 transition-all duration-300 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/20"
+            className="h-10 w-full rounded-lg border border-border/60 bg-card pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground/50 transition-all duration-300 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/20"
           />
         </div>
       </div>

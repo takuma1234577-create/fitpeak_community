@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#050505",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -25,12 +25,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className="dark">
+    <html lang="ja">
       <body
         className={`${inter.variable} font-sans antialiased bg-background text-foreground`}
         style={{
-          backgroundColor: "#050505",
-          color: "#ededed",
+          backgroundColor: "#ffffff",
+          color: "#171717",
         }}
       >
         <Providers>{children}</Providers>

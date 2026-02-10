@@ -265,7 +265,7 @@ export default function GroupChatTab({
               }}
               placeholder="メッセージを入力..."
               rows={1}
-              className="w-full resize-none rounded-xl border border-border/60 bg-[#0a0a0a] px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 transition-all duration-300 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/20"
+              className="w-full resize-none rounded-xl border border-border/60 bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 transition-all duration-300 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/20"
             />
           </div>
           <button
