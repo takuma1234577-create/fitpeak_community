@@ -14,14 +14,13 @@ import {
   MessageCircle,
   Dumbbell,
   Users,
-  User,
   Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { safeArray, safeList } from "@/lib/utils";
-import type { RecommendedUser, NewArrivalUser } from "@/lib/recommendations";
+import type { NewArrivalUser } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { useProfileModal } from "@/contexts/profile-modal-context";
@@ -298,96 +297,6 @@ function formatRegisteredAt(createdAt: string): string {
   return `${Math.floor(diffDays / 30)}ヶ月前に登録`;
 }
 
-function RecommendedUserCard({
-  user,
-  myUserId,
-  onOpenProfile,
-}: {
-  user: RecommendedUser;
-  myUserId: string | null;
-  onOpenProfile: (userId: string) => void;
-}) {
-  const { isFollowing, toggle, loading } = useFollow(user.id, myUserId);
-  const name = user.nickname || user.username || "ユーザー";
-  const initial = name.charAt(0);
-  const showFollow = myUserId && myUserId !== user.id;
-
-  return (
-    <div className="flex items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80">
-      <button
-        type="button"
-        onClick={() => onOpenProfile(user.id)}
-        className="flex min-w-0 flex-1 items-center gap-4 text-left"
-      >
-        <Avatar className="h-12 w-12 shrink-0 ring-1 ring-border/60">
-          <AvatarImage src={user.avatar_url ?? undefined} alt={name} />
-          <AvatarFallback className="bg-secondary text-sm font-bold">{initial}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground">{name}</p>
-          {user.bio && (
-            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{user.bio}</p>
-          )}
-          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
-            {user.prefecture && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3 text-gold/70" />
-                {user.prefecture}
-              </span>
-            )}
-            {user.home_gym && <span className="truncate">{user.home_gym}</span>}
-          </div>
-        </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-      </button>
-      {showFollow && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            toggle();
-          }}
-          disabled={loading}
-          className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all disabled:opacity-60 ${
-            isFollowing
-              ? "border-gold/50 bg-gold/10 text-gold"
-              : "border-border bg-secondary text-foreground hover:border-gold/30"
-          }`}
-        >
-          {isFollowing ? "フォロー中" : "フォローする"}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function RecommendedUsersSection({
-  users,
-  myUserId,
-  onOpenProfile,
-}: {
-  users: RecommendedUser[] | null | undefined;
-  myUserId: string | null;
-  onOpenProfile: (userId: string) => void;
-}) {
-  const safeUsers = safeArray(users);
-  return (
-    <section className="flex flex-col gap-4">
-      <SectionHeader
-        icon={Users}
-        title="おすすめのユーザー"
-        href="/dashboard/search"
-        linkLabel="検索で仲間を探す"
-      />
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {safeUsers.map((user) => (
-          <RecommendedUserCard key={user.id} user={user} myUserId={myUserId} onOpenProfile={onOpenProfile} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function NewArrivalUserCard({
   user,
   myUserId,
@@ -648,19 +557,16 @@ function YourGroupsSection() {
 }
 
 type HomePageProps = {
-  recommendedUsers: RecommendedUser[];
   newArrivalUsers: NewArrivalUser[];
   myUserId: string | null;
 };
 
 export default function HomePage({
-  recommendedUsers,
   newArrivalUsers,
   myUserId,
 }: HomePageProps) {
   const { blockedIds } = useBlockedUserIds();
   const { openProfileModal } = useProfileModal();
-  const filteredRecommendedUsers = recommendedUsers.filter((u) => !blockedIds.has(u.id));
   const filteredNewArrivalUsers = newArrivalUsers.filter((u) => !blockedIds.has(u.id));
 
   return (
@@ -668,7 +574,6 @@ export default function HomePage({
       <UserMatchingCarousel myUserId={myUserId} onOpenProfile={openProfileModal} blockedIds={blockedIds} />
       <RecommendedRecruitmentsSection />
       <MyScheduleSection />
-      <RecommendedUsersSection users={filteredRecommendedUsers} myUserId={myUserId} onOpenProfile={openProfileModal} />
       <NewArrivalUsersSection users={filteredNewArrivalUsers} myUserId={myUserId} onOpenProfile={openProfileModal} />
       <YourGroupsSection />
     </div>
