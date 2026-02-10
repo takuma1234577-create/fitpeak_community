@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronLeft, Users, Loader2, MessageCircle } from "lucide-react";
+import { ChevronLeft, Users, Loader2, MessageCircle, MapPin, Dumbbell, Calendar, Target } from "lucide-react";
 
 export interface OtherProfileTopProps {
   /** ヘッダー画像URL。未設定時はグラデーション */
@@ -12,6 +12,20 @@ export interface OtherProfileTopProps {
   name: string;
   /** 戻る/閉じるボタン押下（モーダルでは閉じる、ページでは戻る） */
   onBack?: () => void;
+  /** 自己紹介（bio） */
+  bio?: string | null;
+  /** 目標（例: 筋肉肥大） */
+  goal?: string | null;
+  /** 年齢表示（例: "25歳" / "非公開"） */
+  ageDisplay?: string | null;
+  /** 性別表示 */
+  gender?: string | null;
+  /** よく行くジム */
+  gym?: string | null;
+  /** トレーニング歴（年数） */
+  trainingYears?: number;
+  /** 住まい（都道府県など） */
+  area?: string | null;
   /** フォロワー数 */
   followersCount?: number;
   /** フォロー中数 */
@@ -35,6 +49,13 @@ export default function OtherProfileTop({
   avatarUrl,
   name,
   onBack,
+  bio,
+  goal,
+  ageDisplay,
+  gender,
+  gym,
+  trainingYears = 0,
+  area,
   followersCount = 0,
   followingCount = 0,
   collabCount = 0,
@@ -110,6 +131,52 @@ export default function OtherProfileTop({
           <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             {name || "名前未設定"}
           </h1>
+        </div>
+
+        {/* 自己紹介 */}
+        {bio && (
+          <p className="mb-4 text-sm font-semibold leading-relaxed tracking-wide text-gold">
+            {bio}
+          </p>
+        )}
+
+        {/* 年齢・性別・ジム・トレ歴・住まいのバッジ */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {goal && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/20 bg-gold/[0.06] px-3 py-1.5 text-xs font-bold text-gold">
+              <Target className="h-3.5 w-3.5" />
+              {goal}
+            </span>
+          )}
+          {ageDisplay != null && ageDisplay !== "" && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5 text-gold/70" />
+              {ageDisplay}
+            </span>
+          )}
+          {gender && (
+            <span className="inline-flex items-center rounded-full border border-border/60 bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              {gender}
+            </span>
+          )}
+          {gym && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              <Dumbbell className="h-3.5 w-3.5 text-gold/70" />
+              {gym}
+            </span>
+          )}
+          {trainingYears > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5 text-gold/70" />
+              トレ歴 {trainingYears}年
+            </span>
+          )}
+          {area && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 text-gold/70" />
+              {area}
+            </span>
+          )}
         </div>
 
         {/* フォロワー・フォロー中・合トレ実績 */}

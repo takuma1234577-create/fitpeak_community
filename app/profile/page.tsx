@@ -98,6 +98,26 @@ export default function ProfilePage() {
     const followersCount = (otherProfile as { followers_count?: number }).followers_count ?? 0;
     const followingCount = (otherProfile as { following_count?: number }).following_count ?? 0;
     const collabCount = (otherProfile as { collab_count?: number }).collab_count ?? 0;
+    const isPrefecturePublic = (otherProfile as { is_prefecture_public?: boolean }).is_prefecture_public !== false;
+    const isHomeGymPublic = (otherProfile as { is_home_gym_public?: boolean }).is_home_gym_public !== false;
+    const isAgePublic = (otherProfile as { is_age_public?: boolean }).is_age_public !== false;
+    const prefecture = (otherProfile as { prefecture?: string | null }).prefecture ?? (otherProfile as { area?: string | null }).area;
+    const homeGym = (otherProfile as { home_gym?: string | null }).home_gym ?? (otherProfile as { gym?: string | null }).gym;
+    const birthday = (otherProfile as { birthday?: string | null }).birthday ?? null;
+    const ageNum = calcAge(birthday);
+    const ageDisplay = birthday ? (isAgePublic && ageNum !== null ? `${ageNum}歳` : "非公開") : null;
+    const displayArea =
+      prefecture || (otherProfile as { area?: string | null }).area
+        ? isPrefecturePublic
+          ? prefecture || (otherProfile as { area?: string | null }).area
+          : "非公開"
+        : null;
+    const displayGym =
+      homeGym || (otherProfile as { gym?: string | null }).gym
+        ? isHomeGymPublic
+          ? homeGym || (otherProfile as { gym?: string | null }).gym
+          : "非公開"
+        : null;
     return (
       <main className="min-h-screen bg-background">
         <div className="mx-auto max-w-lg">
@@ -106,6 +126,13 @@ export default function ProfilePage() {
             avatarUrl={otherProfile.avatar_url ?? null}
             name={name}
             onBack={() => router.push("/dashboard")}
+            bio={otherProfile.bio ?? null}
+            goal={(otherProfile as { goal?: string | null }).goal ?? null}
+            ageDisplay={ageDisplay}
+            gender={(otherProfile as { gender?: string | null }).gender ?? null}
+            gym={displayGym}
+            trainingYears={(otherProfile as { training_years?: number }).training_years ?? 0}
+            area={displayArea}
             followersCount={followersCount}
             followingCount={followingCount}
             collabCount={collabCount}
