@@ -146,9 +146,9 @@ export default function ProfilePage() {
   const ageDisplay = birthday ? (isAgePublic && ageNum !== null ? `${ageNum}歳` : "非公開") : null;
 
   const name =
-    (p as { nickname?: string | null }).nickname ||
-    (p as { username?: string | null }).username ||
-    (p as { name?: string | null }).name ??
+    ((p as { nickname?: string | null }).nickname ||
+      (p as { username?: string | null }).username ||
+      (p as { name?: string | null }).name) ??
     "名前未設定";
 
   return (
@@ -160,9 +160,9 @@ export default function ProfilePage() {
           avatarUrl={p.avatar_url ?? null}
           headerUrl={(p as { header_url?: string | null }).header_url ?? null}
           avatarUpdatedAt={(p as { updated_at?: string }).updated_at ?? null}
-          area={displayArea}
-          gym={displayGym}
-          ageDisplay={ageDisplay}
+          area={displayArea ?? null}
+          gym={displayGym ?? null}
+          ageDisplay={ageDisplay ?? null}
           goal={p.goal ?? null}
           trainingYears={(p as { training_years?: number }).training_years ?? 0}
           followersCount={(p as { followers_count?: number }).followers_count ?? 0}
