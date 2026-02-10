@@ -15,6 +15,8 @@ import {
   ChevronRight,
   User,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { safeList } from "@/lib/utils";
 import {
@@ -43,7 +45,9 @@ type ParticipantRow = {
   user_id: string;
   status: string;
   created_at: string;
-  profiles: { nickname: string | null; username: string | null } | null;
+  reason?: string | null;
+  self_intro?: string | null;
+  profiles: { nickname: string | null; username: string | null; avatar_url: string | null } | null;
 };
 
 const statusLabel: Record<string, string> = {
@@ -56,7 +60,12 @@ const participantStatusLabel: Record<string, string> = {
   rejected: "却下",
 };
 
+function participantKey(recId: string, userId: string) {
+  return `${recId}-${userId}`;
+}
+
 export default function RecruitManagePage() {
+  const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [createdList, setCreatedList] = useState<RecruitmentRow[]>([]);
   const [appliedList, setAppliedList] = useState<{ recruitment: RecruitmentRow; myStatus: string }[]>([]);
@@ -65,6 +74,7 @@ export default function RecruitManagePage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailModalId, setDetailModalId] = useState<string | null>(null);
   const [approving, setApproving] = useState<string | null>(null);
+  const [expandedParticipantKey, setExpandedParticipantKey] = useState<string | null>(null);
 
   const fetchCreated = useCallback(async (userId: string) => {
     const supabase = createClient();
@@ -107,13 +117,22 @@ export default function RecruitManagePage() {
   const fetchParticipants = useCallback(async (recruitmentIds: string[]) => {
     if (recruitmentIds.length === 0) return {};
     const supabase = createClient();
-    const { data, error } = await (supabase as any)
+    let { data, error } = await (supabase as any)
       .from("recruitment_participants")
-      .select("recruitment_id, user_id, status, created_at, profiles(nickname, username)")
+      .select("recruitment_id, user_id, status, created_at, reason, self_intro, profiles(nickname, username, avatar_url)")
       .in("recruitment_id", recruitmentIds)
       .order("created_at", { ascending: false });
+    if (error) {
+      const fallback = await (supabase as any)
+        .from("recruitment_participants")
+        .select("recruitment_id, user_id, status, created_at, profiles(nickname, username, avatar_url)")
+        .in("recruitment_id", recruitmentIds)
+        .order("created_at", { ascending: false });
+      data = fallback.data;
+      error = fallback.error;
+    }
     if (error) return {};
-    const rows = safeList(data as ParticipantRow[] | null);
+    const rows = safeList((data as ParticipantRow[] | null) ?? []);
     const byRec: Record<string, ParticipantRow[]> = {};
     recruitmentIds.forEach((id) => (byRec[id] = []));
     rows.forEach((r) => {
@@ -378,39 +397,82 @@ export default function RecruitManagePage() {
                       {isExpanded && participants.length > 0 && (
                         <div className="border-t border-border/40 bg-secondary/20 px-4 py-3">
                           <ul className="space-y-2">
-                            {participants.map((p) => (
-                              <li
-                                key={`${p.recruitment_id}-${p.user_id}`}
-                                className="flex items-center justify-between rounded-lg border border-border/40 bg-card/50 px-3 py-2 text-sm"
-                              >
-                                <span className="font-medium text-foreground">
-                                  {p.profiles?.nickname || p.profiles?.username || "ユーザー"}
-                                </span>
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                                      p.status === "pending"
-                                        ? "bg-gold/15 text-gold"
-                                        : p.status === "approved"
-                                          ? "bg-green-500/15 text-green-600 dark:text-green-400"
-                                          : "bg-secondary text-muted-foreground"
-                                    }`}
-                                  >
-                                    {participantStatusLabel[p.status] ?? p.status}
-                                  </span>
-                                  {p.status === "pending" && (
+                            {participants.map((p) => {
+                              const key = participantKey(r.id, p.user_id);
+                              const isParticipantExpanded = expandedParticipantKey === key;
+                              const name = p.profiles?.nickname || p.profiles?.username || "ユーザー";
+                              return (
+                                <li
+                                  key={key}
+                                  className="rounded-lg border border-border/40 bg-card/50 overflow-hidden"
+                                >
+                                  <div className="flex items-center justify-between gap-2 px-3 py-2">
                                     <button
                                       type="button"
-                                      onClick={() => handleApprove(r.id, p.user_id)}
-                                      disabled={approving === `${r.id}-${p.user_id}`}
-                                      className="rounded bg-gold px-2 py-1 text-xs font-bold text-[#050505] hover:bg-gold-light disabled:opacity-50"
+                                      onClick={() => {
+                                        if (isParticipantExpanded) {
+                                          router.push(`/profile?u=${p.user_id}`);
+                                        } else {
+                                          setExpandedParticipantKey(key);
+                                        }
+                                      }}
+                                      className="flex min-w-0 flex-1 items-center gap-2 text-left hover:opacity-90"
                                     >
-                                      {approving === `${r.id}-${p.user_id}` ? "処理中…" : "承認する"}
+                                      <Avatar className="h-9 w-9 shrink-0 ring-1 ring-border">
+                                        <AvatarImage src={p.profiles?.avatar_url ?? undefined} alt={name} />
+                                        <AvatarFallback className="text-xs font-bold text-foreground">
+                                          {(name || "?").slice(0, 1)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="truncate font-medium text-foreground">{name}</span>
                                     </button>
+                                    <div className="flex shrink-0 items-center gap-2">
+                                      <span
+                                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                          p.status === "pending"
+                                            ? "bg-gold/15 text-gold"
+                                            : p.status === "approved"
+                                              ? "bg-green-500/15 text-green-600 dark:text-green-400"
+                                              : "bg-secondary text-muted-foreground"
+                                        }`}
+                                      >
+                                        {participantStatusLabel[p.status] ?? p.status}
+                                      </span>
+                                      {p.status === "pending" && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => { e.stopPropagation(); handleApprove(r.id, p.user_id); }}
+                                          disabled={approving === `${r.id}-${p.user_id}`}
+                                          className="rounded bg-gold px-2 py-1 text-xs font-bold text-[#050505] hover:bg-gold-light disabled:opacity-50"
+                                        >
+                                          {approving === `${r.id}-${p.user_id}` ? "処理中…" : "承認する"}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {isParticipantExpanded && (
+                                    <div className="border-t border-border/40 bg-secondary/30 px-3 py-2 text-sm">
+                                      {p.reason && (
+                                        <p className="mb-1">
+                                          <span className="font-semibold text-muted-foreground">参加理由: </span>
+                                          <span className="text-foreground">{p.reason}</span>
+                                        </p>
+                                      )}
+                                      {p.self_intro && (
+                                        <p className="mb-2">
+                                          <span className="font-semibold text-muted-foreground">自己紹介: </span>
+                                          <span className="whitespace-pre-wrap text-foreground">{p.self_intro}</span>
+                                        </p>
+                                      )}
+                                      {!p.reason && !p.self_intro && (
+                                        <p className="mb-2 text-muted-foreground">参加理由・自己紹介は未記入です</p>
+                                      )}
+                                      <p className="text-xs text-gold">名前またはアイコンをクリックでプロフィールへ</p>
+                                    </div>
                                   )}
-                                </div>
-                              </li>
-                            ))}
+                                </li>
+                              );
+                            })}
                           </ul>
                         </div>
                       )}
@@ -488,7 +550,15 @@ export default function RecruitManagePage() {
       )}
 
       {/* 詳細モーダル（募集内容 + 申請者リスト + 承認） */}
-      <Dialog open={!!detailModalId} onOpenChange={(open) => !open && setDetailModalId(null)}>
+      <Dialog
+        open={!!detailModalId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailModalId(null);
+            setExpandedParticipantKey(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-md border-border/60 bg-card sm:rounded-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="sr-only">募集詳細</DialogTitle>
@@ -550,40 +620,82 @@ export default function RecruitManagePage() {
                   <p className="text-sm text-muted-foreground">まだ申請はありません</p>
                 ) : (
                   <ul className="space-y-2">
-                    {selectedParticipants.map((p) => (
-                      <li
-                        key={p.user_id}
-                        className="flex items-center justify-between rounded-lg border border-border/40 bg-secondary/20 px-3 py-2"
-                      >
-                        <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                          <User className="h-4 w-4 text-gold/70" />
-                          {p.profiles?.nickname || p.profiles?.username || "ユーザー"}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                              p.status === "pending"
-                                ? "bg-gold/15 text-gold"
-                                : p.status === "approved"
-                                  ? "bg-green-500/15 text-green-600 dark:text-green-400"
-                                  : "bg-secondary text-muted-foreground"
-                            }`}
-                          >
-                            {participantStatusLabel[p.status] ?? p.status}
-                          </span>
-                          {p.status === "pending" && (
+                    {selectedParticipants.map((p) => {
+                      const key = participantKey(selectedRecruitment.id, p.user_id);
+                      const isParticipantExpanded = expandedParticipantKey === key;
+                      const name = p.profiles?.nickname || p.profiles?.username || "ユーザー";
+                      return (
+                        <li
+                          key={p.user_id}
+                          className="rounded-lg border border-border/40 bg-card/50 overflow-hidden"
+                        >
+                          <div className="flex items-center justify-between gap-2 px-3 py-2">
                             <button
                               type="button"
-                              onClick={() => handleApprove(selectedRecruitment.id, p.user_id)}
-                              disabled={approving === `${selectedRecruitment.id}-${p.user_id}`}
-                              className="rounded bg-gold px-2 py-1 text-xs font-bold text-[#050505] hover:bg-gold-light disabled:opacity-50"
+                              onClick={() => {
+                                if (isParticipantExpanded) {
+                                  router.push(`/profile?u=${p.user_id}`);
+                                } else {
+                                  setExpandedParticipantKey(key);
+                                }
+                              }}
+                              className="flex min-w-0 flex-1 items-center gap-2 text-left hover:opacity-90"
                             >
-                              {approving === `${selectedRecruitment.id}-${p.user_id}` ? "処理中…" : "承認する"}
+                              <Avatar className="h-9 w-9 shrink-0 ring-1 ring-border">
+                                <AvatarImage src={p.profiles?.avatar_url ?? undefined} alt={name} />
+                                <AvatarFallback className="text-xs font-bold text-foreground">
+                                  {(name || "?").slice(0, 1)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="truncate font-medium text-foreground">{name}</span>
                             </button>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                  p.status === "pending"
+                                    ? "bg-gold/15 text-gold"
+                                    : p.status === "approved"
+                                      ? "bg-green-500/15 text-green-600 dark:text-green-400"
+                                      : "bg-secondary text-muted-foreground"
+                                }`}
+                              >
+                                {participantStatusLabel[p.status] ?? p.status}
+                              </span>
+                              {p.status === "pending" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleApprove(selectedRecruitment.id, p.user_id)}
+                                  disabled={approving === `${selectedRecruitment.id}-${p.user_id}`}
+                                  className="rounded bg-gold px-2 py-1 text-xs font-bold text-[#050505] hover:bg-gold-light disabled:opacity-50"
+                                >
+                                  {approving === `${selectedRecruitment.id}-${p.user_id}` ? "処理中…" : "承認する"}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {isParticipantExpanded && (
+                            <div className="border-t border-border/40 bg-secondary/30 px-3 py-2 text-sm">
+                              {p.reason && (
+                                <p className="mb-1">
+                                  <span className="font-semibold text-muted-foreground">参加理由: </span>
+                                  <span className="text-foreground">{p.reason}</span>
+                                </p>
+                              )}
+                              {p.self_intro && (
+                                <p className="mb-2">
+                                  <span className="font-semibold text-muted-foreground">自己紹介: </span>
+                                  <span className="whitespace-pre-wrap text-foreground">{p.self_intro}</span>
+                                </p>
+                              )}
+                              {!p.reason && !p.self_intro && (
+                                <p className="mb-2 text-muted-foreground">参加理由・自己紹介は未記入です</p>
+                              )}
+                              <p className="text-xs text-gold">名前またはアイコンをクリックでプロフィールへ</p>
+                            </div>
                           )}
-                        </div>
-                      </li>
-                    ))}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>

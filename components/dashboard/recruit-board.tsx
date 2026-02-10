@@ -45,6 +45,9 @@ export default function RecruitBoard() {
   const [participantStatus, setParticipantStatus] = useState<"none" | "pending" | "approved" | "rejected" | null>(null);
   const [applying, setApplying] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [applyFormOpen, setApplyFormOpen] = useState(false);
+  const [applyReason, setApplyReason] = useState("");
+  const [applySelfIntro, setApplySelfIntro] = useState("");
   const modalOpen = !!detailId;
 
   const fetchList = useCallback(async () => {
@@ -159,22 +162,43 @@ export default function RecruitBoard() {
     return () => { cancelled = true; };
   }, [detailId, detail]);
 
-  const handleApply = useCallback(async () => {
+  const openApplyForm = useCallback(() => {
+    setApplyReason("");
+    setApplySelfIntro("");
+    setApplyFormOpen(true);
+  }, []);
+
+  const handleSubmitApplyForm = useCallback(async () => {
     if (!detailId || !detail || applying) return;
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    if (detail.user_id === user.id) return; // 自分の募集
+    if (detail.user_id === user.id) return;
     setApplying(true);
     try {
+      const row: Record<string, unknown> = {
+        recruitment_id: detailId,
+        user_id: user.id,
+        status: "pending",
+        reason: applyReason.trim() || null,
+        self_intro: applySelfIntro.trim() || null,
+      };
       const { error } = await (supabase as any)
         .from("recruitment_participants")
-        .insert({ recruitment_id: detailId, user_id: user.id, status: "pending" });
+        .insert(row);
       if (error) {
-        if (error.code === "23505") setParticipantStatus("pending"); // 重複＝申請済み
+        if (error.code === "23505") setParticipantStatus("pending");
+        else if (error.message?.includes("reason") || error.message?.includes("self_intro")) {
+          const fallback = await (supabase as any)
+            .from("recruitment_participants")
+            .insert({ recruitment_id: detailId, user_id: user.id, status: "pending" });
+          if (!fallback.error) setParticipantStatus("pending");
+        }
+        setApplyFormOpen(false);
         return;
       }
       setParticipantStatus("pending");
+      setApplyFormOpen(false);
 
       const { data: myProfile } = await (supabase as any)
         .from("profiles")
@@ -209,7 +233,13 @@ export default function RecruitBoard() {
     } finally {
       setApplying(false);
     }
-  }, [detailId, detail, applying]);
+  }, [detailId, detail, applying, applyReason, applySelfIntro]);
+
+  const handleApply = useCallback(() => {
+    if (!detailId || !detail || applying || !currentUserId) return;
+    if (detail.user_id === currentUserId) return;
+    openApplyForm();
+  }, [detailId, detail, applying, currentUserId, openApplyForm]);
 
   const closeDetail = useCallback(() => {
     router.push("/dashboard/recruit", { scroll: false });
@@ -379,7 +409,7 @@ export default function RecruitBoard() {
                     disabled={applying || !currentUserId}
                     className="w-full rounded-lg bg-gold py-3.5 text-sm font-black uppercase tracking-wider text-[#050505] shadow-lg shadow-gold/25 transition-all hover:bg-gold-light disabled:opacity-60"
                   >
-                    {applying ? "送信中…" : "参加申請する"}
+                    参加申請する
                   </button>
                 )}
               </div>
@@ -389,6 +419,67 @@ export default function RecruitBoard() {
               募集が見つかりませんでした
             </p>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 参加申請フォーム（参加理由・自己紹介） */}
+      <Dialog open={applyFormOpen} onOpenChange={setApplyFormOpen}>
+        <DialogContent className="max-w-md border-border/60 bg-card sm:rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-foreground">
+              参加申請
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            募集者に伝わるよう、参加理由と自己紹介を記入してください。
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="apply-reason" className="mb-1.5 block text-sm font-bold text-foreground">
+                参加理由（任意）
+              </label>
+              <textarea
+                id="apply-reason"
+                value={applyReason}
+                onChange={(e) => setApplyReason(e.target.value)}
+                placeholder="例: 同じ部位を鍛えたい方と一緒にトレーニングしたいです"
+                rows={2}
+                className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
+                maxLength={300}
+              />
+            </div>
+            <div>
+              <label htmlFor="apply-selfintro" className="mb-1.5 block text-sm font-bold text-foreground">
+                簡単な自己紹介（任意）
+              </label>
+              <textarea
+                id="apply-selfintro"
+                value={applySelfIntro}
+                onChange={(e) => setApplySelfIntro(e.target.value)}
+                placeholder="例: 筋トレ2年目。ベンチ80kg、スクワット100kgです。"
+                rows={3}
+                className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
+                maxLength={500}
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleSubmitApplyForm}
+              disabled={applying}
+              className="flex-1 rounded-lg bg-gold py-3 text-sm font-black uppercase tracking-wider text-[#050505] shadow-lg shadow-gold/25 hover:bg-gold-light disabled:opacity-60"
+            >
+              {applying ? "送信中…" : "送信する"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setApplyFormOpen(false)}
+              className="rounded-lg border border-border px-4 py-3 text-sm font-bold text-foreground hover:bg-secondary"
+            >
+              キャンセル
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
