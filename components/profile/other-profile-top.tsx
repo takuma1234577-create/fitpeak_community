@@ -43,6 +43,10 @@ export interface OtherProfileTopProps {
   isOwnProfile?: boolean;
   /** チャットボタン押下（その人との個別チャットへ遷移） */
   onMessage?: () => void;
+  /** フォロワー数をクリックしたとき（一覧モーダル用） */
+  onFollowersClick?: () => void;
+  /** フォロー中数をクリックしたとき（一覧モーダル用） */
+  onFollowingClick?: () => void;
 }
 
 export default function OtherProfileTop({
@@ -65,6 +69,8 @@ export default function OtherProfileTop({
   followLoading = false,
   isOwnProfile = false,
   onMessage,
+  onFollowersClick,
+  onFollowingClick,
 }: OtherProfileTopProps) {
   const initial = (name || "?").charAt(0).toUpperCase();
   const avatarSrc = avatarUrl
@@ -72,8 +78,8 @@ export default function OtherProfileTop({
     : null;
 
   const stats = [
-    { label: "フォロワー", value: followersCount.toLocaleString() },
-    { label: "フォロー中", value: followingCount.toLocaleString() },
+    { label: "フォロワー", value: followersCount.toLocaleString(), onClick: onFollowersClick },
+    { label: "フォロー中", value: followingCount.toLocaleString(), onClick: onFollowingClick },
     { label: "合トレ実績", value: collabCount.toLocaleString() },
   ];
 
@@ -187,8 +193,21 @@ export default function OtherProfileTop({
               key={stat.label}
               className={`flex-1 text-center ${i !== stats.length - 1 ? "border-r border-border/40" : ""}`}
             >
-              <p className="text-xl font-black text-foreground sm:text-2xl">{stat.value}</p>
-              <p className="mt-0.5 text-xs font-semibold tracking-wide text-muted-foreground">{stat.label}</p>
+              {stat.onClick ? (
+                <button
+                  type="button"
+                  onClick={stat.onClick}
+                  className="block w-full py-1 text-center transition-colors hover:opacity-80 active:opacity-70"
+                >
+                  <p className="text-xl font-black text-foreground sm:text-2xl">{stat.value}</p>
+                  <p className="mt-0.5 text-xs font-semibold tracking-wide text-muted-foreground">{stat.label}</p>
+                </button>
+              ) : (
+                <>
+                  <p className="text-xl font-black text-foreground sm:text-2xl">{stat.value}</p>
+                  <p className="mt-0.5 text-xs font-semibold tracking-wide text-muted-foreground">{stat.label}</p>
+                </>
+              )}
             </div>
           ))}
         </div>

@@ -143,7 +143,19 @@ export default function ProfilePage() {
             followLoading={followLoading}
             isOwnProfile={false}
             onMessage={handleMessage}
+            onFollowersClick={() => { setFollowModalTab("followers"); setFollowModalOpen(true); }}
+            onFollowingClick={() => { setFollowModalTab("following"); setFollowModalOpen(true); }}
           />
+          {profileUserId && (
+            <FollowListModal
+              open={followModalOpen}
+              onOpenChange={setFollowModalOpen}
+              profileUserId={profileUserId}
+              myUserId={myProfile?.id ?? null}
+              initialTab={followModalTab}
+              onFollowChange={refreshOtherProfile}
+            />
+          )}
           <div className="mx-5 h-px bg-border/40 sm:mx-8" />
           <StatsGrid benchMax={benchMax} squatMax={squatMax} deadliftMax={deadliftMax} />
         </div>
