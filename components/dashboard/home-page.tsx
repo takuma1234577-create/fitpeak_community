@@ -14,6 +14,7 @@ import {
   MessageCircle,
   Dumbbell,
   Users,
+  User,
   Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -64,8 +65,19 @@ type RecruitmentItem = {
   event_date: string;
   location: string | null;
   created_at: string;
+  max_participants?: number | null;
   profiles: { nickname: string | null; username: string | null } | null;
 };
+
+function formatRecruitDate(eventDate: string): string {
+  const d = new Date(eventDate);
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+  const w = weekdays[d.getDay()];
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const time = d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return `${m}/${day} (${w}) ${time}`;
+}
 
 function RecommendedRecruitmentsSection() {
   const [list, setList] = useState<RecruitmentItem[]>([]);
@@ -75,12 +87,22 @@ function RecommendedRecruitmentsSection() {
     let cancelled = false;
     (async () => {
       const supabase = createClient();
-      const { data, error } = await (supabase as any)
+      let { data, error } = await (supabase as any)
         .from("recruitments")
-        .select("id, title, target_body_part, event_date, location, created_at, profiles(nickname, username)")
+        .select("id, title, target_body_part, event_date, location, created_at, max_participants, profiles(nickname, username)")
         .eq("status", "open")
         .order("created_at", { ascending: false })
         .limit(10);
+      if (error && (error.message?.includes("max_participants") || error.message?.includes("column"))) {
+        const res = await (supabase as any)
+          .from("recruitments")
+          .select("id, title, target_body_part, event_date, location, created_at, profiles(nickname, username)")
+          .eq("status", "open")
+          .order("created_at", { ascending: false })
+          .limit(10);
+        data = res.data;
+        error = res.error;
+      }
       if (!cancelled) {
         if (error) {
           console.error("recruitments fetch:", error);
@@ -97,7 +119,14 @@ function RecommendedRecruitmentsSection() {
   if (loading) {
     return (
       <section className="flex flex-col gap-4">
-        <SectionHeader icon={Dumbbell} title="おすすめ合トレ" href="/dashboard/recruit" linkLabel="すべて見る" />
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10">
+              <Flame className="h-4 w-4 text-gold" />
+            </div>
+            <h2 className="text-base font-bold text-foreground">おすすめ合トレ</h2>
+          </div>
+        </div>
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-gold/60" />
         </div>
@@ -107,51 +136,102 @@ function RecommendedRecruitmentsSection() {
 
   return (
     <section className="flex flex-col gap-4">
-      <SectionHeader icon={Dumbbell} title="おすすめ合トレ" href="/dashboard/recruit" linkLabel="すべて見る" />
+      {/* V0風セクションヘッダー（ゴールドで統一） */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10">
+            <Flame className="h-4 w-4 text-gold" />
+          </div>
+          <h2 className="text-base font-bold text-foreground">おすすめ合トレ</h2>
+        </div>
+        <Link
+          href="/dashboard/recruit"
+          className="flex items-center gap-0.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          すべて見る
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </div>
+
       {list.length === 0 ? (
-        <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
+        <div className="rounded-2xl border border-border/40 bg-card px-5 py-8 text-center shadow-sm">
           <Dumbbell className="mx-auto h-10 w-10 text-muted-foreground/40" />
           <p className="mt-2 text-sm font-semibold text-muted-foreground">募集中の合トレはありません</p>
           <Link
             href="/dashboard/recruit"
-            className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-foreground transition-colors hover:text-gold-light"
+            className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-foreground transition-colors hover:text-gold"
           >
             合トレ募集を探す
             <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-3">
           {list.map((r) => {
-            const name = r.profiles?.nickname || r.profiles?.username || "ユーザー";
-            const date = r.event_date
-              ? new Date(r.event_date).toLocaleDateString("ja-JP", {
-                  month: "numeric",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "—";
+            const organizer = r.profiles?.nickname || r.profiles?.username || "ユーザー";
+            const dateStr = r.event_date ? formatRecruitDate(r.event_date) : "—";
+            const maxLabel = r.max_participants != null ? r.max_participants : "—";
             return (
-              <li key={r.id}>
-                <Link
-                  href={`/dashboard/recruit?r=${r.id}`}
-                  className="block rounded-xl border border-border/40 bg-card p-4 transition-all hover:border-gold/30 hover:bg-card/80"
-                >
-                  <p className="font-bold text-foreground">{r.title}</p>
-                  {r.target_body_part && (
-                    <span className="mt-0.5 inline-block text-xs text-foreground">{r.target_body_part}</span>
-                  )}
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {date}
-                    {r.location && ` ・ ${r.location}`}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground/80">{name}</p>
-                </Link>
-              </li>
+              <Link
+                key={r.id}
+                href={`/dashboard/recruit?r=${r.id}`}
+                className="group relative w-full overflow-hidden rounded-2xl bg-card text-left shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98]"
+              >
+                {/* 上部アクセントバー（サイトのゴールド） */}
+                <div className="h-1 w-full bg-gradient-to-r from-gold to-gold-light" />
+                <div className="flex flex-col gap-3 p-4">
+                  {/* ヘッダー: タイトル + 矢印 */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      {r.target_body_part && (
+                        <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-gold/10 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-foreground">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
+                          {r.target_body_part}
+                        </span>
+                      )}
+                      <h3 className="line-clamp-2 text-[15px] font-bold leading-snug text-card-foreground">
+                        {r.title}
+                      </h3>
+                    </div>
+                    <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-colors group-hover:bg-gold/10 group-hover:text-gold">
+                      <ChevronRight className="h-4 w-4" />
+                    </div>
+                  </div>
+                  {/* 日時・場所 */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                        <CalendarDays className="h-3.5 w-3.5 text-gold" />
+                      </div>
+                      <span className="font-medium">{dateStr}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                        <MapPin className="h-3.5 w-3.5 text-gold" />
+                      </div>
+                      <span className="font-medium">{r.location || "—"}</span>
+                    </div>
+                  </div>
+                  {/* フッター: 募集者 + 参加人数 */}
+                  <div className="flex items-center justify-between border-t border-border pt-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gold/10 text-gold">
+                        <User className="h-3 w-3" />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground">{organizer}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Users className="h-3.5 w-3.5" />
+                      <span className="font-semibold text-card-foreground">—</span>
+                      <span>/</span>
+                      <span>{maxLabel}</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
             );
           })}
-        </ul>
+        </div>
       )}
     </section>
   );
