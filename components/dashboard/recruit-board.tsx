@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Loader2, CalendarDays, MapPin, User } from "lucide-react";
+import { Plus, Loader2, CalendarDays, MapPin, User, ArrowUpDown } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { safeList } from "@/lib/utils";
 import RecruitFilterBar, {
@@ -16,6 +16,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+export type RecruitSortKey =
+  | "date_near"
+  | "date_far"
+  | "participants_desc"
+  | "participants_asc"
+  | "created_desc"
+  | "created_asc";
+
+const SORT_OPTIONS: { value: RecruitSortKey; label: string }[] = [
+  { value: "date_near", label: "日付が近い順" },
+  { value: "date_far", label: "日付が遠い順" },
+  { value: "participants_desc", label: "参加人数が多い順" },
+  { value: "participants_asc", label: "参加人数が少ない順" },
+  { value: "created_desc", label: "作成日が新しい順" },
+  { value: "created_asc", label: "作成日が古い順" },
+];
 
 type RecruitmentRow = {
   id: string;
@@ -27,6 +51,9 @@ type RecruitmentRow = {
   status: string;
   user_id: string;
   level?: string | null;
+  created_at?: string;
+  max_participants?: number | null;
+  approvedCount?: number;
   profiles: { nickname: string | null; username: string | null; avatar_url: string | null } | null;
 };
 
@@ -38,6 +65,7 @@ export default function RecruitBoard() {
   const detailId = searchParams.get("r");
 
   const [filters, setFilters] = useState<RecruitFilters>(DEFAULT_FILTERS);
+  const [sortKey, setSortKey] = useState<RecruitSortKey>("date_near");
   const [list, setList] = useState<RecruitmentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<RecruitmentDetail | null>(null);
@@ -54,11 +82,14 @@ export default function RecruitBoard() {
     setLoading(true);
     try {
       const supabase = createClient();
+      const selectWithMax =
+        "id, title, description, target_body_part, event_date, location, status, user_id, created_at, max_participants, profiles(nickname, username, avatar_url)";
+      const selectWithoutMax =
+        "id, title, description, target_body_part, event_date, location, status, user_id, created_at, profiles(nickname, username, avatar_url)";
       let q = (supabase as any)
         .from("recruitments")
-        .select("id, title, description, target_body_part, event_date, location, status, user_id, profiles(nickname, username, avatar_url)")
-        .eq("status", "open")
-        .order("created_at", { ascending: false });
+        .select(selectWithMax)
+        .eq("status", "open");
 
       if (filters.area !== "all") {
         q = q.ilike("location", `%${filters.area}%`);
@@ -66,16 +97,46 @@ export default function RecruitBoard() {
       if (filters.bodyPart !== "all") {
         q = q.eq("target_body_part", filters.bodyPart);
       }
-      // level フィルターは recruitments.level カラムがある DB のみ（supabase-recruitments-area-level.sql 適用後）
-      // カラムがないと 400 になるため、ここでは使わない
 
-      const { data, error } = await q;
+      let { data, error } = await q;
+      if (error && (error.message?.includes("max_participants") || error.message?.includes("column"))) {
+        q = (supabase as any)
+          .from("recruitments")
+          .select(selectWithoutMax)
+          .eq("status", "open");
+        if (filters.area !== "all") q = q.ilike("location", `%${filters.area}%`);
+        if (filters.bodyPart !== "all") q = q.eq("target_body_part", filters.bodyPart);
+        const res = await q;
+        data = res.data;
+        error = res.error;
+      }
       if (error) {
         console.error("[合トレ] 一覧取得失敗:", error);
         setList([]);
+        setLoading(false);
         return;
       }
-      setList(safeList(data as RecruitmentRow[] | null));
+      const rows = safeList(data as (RecruitmentRow & { created_at?: string; max_participants?: number | null })[] | null);
+
+      const ids = rows.map((r) => r.id);
+      const approvedByRec: Record<string, number> = {};
+      if (ids.length > 0) {
+        const { data: partData } = await (supabase as any)
+          .from("recruitment_participants")
+          .select("recruitment_id")
+          .in("recruitment_id", ids)
+          .eq("status", "approved");
+        const partList = safeList(partData as { recruitment_id: string }[] | null);
+        for (const p of partList) {
+          approvedByRec[p.recruitment_id] = (approvedByRec[p.recruitment_id] ?? 0) + 1;
+        }
+      }
+      const listWithCount: RecruitmentRow[] = rows.map((r) => ({
+        ...r,
+        approvedCount: approvedByRec[r.id] ?? 0,
+      }));
+
+      setList(listWithCount);
     } catch (e) {
       console.error("[合トレ] 取得例外:", e);
       setList([]);
@@ -83,6 +144,39 @@ export default function RecruitBoard() {
       setLoading(false);
     }
   }, [filters.area, filters.bodyPart, filters.level]);
+
+  const sortedList = useMemo(() => {
+    return [...list].sort((a, b) => {
+      switch (sortKey) {
+        case "date_near": {
+          const tA = a.event_date ? new Date(a.event_date).getTime() : 0;
+          const tB = b.event_date ? new Date(b.event_date).getTime() : 0;
+          return tA - tB;
+        }
+        case "date_far": {
+          const tA = a.event_date ? new Date(a.event_date).getTime() : 0;
+          const tB = b.event_date ? new Date(b.event_date).getTime() : 0;
+          return tB - tA;
+        }
+        case "participants_desc":
+          return (b.approvedCount ?? 0) - (a.approvedCount ?? 0);
+        case "participants_asc":
+          return (a.approvedCount ?? 0) - (b.approvedCount ?? 0);
+        case "created_desc": {
+          const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return tB - tA;
+        }
+        case "created_asc": {
+          const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return tA - tB;
+        }
+        default:
+          return 0;
+      }
+    });
+  }, [list, sortKey]);
 
   useEffect(() => {
     fetchList();
@@ -293,6 +387,32 @@ export default function RecruitBoard() {
         onApply={fetchList}
       />
 
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="flex items-center gap-1.5 text-sm font-bold text-muted-foreground">
+          <ArrowUpDown className="h-4 w-4" />
+          並び替え
+        </span>
+        <Select
+          value={sortKey}
+          onValueChange={(v) => setSortKey(v as RecruitSortKey)}
+        >
+          <SelectTrigger className="h-9 w-[200px] border-border/60 bg-secondary/60 text-sm font-semibold sm:w-[220px] [&>span]:text-foreground">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="border-border bg-card">
+            {SORT_OPTIONS.map((opt) => (
+              <SelectItem
+                key={opt.value}
+                value={opt.value}
+                className="font-medium focus:bg-gold/10 focus:text-gold"
+              >
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-gold/60" />
@@ -311,7 +431,7 @@ export default function RecruitBoard() {
         </div>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
-          {list.map((r) => {
+          {sortedList.map((r) => {
             const name = r.profiles?.nickname || r.profiles?.username || "ユーザー";
             const date = r.event_date
               ? new Date(r.event_date).toLocaleDateString("ja-JP", {
@@ -321,6 +441,15 @@ export default function RecruitBoard() {
                   minute: "2-digit",
                 })
               : "—";
+            const createdLabel = r.created_at
+              ? new Date(r.created_at).toLocaleDateString("ja-JP", {
+                  year: "numeric",
+                  month: "numeric",
+                  day: "numeric",
+                })
+              : "—";
+            const maxLabel =
+              r.max_participants != null ? `${r.max_participants}人` : "制限なし";
             return (
               <li key={r.id}>
                 <Link
@@ -336,6 +465,11 @@ export default function RecruitBoard() {
                   <p className="mt-2 text-xs text-muted-foreground">
                     {date} {r.location && `・${r.location}`}
                   </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground/90">
+                    <span>参加人数: {r.approvedCount ?? 0}人</span>
+                    <span>募集人数: {maxLabel}</span>
+                    <span>作成日: {createdLabel}</span>
+                  </div>
                   <p className="mt-1 text-xs text-muted-foreground/80">{name}</p>
                 </Link>
               </li>
