@@ -68,7 +68,7 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
         const tB = b.type === "recruitment" ? b.createdAt : b.date;
         return tB.localeCompare(tA);
       });
-      setItems(merged.slice(0, 20));
+      setItems(Array.isArray(merged) ? merged.slice(0, 20) : []);
     } catch (e) {
       console.warn("[ActivityTimeline] 取得エラー (続行):", e);
       setItems([]);

@@ -27,21 +27,24 @@ export function ensureArray<T>(data: T[] | T | null | undefined): T[] {
  * プロフィールの生データを正規化する。
  * すべての配列・リレーションを safeList でラップし、null を [] に統一する。
  */
-export function normalizeProfile(raw: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
-  if (raw == null || typeof raw !== "object") return null;
+export function normalizeProfile(raw: Record<string, unknown> | unknown[] | null | undefined): Record<string, unknown> | null {
+  if (raw == null) return null;
+  const row = Array.isArray(raw) ? (raw as unknown[])[0] : raw;
+  if (row == null || typeof row !== "object" || Array.isArray(row)) return null;
+  const obj = row as Record<string, unknown>;
   return {
-    ...raw,
-    exercises: ensureArray(raw.exercises).map((x) => String(x)),
-    achievements: ensureArray(raw.achievements).map((a) =>
+    ...obj,
+    exercises: ensureArray(obj.exercises).map((x) => String(x)),
+    achievements: ensureArray(obj.achievements).map((a) =>
       typeof a === "object" && a != null ? a : {}
     ),
-    certifications: ensureArray(raw.certifications).map((x) => String(x)),
-    recruitments: ensureArray(raw.recruitments).map((r) => normalizeRecruitment(r as Record<string, unknown>)),
-    tags: ensureArray(raw.tags),
-    interests: ensureArray(raw.interests),
-    followers: ensureArray(raw.followers),
-    following: ensureArray(raw.following),
-    groups: ensureArray(raw.groups),
+    certifications: ensureArray(obj.certifications).map((x) => String(x)),
+    recruitments: ensureArray(obj.recruitments).map((r) => normalizeRecruitment(r as Record<string, unknown>)),
+    tags: ensureArray(obj.tags),
+    interests: ensureArray(obj.interests),
+    followers: ensureArray(obj.followers),
+    following: ensureArray(obj.following),
+    groups: ensureArray(obj.groups),
   };
 }
 

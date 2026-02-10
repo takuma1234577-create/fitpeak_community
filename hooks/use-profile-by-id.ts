@@ -7,8 +7,10 @@ import { safeArray, normalizeProfile } from "@/lib/utils";
 import { ensureArray } from "@/lib/data-sanitizer";
 
 /** 取得した生データを正規化し、全ての配列プロパティを安全な配列に変換する（データ変換レイヤー） */
-function sanitizeProfile(raw: Record<string, unknown> & { bench_press_max?: number }): Profile {
-  const normalized = normalizeProfile(raw) ?? raw;
+function sanitizeProfile(raw: Record<string, unknown> & { bench_press_max?: number } | unknown): Profile {
+  const row = raw != null && Array.isArray(raw) ? (raw as unknown[])[0] : raw;
+  const obj = row != null && typeof row === "object" && !Array.isArray(row) ? (row as Record<string, unknown>) : {};
+  const normalized = normalizeProfile(obj) ?? obj;
   const toStrArr = (v: unknown): string[] =>
     ensureArray(v).map((x) => String(x));
   const toAchievements = (v: unknown): Achievement[] =>

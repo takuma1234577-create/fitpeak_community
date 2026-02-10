@@ -1,4 +1,5 @@
 import { Trophy } from "lucide-react";
+import { safeArray } from "@/lib/utils";
 
 interface StatsGridProps {
   benchMax: number;
@@ -27,7 +28,7 @@ export default function StatsGrid({
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        {(Array.isArray(big3Stats) ? big3Stats : []).map((stat) => (
+        {safeArray(big3Stats).map((stat) => (
           <div
             key={stat.label}
             className="relative rounded-xl border border-border/60 bg-card p-4 transition-colors hover:border-gold/20 sm:p-5"

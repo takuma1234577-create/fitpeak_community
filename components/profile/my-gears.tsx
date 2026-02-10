@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRef } from "react";
 import { Wrench, ChevronLeft, ChevronRight } from "lucide-react";
+import { safeArray } from "@/lib/utils";
 
 const gears = [
   {
@@ -78,7 +79,7 @@ export default function MyGears() {
         className="scrollbar-hide flex gap-3 overflow-x-auto px-5 pb-2 sm:px-8"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {(Array.isArray(gears) ? gears : []).map((gear) => (
+        {safeArray(gears).map((gear) => (
           <div
             key={gear.name}
             className="group w-40 flex-shrink-0 overflow-hidden rounded-xl border border-border/60 bg-card transition-all hover:border-gold/30 hover:shadow-lg hover:shadow-gold/5 sm:w-48"

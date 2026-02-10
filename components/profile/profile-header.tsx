@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import UserActionsMenu from "@/components/user-actions-menu";
+import { safeArray } from "@/lib/utils";
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -395,11 +396,11 @@ export default function ProfileHeader({
         )}
 
         <div className="flex items-center gap-0 border-t border-border/60 pt-5">
-          {(Array.isArray(stats) ? stats : []).map((stat, i) => (
+          {safeArray(stats).map((stat, i) => (
             <div
               key={stat.label}
               className={`flex-1 text-center ${
-                i !== (Array.isArray(stats) ? stats : []).length - 1 ? "border-r border-border/40" : ""
+                i !== safeArray(stats).length - 1 ? "border-r border-border/40" : ""
               }`}
             >
               {stat.onClick ? (

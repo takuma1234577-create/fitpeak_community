@@ -18,6 +18,7 @@ import ActivityTimeline from "@/components/profile/activity-timeline";
 import ProfileDetails from "@/components/profile/profile-details";
 import { Loader2 } from "lucide-react";
 import { safeArray } from "@/lib/utils";
+import type { Achievement } from "@/types/profile";
 
 function calcAge(birthday: string | null): number | null {
   if (!birthday) return null;
@@ -118,10 +119,8 @@ export default function ProfilePage() {
   const benchMax = (p as { bench_press_max?: number }).bench_press_max ?? 0;
   const squatMax = (p as { squat_max?: number }).squat_max ?? 0;
   const deadliftMax = (p as { deadlift_max?: number }).deadlift_max ?? 0;
-  const rawAchievements = (p as { achievements?: { title: string; year: number; rank: string }[] }).achievements;
-  const safeAchievements = Array.isArray(rawAchievements) ? rawAchievements : [];
-  const rawCertifications = (p as { certifications?: string[] }).certifications;
-  const safeCertifications = Array.isArray(rawCertifications) ? rawCertifications : [];
+  const safeAchievements = safeArray(((p as { achievements?: unknown }).achievements) as unknown[] | null | undefined);
+  const safeCertifications = safeArray(((p as { certifications?: unknown }).certifications) as unknown[] | null | undefined);
 
   const isPrefecturePublic = (p as { is_prefecture_public?: boolean }).is_prefecture_public !== false;
   const isHomeGymPublic = (p as { is_home_gym_public?: boolean }).is_home_gym_public !== false;
@@ -208,8 +207,8 @@ export default function ProfilePage() {
         <div className="mx-5 h-px bg-border/40 sm:mx-8" />
 
         <ProfileDetails
-          achievements={safeArray(safeAchievements)}
-          certifications={safeArray(safeCertifications)}
+          achievements={safeArray(safeAchievements) as Achievement[]}
+          certifications={safeArray(safeCertifications) as string[]}
           trainingYears={(p as { training_years?: number }).training_years ?? 0}
           goal={p.goal ?? null}
         />
