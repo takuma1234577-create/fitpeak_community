@@ -32,17 +32,17 @@ type Props = {
 
 export default function RecruitFilterBar({ filters, onFiltersChange, onApply }: Props) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
-      <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+    <div className="flex flex-row flex-wrap items-center gap-2 sm:gap-3">
+      <div className="flex shrink-0 items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
         <SlidersHorizontal className="h-4 w-4" />
         <span className="hidden sm:inline">フィルター</span>
       </div>
-      <div className="flex flex-1 flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-row flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
         <Select
           value={filters.area}
           onValueChange={(v) => onFiltersChange({ ...filters, area: v })}
         >
-          <SelectTrigger className="h-9 w-full border-border/60 bg-secondary/60 text-sm font-semibold sm:w-[140px] [&>span]:text-foreground">
+          <SelectTrigger className="h-9 w-full min-w-0 border-border/60 bg-secondary/60 text-sm font-semibold sm:w-[140px] [&>span]:text-foreground">
             <SelectValue placeholder="エリア" />
           </SelectTrigger>
           <SelectContent className="max-h-[300px] border-border bg-card">
@@ -65,7 +65,7 @@ export default function RecruitFilterBar({ filters, onFiltersChange, onApply }: 
           value={filters.bodyPart}
           onValueChange={(v) => onFiltersChange({ ...filters, bodyPart: v })}
         >
-          <SelectTrigger className="h-9 w-full border-border/60 bg-secondary/60 text-sm font-semibold sm:w-[120px] [&>span]:text-foreground">
+          <SelectTrigger className="h-9 w-full min-w-0 border-border/60 bg-secondary/60 text-sm font-semibold sm:w-[120px] [&>span]:text-foreground">
             <SelectValue placeholder="部位" />
           </SelectTrigger>
           <SelectContent className="border-border bg-card">
@@ -85,7 +85,7 @@ export default function RecruitFilterBar({ filters, onFiltersChange, onApply }: 
           value={filters.level}
           onValueChange={(v) => onFiltersChange({ ...filters, level: v })}
         >
-          <SelectTrigger className="h-9 w-full border-border/60 bg-secondary/60 text-sm font-semibold sm:w-[130px] [&>span]:text-foreground">
+          <SelectTrigger className="h-9 w-full min-w-0 border-border/60 bg-secondary/60 text-sm font-semibold sm:w-[130px] [&>span]:text-foreground">
             <SelectValue placeholder="レベル" />
           </SelectTrigger>
           <SelectContent className="border-border bg-card">
@@ -105,7 +105,7 @@ export default function RecruitFilterBar({ filters, onFiltersChange, onApply }: 
           <button
             type="button"
             onClick={onApply}
-            className="h-9 rounded-lg border border-gold/50 bg-gold/10 px-4 text-sm font-bold text-gold transition-colors hover:bg-gold/20"
+            className="h-9 shrink-0 rounded-lg border border-gold/50 bg-gold/10 px-4 text-sm font-bold text-gold transition-colors hover:bg-gold/20"
           >
             絞り込み
           </button>
