@@ -175,6 +175,37 @@ export default function RecruitBoard() {
         return;
       }
       setParticipantStatus("pending");
+
+      const { data: myProfile } = await (supabase as any)
+        .from("profiles")
+        .select("nickname, username")
+        .eq("id", user.id)
+        .maybeSingle();
+      const applicantDisplay =
+        (myProfile?.nickname || myProfile?.username) ?? "誰か";
+
+      await (supabase as any).from("notifications").insert({
+        user_id: detail.user_id,
+        sender_id: user.id,
+        type: "apply",
+        content: `${applicantDisplay}が「${detail.title}」に参加申請しました`,
+        link: `/dashboard/recruit/manage`,
+      });
+
+      try {
+        await fetch("/api/notify-recruitment-apply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recruitment_id: detailId,
+            recruitment_title: detail.title,
+            creator_id: detail.user_id,
+            applicant_nickname: applicantDisplay,
+          }),
+        });
+      } catch {
+        // メール送信は省略可
+      }
     } finally {
       setApplying(false);
     }
@@ -209,13 +240,21 @@ export default function RecruitBoard() {
         <h1 className="text-2xl font-black tracking-tight text-foreground">
           合トレ募集
         </h1>
-        <Link
-          href="/dashboard/recruit/new"
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-gold px-5 py-3.5 text-sm font-black uppercase tracking-wider text-[#050505] shadow-lg shadow-gold/25 transition-all hover:bg-gold-light hover:shadow-xl active:scale-[0.98]"
-        >
-          <Plus className="h-5 w-5" strokeWidth={2.5} />
-          合トレを募集する
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/dashboard/recruit/manage"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm font-bold text-foreground transition-colors hover:bg-secondary"
+          >
+            作成した合トレ
+          </Link>
+          <Link
+            href="/dashboard/recruit/new"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-gold px-5 py-3.5 text-sm font-black uppercase tracking-wider text-[#050505] shadow-lg shadow-gold/25 transition-all hover:bg-gold-light hover:shadow-xl active:scale-[0.98]"
+          >
+            <Plus className="h-5 w-5" strokeWidth={2.5} />
+            合トレを募集する
+          </Link>
+        </div>
       </div>
 
       <RecruitFilterBar

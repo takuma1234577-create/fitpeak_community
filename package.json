@@ -26,6 +26,7 @@
     "react-dom": "^19",
     "react-easy-crop": "^5.5.6",
     "react-hook-form": "^7.71.1",
+    "resend": "^6.9.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7"
   },
