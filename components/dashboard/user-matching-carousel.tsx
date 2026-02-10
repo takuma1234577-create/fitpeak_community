@@ -199,37 +199,62 @@ export default function UserMatchingCarousel({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
+  const MIN_USERS = 5;
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const supabase = createClient();
+      const sb = supabase as any;
       const fields =
         "id, nickname, username, bio, avatar_url, header_url, prefecture, home_gym, exercises";
+      const blocked = blockedIds instanceof Set ? blockedIds : new Set<string>();
 
-      let query = (supabase as any)
+      let query = sb
         .from("profiles")
         .select(fields)
         .eq("email_confirmed", true)
         .not("nickname", "is", null)
         .order("created_at", { ascending: false })
-        .limit(15);
+        .limit(20);
 
       if (myUserId) {
         query = query.neq("id", myUserId);
       }
 
       const { data, error } = await query;
-      if (!cancelled) {
-        if (error) {
-          console.error("user matching fetch:", error);
-          setUsers([]);
-        } else {
-          const list = safeList((data ?? []) as MatchUser[]);
-          const blocked = blockedIds instanceof Set ? blockedIds : new Set<string>();
-          setUsers(blocked.size ? list.filter((u) => !blocked.has(u.id)) : list);
-        }
+      if (cancelled) return;
+      if (error) {
+        console.error("user matching fetch:", error);
+        setUsers([]);
         setLoading(false);
+        return;
       }
+
+      let list = safeList((data ?? []) as MatchUser[]).filter((u) => !blocked.has(u.id));
+
+      if (list.length < MIN_USERS) {
+        const excludeIds = [...new Set([...(myUserId ? [myUserId] : []), ...list.map((u) => u.id)])];
+        const need = MIN_USERS - list.length;
+        const { data: randomRows } = await sb.rpc("get_random_profiles", {
+          p_exclude_ids: excludeIds,
+          p_limit: Math.max(need, 10),
+        });
+        const randomList = safeList((randomRows ?? []) as MatchUser[]);
+        const seen = new Set(list.map((u) => u.id));
+        for (const row of randomList) {
+          if (row?.id && !seen.has(row.id) && !blocked.has(row.id)) {
+            seen.add(row.id);
+            list.push(row as MatchUser);
+            if (list.length >= MIN_USERS) break;
+          }
+        }
+      }
+
+      if (!cancelled) {
+        setUsers(list);
+      }
+      setLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -279,8 +304,6 @@ export default function UserMatchingCarousel({
     );
   }
 
-  if (users.length === 0) return null;
-
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -290,53 +313,63 @@ export default function UserMatchingCarousel({
           </div>
           <h2 className="text-base font-bold text-foreground">おすすめユーザー</h2>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => scroll("left")}
-            disabled={!canScrollLeft}
-            className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 sm:flex"
-            aria-label="前へスクロール"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scroll("right")}
-            disabled={!canScrollRight}
-            className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 sm:flex"
-            aria-label="次へスクロール"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      <div
-        ref={scrollRef}
-        className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
-      >
-        {users.map((user) => (
-          <div key={user.id} className="snap-start">
-            <MatchCard
-              user={user}
-              myUserId={myUserId}
-              onOpenProfile={onOpenProfile}
-            />
+        {users.length > 0 && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => scroll("left")}
+              disabled={!canScrollLeft}
+              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 sm:flex"
+              aria-label="前へスクロール"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scroll("right")}
+              disabled={!canScrollRight}
+              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 sm:flex"
+              aria-label="次へスクロール"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
-        ))}
+        )}
       </div>
 
-      <div className="flex justify-center gap-1.5 sm:hidden" aria-hidden>
-        {users.slice(0, 5).map((_, i) => (
-          <span
-            key={i}
-            className={`h-1.5 rounded-full transition-all ${
-              i === 0 ? "w-4 bg-gold" : "w-1.5 bg-border"
-            }`}
-          />
-        ))}
-      </div>
+      {users.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          まだおすすめユーザーはいません。検索で仲間を探してみましょう。
+        </p>
+      ) : (
+        <>
+          <div
+            ref={scrollRef}
+            className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
+          >
+            {users.map((user) => (
+              <div key={user.id} className="snap-start">
+                <MatchCard
+                  user={user}
+                  myUserId={myUserId}
+                  onOpenProfile={onOpenProfile}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-center gap-1.5 sm:hidden" aria-hidden>
+            {users.slice(0, 5).map((_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === 0 ? "w-4 bg-gold" : "w-1.5 bg-border"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }
