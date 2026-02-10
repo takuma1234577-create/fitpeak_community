@@ -204,7 +204,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
       <div className="space-y-6">
         <Link
           href="/dashboard/groups"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-gold hover:text-gold-light"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-gold-light"
         >
           <ArrowLeft className="h-4 w-4" />
           グループ一覧へ
@@ -325,7 +325,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
               )}
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {group.category && (
-                  <span className="rounded-full bg-gold/20 px-2.5 py-0.5 text-xs font-bold text-gold">
+                  <span className="rounded-full bg-gold/20 px-2.5 py-0.5 text-xs font-bold text-foreground">
                     {group.category}
                   </span>
                 )}
@@ -353,7 +353,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
                   >
                     <Avatar className="h-10 w-10 ring-1 ring-border">
                       <AvatarImage src={m.avatar_url ?? undefined} alt={m.name} />
-                      <AvatarFallback className="text-xs font-bold text-gold">
+                      <AvatarFallback className="text-xs font-bold text-foreground">
                         {m.initial}
                       </AvatarFallback>
                     </Avatar>
@@ -381,7 +381,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
           ) : !isJoined && recruitment ? (
             <>
               <div className="rounded-xl border border-border/60 bg-gold/5 p-5">
-                <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-gold">
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground">
                   <Dumbbell className="h-4 w-4" />
                   合トレ概要
                 </h3>
@@ -405,7 +405,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
                   </p>
                 )}
                 {recruitment.target_body_part && (
-                  <p className="mt-1 text-xs text-gold">{recruitment.target_body_part}</p>
+                  <p className="mt-1 text-xs text-foreground">{recruitment.target_body_part}</p>
                 )}
                 {recruitment.description && (
                   <p className="mt-3 whitespace-pre-wrap text-xs text-muted-foreground">

@@ -142,7 +142,7 @@ export default function OtherProfileTop({
 
         {/* 自己紹介 */}
         {bio && (
-          <p className="mb-4 text-sm font-semibold leading-relaxed tracking-wide text-gold">
+          <p className="mb-4 text-sm font-semibold leading-relaxed tracking-wide text-foreground">
             {bio}
           </p>
         )}
@@ -150,7 +150,7 @@ export default function OtherProfileTop({
         {/* 年齢・性別・ジム・トレ歴・住まいのバッジ */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {goal && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/20 bg-gold/[0.06] px-3 py-1.5 text-xs font-bold text-gold">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/20 bg-gold/[0.06] px-3 py-1.5 text-xs font-bold text-foreground">
               <Target className="h-3.5 w-3.5" />
               {goal}
             </span>

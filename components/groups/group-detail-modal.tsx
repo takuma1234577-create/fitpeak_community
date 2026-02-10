@@ -200,7 +200,7 @@ export default function GroupDetailModal({
                 )}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {group.category && (
-                    <span className="rounded-full bg-gold/20 px-2.5 py-0.5 text-xs font-bold text-gold">
+                    <span className="rounded-full bg-gold/20 px-2.5 py-0.5 text-xs font-bold text-foreground">
                       {group.category}
                     </span>
                   )}
@@ -228,7 +228,7 @@ export default function GroupDetailModal({
                     >
                       <Avatar className="h-9 w-9 ring-1 ring-border">
                         <AvatarImage src={m.avatar_url ?? undefined} alt={m.name} />
-                        <AvatarFallback className="text-xs font-bold text-gold">{m.initial}</AvatarFallback>
+                        <AvatarFallback className="text-xs font-bold text-foreground">{m.initial}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="truncate text-sm font-bold text-foreground">{m.name}</p>
@@ -255,7 +255,7 @@ export default function GroupDetailModal({
             ) : !isJoined && recruitment ? (
               <>
                 <div className="rounded-xl border border-border/60 bg-gold/5 p-4">
-                  <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-gold">
+                  <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-foreground">
                     <Dumbbell className="h-4 w-4" />
                     合トレ概要
                   </h3>
@@ -279,7 +279,7 @@ export default function GroupDetailModal({
                     </p>
                   )}
                   {recruitment.target_body_part && (
-                    <p className="mt-1 text-xs text-gold">{recruitment.target_body_part}</p>
+                    <p className="mt-1 text-xs text-foreground">{recruitment.target_body_part}</p>
                   )}
                   {recruitment.description && (
                     <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">

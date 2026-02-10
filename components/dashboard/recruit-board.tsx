@@ -424,7 +424,7 @@ export default function RecruitBoard() {
           </p>
           <Link
             href="/dashboard/recruit/new"
-            className="mt-3 inline-block text-sm font-bold text-gold hover:underline"
+            className="mt-3 inline-block text-sm font-bold text-foreground hover:underline"
           >
             最初の募集を作成する
           </Link>
@@ -458,7 +458,7 @@ export default function RecruitBoard() {
                 >
                   <p className="font-bold text-foreground">{r.title}</p>
                   {r.target_body_part && (
-                    <span className="mt-1 inline-block text-xs text-gold">
+                    <span className="mt-1 inline-block text-xs text-foreground">
                       {r.target_body_part}
                     </span>
                   )}
@@ -494,7 +494,7 @@ export default function RecruitBoard() {
               </h2>
               <div className="flex flex-wrap gap-2">
                 {detail.target_body_part && (
-                  <span className="rounded-full bg-gold/10 px-3 py-1 text-xs font-bold text-gold">
+                  <span className="rounded-full bg-gold/10 px-3 py-1 text-xs font-bold text-foreground">
                     {detail.target_body_part}
                   </span>
                 )}
@@ -531,7 +531,7 @@ export default function RecruitBoard() {
                 {currentUserId && detail.user_id === currentUserId ? (
                   <p className="text-center text-sm text-muted-foreground">自分の募集です</p>
                 ) : participantStatus === "pending" ? (
-                  <p className="text-center text-sm font-semibold text-gold">申請中です</p>
+                  <p className="text-center text-sm font-semibold text-foreground">申請中です</p>
                 ) : participantStatus === "approved" ? (
                   <p className="text-center text-sm font-semibold text-green-500">参加が承認されました</p>
                 ) : participantStatus === "rejected" ? (

@@ -105,7 +105,7 @@ export default function RecruitFilterBar({ filters, onFiltersChange, onApply }: 
           <button
             type="button"
             onClick={onApply}
-            className="h-9 shrink-0 rounded-lg border border-gold/50 bg-gold/10 px-4 text-sm font-bold text-gold transition-colors hover:bg-gold/20"
+            className="h-9 shrink-0 rounded-lg border border-gold/50 bg-gold/10 px-4 text-sm font-bold text-foreground transition-colors hover:bg-gold/20"
           >
             絞り込み
           </button>

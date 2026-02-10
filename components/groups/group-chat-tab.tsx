@@ -215,7 +215,7 @@ export default function GroupChatTab({
                                 href={`/dashboard/recruit?r=${j.recruitmentId}`}
                                 className="block rounded-lg border border-border/60 bg-background/80 p-2.5 transition-colors hover:border-gold/40"
                               >
-                                <span className="flex items-center gap-1.5 text-sm font-bold text-gold">
+                                <span className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                                   <Dumbbell className="h-4 w-4 shrink-0" />
                                   {j.title ?? "合トレ"}
                                 </span>

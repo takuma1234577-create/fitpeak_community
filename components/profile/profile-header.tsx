@@ -253,7 +253,7 @@ export default function ProfileHeader({
                 disabled={followLoading}
                 className={`flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-bold tracking-wide transition-all active:scale-[0.98] disabled:opacity-60 ${
                   isFollowing
-                    ? "border-gold/50 bg-gold/10 text-gold hover:bg-gold/20"
+                    ? "border-gold/50 bg-gold/10 text-foreground hover:bg-gold/20"
                     : "border-border bg-transparent text-foreground hover:border-gold/30 hover:bg-secondary/80"
                 }`}
               >
@@ -287,7 +287,7 @@ export default function ProfileHeader({
             {name}
           </h1>
           {bio && (
-            <p className="mt-1 text-sm font-semibold tracking-wide text-gold">
+            <p className="mt-1 text-sm font-semibold tracking-wide text-foreground">
               {bio}
             </p>
           )}

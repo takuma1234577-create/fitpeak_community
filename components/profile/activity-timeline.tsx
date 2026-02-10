@@ -96,7 +96,7 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
         </div>
         <button
           type="button"
-          className="flex items-center gap-1 text-xs font-semibold text-gold/80 transition-colors hover:text-gold"
+          className="flex items-center gap-1 text-xs font-semibold text-foreground transition-colors hover:text-gold"
         >
           すべて見る
           <TrendingUp className="h-3 w-3" />

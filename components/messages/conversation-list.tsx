@@ -112,7 +112,7 @@ export default function ConversationList({
                   </span>
                   {conv.isGroupChat && (
                     <>
-                      <span className="shrink-0 rounded bg-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-gold">
+                      <span className="shrink-0 rounded bg-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-foreground">
                         グループ
                       </span>
                       {conv.participantCount != null && (
@@ -127,7 +127,7 @@ export default function ConversationList({
                   className={cn(
                     "shrink-0 text-[11px]",
                     conv.unread > 0
-                      ? "font-bold text-gold"
+                      ? "font-bold text-foreground"
                       : "font-medium text-muted-foreground/60"
                   )}
                 >

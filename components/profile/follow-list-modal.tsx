@@ -251,7 +251,7 @@ export default function FollowListModal({
                       className={cn(
                         "shrink-0 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors disabled:opacity-60",
                         p.isFollowing
-                          ? "border-gold/50 bg-gold/10 text-gold hover:bg-gold/20"
+                          ? "border-gold/50 bg-gold/10 text-foreground hover:bg-gold/20"
                           : "border-border bg-transparent text-foreground hover:border-gold/30 hover:bg-secondary/80"
                       )}
                     >

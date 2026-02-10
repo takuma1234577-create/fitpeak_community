@@ -58,7 +58,7 @@ function SectionHeader({
       {href && (
         <Link
           href={href}
-          className="flex items-center gap-1 text-xs font-semibold text-gold/80 transition-colors hover:text-gold"
+          className="flex items-center gap-1 text-xs font-semibold text-foreground transition-colors hover:text-gold"
         >
           {linkLabel || "もっと見る"}
           <ChevronRight className="h-3.5 w-3.5" />
@@ -74,13 +74,13 @@ function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-r from-gold/20 via-gold/10 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
       <div className="relative flex flex-col gap-4 px-6 py-8 sm:px-8 sm:py-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold/70" suppressHydrationWarning>
+        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-foreground" suppressHydrationWarning>
           {todayMotivation.date}
         </p>
         <h1 className="text-balance text-2xl font-black leading-tight text-foreground sm:text-3xl">
           {todayMotivation.greeting}
         </h1>
-        <p className="text-sm font-bold text-gold sm:text-base">
+        <p className="text-sm font-bold text-foreground sm:text-base">
           {todayMotivation.message}
         </p>
       </div>
@@ -99,7 +99,7 @@ function MyScheduleSection() {
         </p>
         <Link
           href="/dashboard/recruit"
-          className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-gold transition-colors hover:text-gold-light"
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-foreground transition-colors hover:text-gold-light"
         >
           合トレ募集を探す
           <ChevronRight className="h-3.5 w-3.5" />
@@ -307,7 +307,7 @@ function NewArrivalUsersSection({
             </button>
             <Link
               href="/dashboard/search"
-              className="ml-2 flex items-center gap-1 text-xs font-semibold text-gold/80 transition-colors hover:text-gold"
+              className="ml-2 flex items-center gap-1 text-xs font-semibold text-foreground transition-colors hover:text-gold"
             >
               検索で仲間を探す
               <ChevronRight className="h-3.5 w-3.5" />
@@ -440,7 +440,7 @@ function YourGroupsSection() {
                   </span>
                   <span className="text-[11px] text-muted-foreground">
                     {group.unread > 0 ? (
-                      <span className="flex items-center gap-1 text-gold/80">
+                      <span className="flex items-center gap-1 text-foreground">
                         <MessageCircle className="h-3 w-3" />
                         {group.unread}件の新着
                       </span>

@@ -149,7 +149,7 @@ export default function OtherProfileSections({ profileUserId }: { profileUserId:
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-foreground">{r.title}</p>
                     {r.target_body_part && (
-                      <span className="mt-0.5 inline-block text-xs text-gold">{r.target_body_part}</span>
+                      <span className="mt-0.5 inline-block text-xs text-foreground">{r.target_body_part}</span>
                     )}
                     <p className="mt-1 text-xs text-muted-foreground">
                       {formatDate(r.event_date)}
@@ -185,7 +185,7 @@ export default function OtherProfileSections({ profileUserId }: { profileUserId:
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-foreground">{r.title}</p>
                     {r.target_body_part && (
-                      <span className="mt-0.5 inline-block text-xs text-gold">{r.target_body_part}</span>
+                      <span className="mt-0.5 inline-block text-xs text-foreground">{r.target_body_part}</span>
                     )}
                     <p className="mt-1 text-xs text-muted-foreground">
                       {formatDate(r.event_date)}

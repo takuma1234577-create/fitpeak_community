@@ -40,7 +40,7 @@ interface ChatRoomProps {
 function DateChip({ label }: { label: string }) {
   return (
     <div className="flex items-center justify-center py-4">
-      <span className="rounded-full bg-[#1a1a1a] px-4 py-1.5 text-[11px] font-semibold text-muted-foreground/60 tracking-wide shadow-sm">
+      <span className="rounded-full bg-white/15 px-4 py-1.5 text-[11px] font-semibold text-white/95 tracking-wide shadow-sm">
         {label}
       </span>
     </div>

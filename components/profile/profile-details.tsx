@@ -47,7 +47,7 @@ export default function ProfileDetails({
                     {a.year}年
                   </p>
                 </div>
-                <span className="shrink-0 rounded-full bg-gold/10 px-3 py-1 text-xs font-bold text-gold">
+                <span className="shrink-0 rounded-full bg-gold/10 px-3 py-1 text-xs font-bold text-foreground">
                   {a.rank}
                 </span>
               </div>
@@ -68,7 +68,7 @@ export default function ProfileDetails({
             {safeArray(safeCertifications).map((cert) => (
               <span
                 key={cert}
-                className="inline-flex items-center gap-1.5 rounded-full border border-gold/20 bg-gold/[0.06] px-3.5 py-1.5 text-xs font-bold text-gold"
+                className="inline-flex items-center gap-1.5 rounded-full border border-gold/20 bg-gold/[0.06] px-3.5 py-1.5 text-xs font-bold text-foreground"
               >
                 <BadgeCheck className="h-3 w-3" />
                 {cert}

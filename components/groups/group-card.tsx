@@ -77,7 +77,7 @@ export default function GroupCard({
           {showRecruitmentTag && (
             <Badge
               variant="outline"
-              className="flex items-center gap-1 border-gold/40 bg-gold/20 px-2.5 py-0.5 text-[11px] font-bold text-gold"
+              className="flex items-center gap-1 border-gold/40 bg-gold/20 px-2.5 py-0.5 text-[11px] font-bold text-foreground"
             >
               <Dumbbell className="h-3 w-3" />
               合トレ
@@ -110,7 +110,7 @@ export default function GroupCard({
           <span className="font-semibold">{group.memberCount}名</span>
         </div>
         {group.isJoined ? (
-          <span className="rounded-lg bg-gold/10 px-3.5 py-2 text-xs font-bold text-gold">
+          <span className="rounded-lg bg-gold/10 px-3.5 py-2 text-xs font-bold text-foreground">
             参加中
           </span>
         ) : (

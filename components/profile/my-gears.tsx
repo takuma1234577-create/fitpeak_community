@@ -94,7 +94,7 @@ export default function MyGears() {
               <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
             </div>
             <div className="p-3">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gold/70">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-foreground">
                 {gear.category}
               </p>
               <p className="line-clamp-2 text-xs font-bold leading-snug text-foreground">

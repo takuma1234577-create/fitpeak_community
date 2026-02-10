@@ -158,7 +158,7 @@ export default function SearchPage() {
                   key={kw}
                   type="button"
                   onClick={() => handleKeywordClick(kw)}
-                  className="rounded-full border border-gold/30 bg-gold/10 px-4 py-2 text-sm font-semibold text-gold transition-all hover:bg-gold/20 hover:border-gold/50"
+                  className="rounded-full border border-gold/30 bg-gold/10 px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-gold/20 hover:border-gold/50"
                 >
                   {kw}
                 </button>
@@ -252,7 +252,7 @@ export default function SearchPage() {
                     {showUserMore && viewParam !== "users" && (
                       <Link
                         href={`/dashboard/search?q=${encodeURIComponent(query)}&view=users`}
-                        className="self-start rounded-lg border border-gold/40 bg-gold/10 px-4 py-2 text-sm font-bold text-gold transition-colors hover:bg-gold/20"
+                        className="self-start rounded-lg border border-gold/40 bg-gold/10 px-4 py-2 text-sm font-bold text-foreground transition-colors hover:bg-gold/20"
                       >
                         もっと見る（ユーザー {filteredUsers.length} 件）
                       </Link>
@@ -279,7 +279,7 @@ export default function SearchPage() {
                         >
                           <p className="font-bold text-foreground">{group.name}</p>
                           {group.category && (
-                            <span className="text-xs text-gold">{group.category}</span>
+                            <span className="text-xs text-foreground">{group.category}</span>
                           )}
                           {group.description && (
                             <p className="line-clamp-2 text-xs text-muted-foreground">

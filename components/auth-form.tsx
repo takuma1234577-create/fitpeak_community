@@ -185,7 +185,7 @@ export default function AuthForm() {
 
   return (
     <div className="mx-auto w-full max-w-[440px]">
-      <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-2xl shadow-black/60 backdrop-blur-sm sm:p-10">
+      <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-10">
         <div className="mb-8 flex gap-1 rounded-lg bg-secondary/80 p-1.5">
           <button
             type="button"
@@ -221,7 +221,7 @@ export default function AuthForm() {
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className={labelClass}>パスワード</label>
                 {activeTab === "login" && (
-                  <button type="button" className="text-xs font-semibold tracking-wide text-gold/80 transition-colors hover:text-gold">パスワードをお忘れの方</button>
+                  <button type="button" className="text-xs font-semibold tracking-wide text-foreground transition-colors hover:text-gold">パスワードをお忘れの方</button>
                 )}
               </div>
             }
@@ -258,7 +258,7 @@ export default function AuthForm() {
         </div>
 
         <p className="mt-7 text-center text-xs text-muted-foreground">
-          {activeTab === "login" ? (<>アカウントをお持ちでない方は <button type="button" onClick={() => setActiveTab("signup")} className="font-bold text-gold transition-colors hover:text-gold-light">新規登録</button></>) : (<>アカウントをお持ちの方は <button type="button" onClick={() => setActiveTab("login")} className="font-bold text-gold transition-colors hover:text-gold-light">ログイン</button></>)}
+          {activeTab === "login" ? (<>アカウントをお持ちでない方は <button type="button" onClick={() => setActiveTab("signup")} className="font-bold text-foreground transition-colors hover:text-gold-light">新規登録</button></>) : (<>アカウントをお持ちの方は <button type="button" onClick={() => setActiveTab("login")} className="font-bold text-foreground transition-colors hover:text-gold-light">ログイン</button></>)}
         </p>
       </div>
 

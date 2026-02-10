@@ -49,7 +49,7 @@ function formatTime(iso: string) {
 function DateChip({ label }: { label: string }) {
   return (
     <div className="flex items-center justify-center py-4">
-      <span className="rounded-full bg-[#1a1a1a] px-4 py-1.5 text-[11px] font-semibold text-muted-foreground/60 tracking-wide shadow-sm">
+      <span className="rounded-full bg-white/15 px-4 py-1.5 text-[11px] font-semibold text-white/95 tracking-wide shadow-sm">
         {label}
       </span>
     </div>
@@ -565,7 +565,7 @@ export default function IndividualChatView({
                               href={`/dashboard/recruit?r=${rId}`}
                               className="block rounded-lg border border-border/60 bg-background/80 p-2.5 transition-colors hover:border-gold/40"
                             >
-                              <span className="flex items-center gap-1.5 text-sm font-bold text-gold">
+                              <span className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                                 <Dumbbell className="h-4 w-4 shrink-0" />
                                 {title}
                               </span>
