@@ -8,7 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ReportDialog from "@/components/report-dialog";
 import { createClient } from "@/utils/supabase/client";
-import { safeList } from "@/lib/utils";
+import { safeList, safeArray } from "@/lib/utils";
+import { ensureArray } from "@/lib/data-sanitizer";
 import GroupChatTab from "@/components/groups/group-chat-tab";
 import CreateGroupDialog from "@/components/groups/create-group-dialog";
 import { cn } from "@/lib/utils";
@@ -85,15 +86,17 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
       .from("group_members")
       .select("user_id")
       .eq("group_id", groupId);
-    const userIds = safeList(memberRows as { user_id: string }[] | null).map((r) => r.user_id);
+    const memberList = ensureArray(memberRows) as { user_id: string }[];
+    const userIds = memberList.map((r) => r.user_id);
     if (userIds.length > 0) {
       const { data: profs } = await supabase
         .from("profiles")
         .select("id, nickname, username, avatar_url")
         .in("id", userIds);
       const creatorId = (g as GroupData).created_by;
+      const profList = ensureArray(profs) as Record<string, unknown>[];
       setMembers(
-        safeList(profs as Record<string, unknown>[] | null).map((p) => {
+        profList.map((p) => {
           const id = (p as { id: string }).id;
           const name = (p as { nickname: string | null }).nickname || (p as { username: string | null }).username || "ユーザー";
           return {
@@ -343,7 +346,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
               <p className="text-sm text-muted-foreground">まだメンバーがいません</p>
             ) : (
               <div className="flex flex-col gap-3">
-                {members.map((m) => (
+                {safeArray(members).map((m) => (
                   <div
                     key={m.user_id}
                     className="flex items-center gap-3 rounded-lg border border-border/40 bg-secondary/30 px-4 py-3"

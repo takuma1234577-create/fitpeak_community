@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Send, ImagePlus, MessageCircle, Loader2, Dumbbell } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
-import { cn } from "@/lib/utils";
+import { cn, safeArray } from "@/lib/utils";
+import { ensureArray } from "@/lib/data-sanitizer";
 
 type MessageRow = {
   id: string;
@@ -50,7 +51,8 @@ export default function GroupChatTab({
       setLoading(false);
       return;
     }
-    const list = (msgData ?? []) as { id: string; sender_id: string; content: string; created_at: string }[];
+    const rawList = ensureArray(msgData) as { id: string; sender_id: string; content: string; created_at: string }[];
+    const list = Array.isArray(rawList) ? rawList : [];
     const senderIds = [...new Set(list.map((m) => m.sender_id))];
     let nameMap: Record<string, { name: string; avatar: string | null }> = {};
     if (senderIds.length > 0) {
@@ -58,7 +60,7 @@ export default function GroupChatTab({
         .from("profiles")
         .select("id, nickname, username, avatar_url")
         .in("id", senderIds);
-      nameMap = (profs ?? []).reduce(
+      nameMap = ensureArray(profs).reduce(
         (acc, p) => {
           const id = (p as { id: string }).id;
           acc[id] = {
@@ -173,7 +175,7 @@ export default function GroupChatTab({
             <p className="text-xs mt-1">最初のメッセージを送ってみましょう</p>
           </div>
         ) : (
-          messages.map((msg) => {
+          safeArray(messages).map((msg) => {
             const isMe = msg.sender_id === myUserId;
             return (
               <div
