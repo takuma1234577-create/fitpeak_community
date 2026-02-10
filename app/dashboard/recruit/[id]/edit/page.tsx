@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
@@ -19,10 +19,10 @@ for (let h = 0; h < 24; h++) {
   }
 }
 
-export default function NewRecruitPage() {
+export default function EditRecruitPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const copyId = searchParams.get("copy");
+  const params = useParams();
+  const id = params?.id as string | undefined;
 
   const [title, setTitle] = useState("");
   const [area, setArea] = useState("");
@@ -33,25 +33,34 @@ export default function NewRecruitPage() {
   const [dateOpen, setDateOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(!!id);
   const [error, setError] = useState<string | null>(null);
-  const [copyLoaded, setCopyLoaded] = useState(false);
 
   useEffect(() => {
-    if (!copyId || copyLoaded) return;
+    if (!id) return;
     let cancelled = false;
     (async () => {
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
       const { data, error: fetchError } = await (supabase as any)
         .from("recruitments")
-        .select("title, description, target_body_part, event_date, location")
-        .eq("id", copyId)
+        .select("id, user_id, title, description, target_body_part, event_date, location, status")
+        .eq("id", id)
         .maybeSingle();
+      // level は DB にカラムがある場合のみ。ここでは select に含めない
       if (cancelled) return;
       if (fetchError || !data) {
-        setCopyLoaded(true);
+        setError("募集が見つかりません");
+        setLoading(false);
         return;
       }
-      setTitle((data.title ?? "") + "（コピー）");
+      if (data.user_id !== user.id) {
+        setError("編集する権限がありません");
+        setLoading(false);
+        return;
+      }
+      setTitle(data.title ?? "");
       setArea(data.location ?? "");
       setBodyPart(data.target_body_part && data.target_body_part !== "" ? data.target_body_part : "all");
       setLevel("all");
@@ -63,13 +72,15 @@ export default function NewRecruitPage() {
           `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
         );
       }
-      setCopyLoaded(true);
-    })();
+    })().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
     return () => { cancelled = true; };
-  }, [copyId, copyLoaded]);
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!id) return;
     setError(null);
     if (!title.trim()) {
       setError("タイトルを入力してください");
@@ -91,46 +102,70 @@ export default function NewRecruitPage() {
       const dateTime = `${eventDate}T${eventTime}:00`;
       const eventDateTime = new Date(dateTime).toISOString();
       const row: Record<string, unknown> = {
-        user_id: user.id,
         title: title.trim(),
         description: description.trim() || null,
         target_body_part: bodyPart === "all" ? null : bodyPart,
         event_date: eventDateTime,
         location: area.trim() || null,
-        status: "open",
       };
       if (level !== "all") (row as Record<string, string>).level = level;
 
-      let { error: insertError } = await (supabase as any).from("recruitments").insert(row);
-      if (insertError && level !== "all") {
-        delete (row as Record<string, string>).level;
-        const retry = await (supabase as any).from("recruitments").insert(row);
-        insertError = retry.error;
-      }
-      if (insertError) {
-        setError(insertError.message ?? "作成に失敗しました");
+      const { error: updateError } = await (supabase as any)
+        .from("recruitments")
+        .update(row)
+        .eq("id", id)
+        .eq("user_id", user.id);
+      if (updateError) {
+        if (updateError.message?.includes("level")) {
+          delete (row as Record<string, string>).level;
+          const retry = await (supabase as any).from("recruitments").update(row).eq("id", id).eq("user_id", user.id);
+          if (retry.error) setError(retry.error.message ?? "更新に失敗しました");
+        } else setError(updateError.message ?? "更新に失敗しました");
         setSubmitting(false);
         return;
       }
-      router.push("/dashboard/recruit");
+      router.push("/dashboard/recruit/manage");
       router.refresh();
     } catch (e) {
       console.error(e);
-      setError("作成中にエラーが発生しました");
+      setError("更新中にエラーが発生しました");
       setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-lg space-y-6">
+        <Link href="/dashboard/recruit/manage" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
+          ← 管理画面へ
+        </Link>
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-gold/60" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !title) {
+    return (
+      <div className="mx-auto max-w-lg space-y-6">
+        <Link href="/dashboard/recruit/manage" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
+          ← 管理画面へ
+        </Link>
+        <p className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+          {error}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <Link
-        href="/dashboard/recruit"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
-      >
-        ← 募集一覧へ
+      <Link href="/dashboard/recruit/manage" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
+        ← 管理画面へ
       </Link>
       <h1 className="text-2xl font-black tracking-tight text-foreground">
-        合トレを募集する
+        募集を編集
       </h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -141,9 +176,7 @@ export default function NewRecruitPage() {
         )}
 
         <div>
-          <label htmlFor="title" className="mb-1.5 block text-sm font-bold text-foreground">
-            タイトル
-          </label>
+          <label htmlFor="title" className="mb-1.5 block text-sm font-bold text-foreground">タイトル</label>
           <input
             id="title"
             type="text"
@@ -156,9 +189,7 @@ export default function NewRecruitPage() {
         </div>
 
         <div>
-          <label htmlFor="area" className="mb-1.5 block text-sm font-bold text-foreground">
-            エリア
-          </label>
+          <label htmlFor="area" className="mb-1.5 block text-sm font-bold text-foreground">エリア</label>
           <select
             id="area"
             value={area}
@@ -167,17 +198,13 @@ export default function NewRecruitPage() {
           >
             <option value="">選択してください</option>
             {safeArray(PREFECTURES).map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
+              <option key={p} value={p}>{p}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <label htmlFor="bodyPart" className="mb-1.5 block text-sm font-bold text-foreground">
-            部位
-          </label>
+          <label htmlFor="bodyPart" className="mb-1.5 block text-sm font-bold text-foreground">部位</label>
           <select
             id="bodyPart"
             value={bodyPart}
@@ -185,17 +212,13 @@ export default function NewRecruitPage() {
             className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
           >
             {safeArray(BODY_PARTS).map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
+              <option key={p.value} value={p.value}>{p.label}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <label htmlFor="level" className="mb-1.5 block text-sm font-bold text-foreground">
-            対象レベル
-          </label>
+          <label htmlFor="level" className="mb-1.5 block text-sm font-bold text-foreground">対象レベル</label>
           <select
             id="level"
             value={level}
@@ -203,18 +226,14 @@ export default function NewRecruitPage() {
             className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
           >
             {safeArray(LEVELS).map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
+              <option key={l.value} value={l.value}>{l.label}</option>
             ))}
           </select>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-foreground">
-              日付
-            </label>
+            <label className="mb-1.5 block text-sm font-bold text-foreground">日付</label>
             <Popover open={dateOpen} onOpenChange={setDateOpen}>
               <PopoverTrigger asChild>
                 <button
@@ -226,11 +245,7 @@ export default function NewRecruitPage() {
                 >
                   <CalendarIcon className="h-4 w-4 shrink-0 text-gold/70" />
                   {eventDate
-                    ? new Date(eventDate + "T12:00:00").toLocaleDateString("ja-JP", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })
+                    ? new Date(eventDate + "T12:00:00").toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })
                     : "日付を選択"}
                 </button>
               </PopoverTrigger>
@@ -250,9 +265,7 @@ export default function NewRecruitPage() {
             </Popover>
           </div>
           <div>
-            <label htmlFor="eventTime" className="mb-1.5 block text-sm font-bold text-foreground">
-              時間
-            </label>
+            <label htmlFor="eventTime" className="mb-1.5 block text-sm font-bold text-foreground">時間</label>
             <select
               id="eventTime"
               value={eventTime}
@@ -260,18 +273,14 @@ export default function NewRecruitPage() {
               className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
             >
               {TIME_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
+                <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
         </div>
 
         <div>
-          <label htmlFor="description" className="mb-1.5 block text-sm font-bold text-foreground">
-            説明（任意）
-          </label>
+          <label htmlFor="description" className="mb-1.5 block text-sm font-bold text-foreground">説明（任意）</label>
           <textarea
             id="description"
             value={description}
@@ -288,14 +297,10 @@ export default function NewRecruitPage() {
             disabled={submitting}
             className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gold py-3.5 text-sm font-black uppercase tracking-wider text-[#050505] shadow-lg shadow-gold/25 transition-all hover:bg-gold-light disabled:opacity-60"
           >
-            {submitting ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              "募集する"
-            )}
+            {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "保存"}
           </button>
           <Link
-            href="/dashboard/recruit"
+            href="/dashboard/recruit/manage"
             className="flex items-center justify-center rounded-lg border border-border px-6 py-3.5 text-sm font-bold text-foreground transition-colors hover:bg-secondary"
           >
             キャンセル

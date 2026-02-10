@@ -245,7 +245,7 @@ export default function RecruitBoard() {
             href="/dashboard/recruit/manage"
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm font-bold text-foreground transition-colors hover:bg-secondary"
           >
-            作成した合トレ
+            合トレを管理する
           </Link>
           <Link
             href="/dashboard/recruit/new"
