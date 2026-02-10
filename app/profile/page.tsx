@@ -46,7 +46,7 @@ export default function ProfilePage() {
     onSuccess: refreshDisplayProfile,
   });
   const { isBlocked, refetch: refetchBlock } = useBlockStatus(isOwnProfile ? null : profileUserId);
-  const { blockedIds, refetch: refetchBlockedIds } = useBlockedUserIds();
+  const { blockedIds } = useBlockedUserIds();
   const [followModalOpen, setFollowModalOpen] = useState(false);
   const [followModalTab, setFollowModalTab] = useState<FollowTab>("followers");
 
@@ -145,8 +145,6 @@ export default function ProfilePage() {
             onMessage={handleMessage}
             onFollowersClick={() => { setFollowModalTab("followers"); setFollowModalOpen(true); }}
             onFollowingClick={() => { setFollowModalTab("following"); setFollowModalOpen(true); }}
-            profileUserIdForActions={profileUserId}
-            onBlockChange={refetchBlockedIds}
           />
           {profileUserId && (
             <FollowListModal
