@@ -1,36 +1,28 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
-import ProfileModal from "@/components/profile/profile-modal";
+import { createContext, useCallback, useContext } from "react";
+import { useRouter } from "next/navigation";
 
 type ProfileModalContextValue = {
+  /** 他ユーザーのプロフィールを開く（ページ遷移で /profile?u=userId） */
   openProfileModal: (userId: string) => void;
 };
 
 const ProfileModalContext = createContext<ProfileModalContextValue | null>(null);
 
 export function ProfileModalProvider({ children }: { children: React.ReactNode }) {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
 
-  const openProfileModal = useCallback((id: string) => {
-    setUserId(id);
-    setOpen(true);
-  }, []);
-
-  const onOpenChange = useCallback((next: boolean) => {
-    setOpen(next);
-    if (!next) setUserId(null);
-  }, []);
+  const openProfileModal = useCallback(
+    (id: string) => {
+      router.push(`/profile?u=${encodeURIComponent(id)}`);
+    },
+    [router]
+  );
 
   return (
     <ProfileModalContext.Provider value={{ openProfileModal }}>
       {children}
-      <ProfileModal
-        userId={userId}
-        open={open}
-        onOpenChange={onOpenChange}
-      />
     </ProfileModalContext.Provider>
   );
 }
