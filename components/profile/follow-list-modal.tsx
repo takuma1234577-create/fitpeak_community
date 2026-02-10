@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { useProfileModal } from "@/contexts/profile-modal-context";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,46 @@ interface FollowListModalProps {
   myUserId: string | null;
   initialTab: FollowTab;
   onFollowChange?: () => void;
+}
+
+function FollowListProfileButton({
+  p,
+  displayName,
+  onOpenChange,
+}: {
+  p: FollowListItem;
+  displayName: (p: FollowListItem) => string;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { openProfileModal } = useProfileModal();
+  const handleClick = () => {
+    openProfileModal(p.id);
+    onOpenChange(false);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+    >
+      <Avatar className="h-10 w-10 shrink-0 ring-1 ring-border/60">
+        <AvatarImage src={p.avatar_url ?? undefined} alt={displayName(p)} />
+        <AvatarFallback className="bg-secondary text-sm font-bold text-foreground">
+          {displayName(p).charAt(0)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-foreground">
+          {displayName(p)}
+        </p>
+        {p.bio && (
+          <p className="line-clamp-1 text-xs text-muted-foreground">
+            {p.bio}
+          </p>
+        )}
+      </div>
+    </button>
+  );
 }
 
 async function fetchFollowers(profileUserId: string, myUserId: string | null): Promise<FollowListItem[]> {
@@ -198,28 +238,11 @@ export default function FollowListModal({
             <ul className="divide-y divide-border/40">
               {safeArray(list).map((p) => (
                 <li key={p.id} className="flex items-center gap-3 px-4 py-3">
-                  <Link
-                    href={`/profile?u=${p.id}`}
-                    onClick={() => onOpenChange(false)}
-                    className="flex min-w-0 flex-1 items-center gap-3"
-                  >
-                    <Avatar className="h-10 w-10 shrink-0 ring-1 ring-border/60">
-                      <AvatarImage src={p.avatar_url ?? undefined} alt={displayName(p)} />
-                      <AvatarFallback className="bg-secondary text-sm font-bold text-foreground">
-                        {displayName(p).charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold text-foreground">
-                        {displayName(p)}
-                      </p>
-                      {p.bio && (
-                        <p className="line-clamp-1 text-xs text-muted-foreground">
-                          {p.bio}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
+                  <FollowListProfileButton
+                    p={p}
+                    displayName={displayName}
+                    onOpenChange={onOpenChange}
+                  />
                   {myUserId && myUserId !== p.id && (
                     <button
                       type="button"

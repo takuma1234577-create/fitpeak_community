@@ -20,6 +20,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { safeList } from "@/lib/utils";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
+import { useProfileModal } from "@/contexts/profile-modal-context";
 import { uploadChatMedia, getMessageTypeFromFile } from "@/lib/upload-chat-media";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +78,7 @@ export default function IndividualChatView({
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
   const { blockedIds } = useBlockedUserIds();
+  const { openProfileModal } = useProfileModal();
   const visibleMessages = messages.filter(
     (msg) => msg.sender_id === myUserId || !blockedIds.has(msg.sender_id)
   );
@@ -369,9 +371,10 @@ export default function IndividualChatView({
           <ArrowLeft className="h-5 w-5" />
         </Link>
         {otherUser?.id ? (
-          <Link
-            href={`/profile?u=${otherUser.id}`}
-            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition-colors hover:bg-secondary/40 -mx-1 px-1 py-0.5"
+          <button
+            type="button"
+            onClick={() => openProfileModal(otherUser.id)}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition-colors hover:bg-secondary/40 -mx-1 px-1 py-0.5 text-left"
             aria-label={`${otherName}のプロフィール`}
           >
             <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-border/40 sm:h-10 sm:w-10">
@@ -399,7 +402,7 @@ export default function IndividualChatView({
                 </span>
               )}
             </div>
-          </Link>
+          </button>
         ) : (
           <>
             <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-border/40 sm:h-10 sm:w-10">
@@ -431,13 +434,24 @@ export default function IndividualChatView({
         )}
         {!embedded && (
           <div className="flex shrink-0 items-center gap-1">
-            <Link
-              href={otherUser?.id ? `/profile?u=${otherUser.id}` : "/dashboard/messages"}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
-              aria-label="プロフィール"
-            >
-              <UserCircle className="h-5 w-5" />
-            </Link>
+            {otherUser?.id ? (
+              <button
+                type="button"
+                onClick={() => openProfileModal(otherUser.id)}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
+                aria-label="プロフィール"
+              >
+                <UserCircle className="h-5 w-5" />
+              </button>
+            ) : (
+              <Link
+                href="/dashboard/messages"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
+                aria-label="メッセージ一覧"
+              >
+                <UserCircle className="h-5 w-5" />
+              </Link>
+            )}
             <button
               type="button"
               className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
+import { useProfileModal } from "@/contexts/profile-modal-context";
 import { POPULAR_SEARCH_KEYWORDS } from "@/lib/search-constants";
 import { safeArray, safeList } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -58,6 +59,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const { blockedIds } = useBlockedUserIds();
+  const { openProfileModal } = useProfileModal();
 
   const runSearch = useCallback(async (searchText: string) => {
     const term = searchText.trim();
@@ -208,10 +210,11 @@ export default function SearchPage() {
                         const name = profile.nickname || profile.username || "ユーザー";
                         const initial = name.charAt(0);
                         return (
-                          <Link
+                          <button
                             key={profile.id}
-                            href={profile.id ? `/profile?u=${profile.id}` : "/profile"}
-                            className="flex shrink-0 items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80 md:shrink"
+                            type="button"
+                            onClick={() => profile.id && openProfileModal(profile.id)}
+                            className="flex shrink-0 items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80 md:shrink text-left w-full"
                           >
                             <Avatar className="h-12 w-12 shrink-0 ring-1 ring-border/60">
                               <AvatarImage src={profile.avatar_url ?? undefined} alt={name} />
@@ -242,7 +245,7 @@ export default function SearchPage() {
                               </div>
                             </div>
                             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-                          </Link>
+                          </button>
                         );
                       })}
                     </div>

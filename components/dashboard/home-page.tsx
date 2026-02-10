@@ -23,6 +23,7 @@ import { safeArray, safeList } from "@/lib/utils";
 import type { RecommendedUser, NewArrivalUser } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
+import { useProfileModal } from "@/contexts/profile-modal-context";
 
 const todayMotivation = {
   greeting: "おかえりなさい。",
@@ -124,9 +125,11 @@ function formatRegisteredAt(createdAt: string): string {
 function RecommendedUserCard({
   user,
   myUserId,
+  onOpenProfile,
 }: {
   user: RecommendedUser;
   myUserId: string | null;
+  onOpenProfile: (userId: string) => void;
 }) {
   const { isFollowing, toggle, loading } = useFollow(user.id, myUserId);
   const name = user.nickname || user.username || "ユーザー";
@@ -135,7 +138,11 @@ function RecommendedUserCard({
 
   return (
     <div className="flex items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80">
-      <Link href={`/profile?u=${user.id}`} className="flex min-w-0 flex-1 items-center gap-4">
+      <button
+        type="button"
+        onClick={() => onOpenProfile(user.id)}
+        className="flex min-w-0 flex-1 items-center gap-4 text-left"
+      >
         <Avatar className="h-12 w-12 shrink-0 ring-1 ring-border/60">
           <AvatarImage src={user.avatar_url ?? undefined} alt={name} />
           <AvatarFallback className="bg-secondary text-sm font-bold">{initial}</AvatarFallback>
@@ -156,7 +163,7 @@ function RecommendedUserCard({
           </div>
         </div>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40" />
-      </Link>
+      </button>
       {showFollow && (
         <button
           type="button"
@@ -181,9 +188,11 @@ function RecommendedUserCard({
 function RecommendedUsersSection({
   users,
   myUserId,
+  onOpenProfile,
 }: {
   users: RecommendedUser[] | null | undefined;
   myUserId: string | null;
+  onOpenProfile: (userId: string) => void;
 }) {
   const safeUsers = safeArray(users);
   return (
@@ -196,7 +205,7 @@ function RecommendedUsersSection({
       />
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {safeUsers.map((user) => (
-          <RecommendedUserCard key={user.id} user={user} myUserId={myUserId} />
+          <RecommendedUserCard key={user.id} user={user} myUserId={myUserId} onOpenProfile={onOpenProfile} />
         ))}
       </div>
     </section>
@@ -206,9 +215,11 @@ function RecommendedUsersSection({
 function NewArrivalUserCard({
   user,
   myUserId,
+  onOpenProfile,
 }: {
   user: NewArrivalUser;
   myUserId: string | null;
+  onOpenProfile: (userId: string) => void;
 }) {
   const { isFollowing, toggle, loading } = useFollow(user.id, myUserId);
   const name = user.nickname || user.username || "ユーザー";
@@ -217,7 +228,11 @@ function NewArrivalUserCard({
 
   return (
     <div className="flex w-[160px] shrink-0 flex-col items-center gap-2 rounded-xl border border-border/40 bg-card px-4 py-4 transition-all hover:border-gold/30 hover:bg-card/80">
-      <Link href={`/profile?u=${user.id}`} className="flex flex-col items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onOpenProfile(user.id)}
+        className="flex flex-col items-center gap-2 w-full"
+      >
         <Avatar className="h-14 w-14 shrink-0 ring-2 ring-border/60">
           <AvatarImage src={user.avatar_url ?? undefined} alt={name} />
           <AvatarFallback className="bg-secondary text-sm font-bold">{initial}</AvatarFallback>
@@ -226,7 +241,7 @@ function NewArrivalUserCard({
         <span className="text-[11px] text-muted-foreground">
           {formatRegisteredAt(user.created_at)}
         </span>
-      </Link>
+      </button>
       {showFollow && (
         <button
           type="button"
@@ -251,9 +266,11 @@ function NewArrivalUserCard({
 function NewArrivalUsersSection({
   users,
   myUserId,
+  onOpenProfile,
 }: {
   users: NewArrivalUser[] | null | undefined;
   myUserId: string | null;
+  onOpenProfile: (userId: string) => void;
 }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const safeUsers = safeArray(users);
@@ -307,7 +324,7 @@ function NewArrivalUsersSection({
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {safeUsers.map((user) => (
-            <NewArrivalUserCard key={user.id} user={user} myUserId={myUserId} />
+            <NewArrivalUserCard key={user.id} user={user} myUserId={myUserId} onOpenProfile={onOpenProfile} />
           ))}
         </div>
       )}
@@ -466,6 +483,7 @@ export default function HomePage({
   myUserId,
 }: HomePageProps) {
   const { blockedIds } = useBlockedUserIds();
+  const { openProfileModal } = useProfileModal();
   const filteredRecommendedUsers = recommendedUsers.filter((u) => !blockedIds.has(u.id));
   const filteredNewArrivalUsers = newArrivalUsers.filter((u) => !blockedIds.has(u.id));
 
@@ -473,8 +491,8 @@ export default function HomePage({
     <div className="flex flex-col gap-8">
       <HeroSection />
       <MyScheduleSection />
-      <RecommendedUsersSection users={filteredRecommendedUsers} myUserId={myUserId} />
-      <NewArrivalUsersSection users={filteredNewArrivalUsers} myUserId={myUserId} />
+      <RecommendedUsersSection users={filteredRecommendedUsers} myUserId={myUserId} onOpenProfile={openProfileModal} />
+      <NewArrivalUsersSection users={filteredNewArrivalUsers} myUserId={myUserId} onOpenProfile={openProfileModal} />
       <YourGroupsSection />
     </div>
   );
