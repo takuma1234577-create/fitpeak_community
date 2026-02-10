@@ -250,8 +250,18 @@ export async function getNewArrivalUsers(
       .not("nickname", "is", null)
       .order("created_at", { ascending: false })
       .limit(Math.min(limit, 10));
-    if (error) return [];
-    return safeList(data as Record<string, unknown>[]).map((row) => ({
+    if (!error && data?.length) {
+      return safeList(data as Record<string, unknown>[]).map((row) => ({
+        ...toRecommendedUser(row),
+        created_at: (row.created_at as string) ?? "",
+      })) as NewArrivalUser[];
+    }
+    const { data: randomRows } = await sb.rpc("get_random_profiles", {
+      p_exclude_ids: [myId],
+      p_limit: Math.min(limit, 10),
+    });
+    const list = safeList(randomRows as Record<string, unknown>[] | null);
+    return list.map((row) => ({
       ...toRecommendedUser(row),
       created_at: (row.created_at as string) ?? "",
     })) as NewArrivalUser[];

@@ -190,7 +190,13 @@ export default function AuthForm() {
           options: name.trim() ? { data: { display_name: name.trim() } } : undefined,
         });
         if (error) {
-          setAuthError(error.message === "User already registered" ? "このメールアドレスは既に登録されています" : error.message);
+          let message = error.message;
+          if (error.message === "User already registered") {
+            message = "このメールアドレスは既に登録されています";
+          } else if (error.message?.toLowerCase().includes("confirmation email") || error.message === "Error sending confirmation email") {
+            message = "確認メールの送信に失敗しました。しばらく経ってから再試行するか、管理者に問い合わせてください。（SMTP設定の確認が必要な場合があります）";
+          }
+          setAuthError(message);
           return;
         }
         if (data.session && data.user) {

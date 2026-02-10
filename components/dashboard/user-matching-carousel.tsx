@@ -216,7 +216,7 @@ export default function UserMatchingCarousel({
         .eq("email_confirmed", true)
         .not("nickname", "is", null)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(40);
 
       if (myUserId) {
         query = query.neq("id", myUserId);
@@ -235,20 +235,29 @@ export default function UserMatchingCarousel({
 
       if (list.length < MIN_USERS) {
         const excludeIds = [...new Set([...(myUserId ? [myUserId] : []), ...list.map((u) => u.id)])];
-        const need = MIN_USERS - list.length;
-        const { data: randomRows } = await sb.rpc("get_random_profiles", {
+        const need = Math.max(MIN_USERS - list.length, 10);
+        const { data: supplementRows } = await sb.rpc("get_random_profiles", {
           p_exclude_ids: excludeIds,
-          p_limit: Math.max(need, 10),
+          p_limit: need,
         });
-        const randomList = safeList((randomRows ?? []) as MatchUser[]);
+        const supplementList = safeList((supplementRows ?? []) as MatchUser[]);
         const seen = new Set(list.map((u) => u.id));
-        for (const row of randomList) {
+        for (const row of supplementList) {
           if (row?.id && !seen.has(row.id) && !blocked.has(row.id)) {
             seen.add(row.id);
             list.push(row as MatchUser);
             if (list.length >= MIN_USERS) break;
           }
         }
+      }
+
+      if (list.length === 0) {
+        const { data: fallbackRows } = await sb.rpc("get_random_profiles", {
+          p_exclude_ids: myUserId ? [myUserId] : [],
+          p_limit: MIN_USERS,
+        });
+        const fallbackList = safeList((fallbackRows ?? []) as MatchUser[]).filter((u) => !blocked.has(u.id));
+        if (fallbackList.length > 0) list = fallbackList;
       }
 
       if (!cancelled) {
