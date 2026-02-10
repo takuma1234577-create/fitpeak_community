@@ -39,11 +39,11 @@ export default function DashboardHeader() {
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
         .eq("is_read", false);
-      if (error) {
+      if (error != null) {
         setUnreadCount(0);
         return;
       }
-      setUnreadCount(typeof count === "number" ? count : 0);
+      setUnreadCount(typeof count === "number" && Number.isFinite(count) ? count : 0);
     } catch {
       setUnreadCount(0);
     }

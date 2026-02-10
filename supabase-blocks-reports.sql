@@ -16,6 +16,10 @@ CREATE INDEX IF NOT EXISTS idx_blocks_blocked_id ON public.blocks(blocked_id);
 
 ALTER TABLE public.blocks ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "blocks_select_own" ON public.blocks;
+DROP POLICY IF EXISTS "blocks_insert_own" ON public.blocks;
+DROP POLICY IF EXISTS "blocks_delete_own" ON public.blocks;
+
 CREATE POLICY "blocks_select_own"
   ON public.blocks FOR SELECT
   USING (auth.uid() = blocker_id OR auth.uid() = blocked_id);
@@ -43,6 +47,9 @@ CREATE INDEX IF NOT EXISTS idx_reports_reporter_id ON public.reports(reporter_id
 CREATE INDEX IF NOT EXISTS idx_reports_target_type ON public.reports(target_id, type);
 
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "reports_insert_own" ON public.reports;
+DROP POLICY IF EXISTS "reports_select_own" ON public.reports;
 
 CREATE POLICY "reports_insert_own"
   ON public.reports FOR INSERT

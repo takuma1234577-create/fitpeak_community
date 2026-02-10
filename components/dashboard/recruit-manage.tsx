@@ -22,7 +22,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { bodyParts } from "@/components/dashboard/filter-bar";
 import { PREFECTURES } from "@/lib/constants";
-import { safeArray } from "@/lib/utils";
+import { safeArray, safeList } from "@/lib/utils";
 
 type RecruitmentRow = {
   id: string;
@@ -72,10 +72,10 @@ export default function RecruitManage() {
       .select("id, title, description, target_body_part, event_date, location, status, created_at, chat_room_id")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-    const safeList = Array.isArray(data) ? (data as RecruitmentRow[]) : [];
+    const recruitmentList = safeList(data as RecruitmentRow[] | null);
     if (!error) {
-      setList(safeList);
-      const ids = safeList.map((r) => r.id);
+      setList(recruitmentList);
+      const ids = recruitmentList.map((r) => r.id);
       if (ids.length > 0) {
         const { data: pending } = await (supabase as any)
           .from("recruitment_participants")
@@ -84,8 +84,7 @@ export default function RecruitManage() {
           .eq("status", "pending");
         const byRec: Record<string, PendingParticipant[]> = {};
         ids.forEach((id) => (byRec[id] = []));
-        const pendingList = Array.isArray(pending) ? pending : pending != null ? [pending] : [];
-        pendingList.forEach((p: PendingParticipant) => {
+        safeList(pending as PendingParticipant[] | null).forEach((p) => {
           if (!byRec[p.recruitment_id]) byRec[p.recruitment_id] = [];
           byRec[p.recruitment_id].push(p);
         });
@@ -175,7 +174,7 @@ export default function RecruitManage() {
       .select("user_id")
       .eq("recruitment_id", r.id)
       .in("status", ["pending", "approved"]);
-    const userIds = (participants ?? []).map((p: { user_id: string }) => p.user_id);
+    const userIds = safeList(participants as { user_id: string }[] | null).map((p) => p.user_id);
     for (const uid of userIds) {
       if (uid === user?.id) continue;
       await (supabase as any).from("notifications").insert({
@@ -267,11 +266,11 @@ export default function RecruitManage() {
         </div>
       ) : (
         <ul className="space-y-4">
-          {(list || []).map((r) => {
+          {safeList(list).map((r) => {
             const d = new Date(r.event_date);
             const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
             const timeStr = d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-            const pendingList = (pendingByRecruitment[r.id] ?? []) as PendingParticipant[];
+            const pendingList = safeList(pendingByRecruitment[r.id]) as PendingParticipant[];
             return (
               <li
                 key={r.id}
@@ -326,7 +325,7 @@ export default function RecruitManage() {
                       承認待ち ({pendingList.length}名)
                     </p>
                     <ul className="space-y-2">
-                      {(pendingList || []).map((p) => {
+                      {safeList(pendingList).map((p) => {
                         const name = p.profiles?.nickname || p.profiles?.username || "ユーザー";
                         const key = `${r.id}-${p.user_id}`;
                         const isLoading = actionLoading === key;

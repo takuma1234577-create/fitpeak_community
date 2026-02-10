@@ -17,7 +17,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { POPULAR_SEARCH_KEYWORDS } from "@/lib/search-constants";
-import { safeArray } from "@/lib/utils";
+import { safeArray, safeList } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 type ProfileRow = {
@@ -101,9 +101,9 @@ export default function SearchPage() {
       ]);
 
       setResults({
-        users: (profilesRes.data ?? []) as ProfileRow[],
-        groups: (groupsRes.data ?? []) as GroupRow[],
-        recruitments: (recruitmentsRes.data ?? []) as RecruitmentRow[],
+        users: safeList(profilesRes.data as ProfileRow[] | null),
+        groups: safeList(groupsRes.data as GroupRow[] | null),
+        recruitments: safeList(recruitmentsRes.data as RecruitmentRow[] | null),
       });
 
       if (profilesRes.error) console.error("search_profiles:", profilesRes.error);
@@ -131,9 +131,9 @@ export default function SearchPage() {
     runSearch(query);
   };
 
-  const safeUsers = Array.isArray(results.users) ? results.users : [];
-  const safeRecruitments = Array.isArray(results.recruitments) ? results.recruitments : [];
-  const safeGroups = Array.isArray(results.groups) ? results.groups : [];
+  const safeUsers = safeList(results.users);
+  const safeRecruitments = safeList(results.recruitments);
+  const safeGroups = safeList(results.groups);
   const showKeywords = !searched || (!query.trim() && safeUsers.length === 0 && safeGroups.length === 0 && safeRecruitments.length === 0 && !loading);
 
   const filteredUsers = safeUsers.filter((u) => !blockedIds.has(u.id));
@@ -326,7 +326,7 @@ export default function SearchPage() {
                   <p className="text-sm text-muted-foreground">該当する募集はありません</p>
                 ) : (
                   <ul className="grid gap-2 sm:grid-cols-2">
-                    {(filteredRecruitments ?? []).map((rec) => {
+                    {safeList(filteredRecruitments).map((rec) => {
                       const eventDate = rec.event_date
                         ? new Date(rec.event_date).toLocaleDateString("ja-JP", {
                             month: "numeric",

@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
-import { safeArray } from "@/lib/utils";
+import { safeArray, safeList } from "@/lib/utils";
 import type {
   RecruitmentWithProfile,
   RecommendedUser,
@@ -491,7 +491,7 @@ function YourGroupsSection() {
         .from("group_members")
         .select("group_id")
         .eq("user_id", user.id);
-      const membersList = (Array.isArray(members) ? members : []) as { group_id: string }[];
+      const membersList = safeList(members as { group_id: string }[] | null);
       if (memErr || !membersList.length) {
         if (!cancelled) {
           setGroups([]);
@@ -499,12 +499,12 @@ function YourGroupsSection() {
         }
         return;
       }
-      const ids = (membersList || []).map((m) => m.group_id);
+      const ids = membersList.map((m) => m.group_id);
       const { data: groupList, error } = await supabase
         .from("groups")
         .select("id, name")
         .in("id", ids);
-      const groupListTyped = safeArray(groupList) as { id: string; name: string }[];
+      const groupListTyped = safeList(groupList as { id: string; name: string }[] | null);
       if (!cancelled) {
         if (error) {
           console.error("groups fetch:", error);

@@ -18,6 +18,7 @@ import {
   Dumbbell,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { safeList } from "@/lib/utils";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { uploadChatMedia, getMessageTypeFromFile } from "@/lib/upload-chat-media";
 import { cn } from "@/lib/utils";
@@ -94,7 +95,7 @@ export default function IndividualChatView({
       .from("conversation_participants")
       .select("user_id, last_read_at, profiles(id, nickname, username, avatar_url, bio, home_gym, exercises, prefecture)")
       .eq("conversation_id", id);
-    const list = (participants ?? []) as {
+    type ParticipantRow = {
       user_id: string;
       last_read_at: string | null;
       profiles: {
@@ -107,7 +108,8 @@ export default function IndividualChatView({
         exercises: string[] | null;
         prefecture: string | null;
       } | null;
-    }[];
+    };
+    const list = safeList(participants as ParticipantRow[] | null);
     const other = list.find((p) => p.user_id !== user.id);
     if (other?.profiles) {
       const p = other.profiles;
@@ -139,8 +141,8 @@ export default function IndividualChatView({
       .select("id, sender_id, content, created_at, message_type")
       .eq("conversation_id", id)
       .order("created_at", { ascending: true });
-    if (!error && Array.isArray(rows)) {
-      setMessages((rows as MessageRow[]).map((r) => ({ ...r, message_type: r.message_type ?? "text" })));
+    if (!error) {
+      setMessages(safeList(rows as MessageRow[] | null).map((r) => ({ ...r, message_type: r.message_type ?? "text" })));
     }
     setLoading(false);
 
@@ -247,7 +249,7 @@ export default function IndividualChatView({
         .from("conversation_participants")
         .select("user_id")
         .eq("conversation_id", id);
-      const otherIds = (participants ?? []).map((p: { user_id: string }) => p.user_id).filter((uid: string) => uid !== myUserId);
+      const otherIds = safeList(participants as { user_id: string }[] | null).map((p) => p.user_id).filter((uid) => uid !== myUserId);
       for (const uid of otherIds) {
         await (supabase as any).from("notifications").insert({
           user_id: uid,

@@ -13,3 +13,6 @@ export function cn(...inputs: ClassValue[]) {
 export function safeArray<T>(data: readonly T[] | T[] | null | undefined): T[] {
   return Array.isArray(data) ? [...data] : [];
 }
+
+/** データ正規化レイヤー（safeList / normalizeProfile / normalizeRecruitment）の再エクスポート */
+export { safeList, ensureArray, normalizeProfile, normalizeRecruitment, normalizeList } from "./data-sanitizer";

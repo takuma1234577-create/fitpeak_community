@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ReportDialog from "@/components/report-dialog";
 import { createClient } from "@/utils/supabase/client";
+import { safeList } from "@/lib/utils";
 import GroupChatTab from "@/components/groups/group-chat-tab";
 import CreateGroupDialog from "@/components/groups/create-group-dialog";
 import { cn } from "@/lib/utils";
@@ -73,7 +74,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
       .from("group_members")
       .select("user_id")
       .eq("group_id", groupId);
-    const userIds = (memberRows ?? []).map((r) => (r as { user_id: string }).user_id);
+    const userIds = safeList(memberRows as { user_id: string }[] | null).map((r) => r.user_id);
     if (userIds.length > 0) {
       const { data: profs } = await supabase
         .from("profiles")
@@ -81,7 +82,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
         .in("id", userIds);
       const creatorId = (g as GroupData).created_by;
       setMembers(
-        (profs ?? []).map((p) => {
+        safeList(profs as Record<string, unknown>[] | null).map((p) => {
           const id = (p as { id: string }).id;
           const name = (p as { nickname: string | null }).nickname || (p as { username: string | null }).username || "ユーザー";
           return {

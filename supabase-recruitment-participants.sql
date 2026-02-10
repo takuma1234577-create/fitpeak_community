@@ -17,6 +17,12 @@ CREATE INDEX IF NOT EXISTS idx_recruitment_participants_status ON public.recruit
 
 ALTER TABLE public.recruitment_participants ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "recruitment_participants_select_all" ON public.recruitment_participants;
+DROP POLICY IF EXISTS "recruitment_participants_insert_own" ON public.recruitment_participants;
+DROP POLICY IF EXISTS "recruitment_participants_update_creator" ON public.recruitment_participants;
+DROP POLICY IF EXISTS "recruitment_participants_delete_own" ON public.recruitment_participants;
+DROP POLICY IF EXISTS "recruitment_participants_delete_creator" ON public.recruitment_participants;
+
 -- 誰でも参加者一覧を読める（募集詳細・管理用）
 CREATE POLICY "recruitment_participants_select_all"
   ON public.recruitment_participants FOR SELECT
@@ -54,7 +60,8 @@ CREATE POLICY "recruitment_participants_delete_creator"
 
 COMMENT ON TABLE public.recruitment_participants IS '合トレ参加申請: pending=申請中, approved=承認済み, rejected=却下';
 
--- 承認時に募集作成者が conversation_participants へ追加するためのポリシー
+-- 承認時に募集作成者が conversation_participants へ追加するためのポリシー（二重実行防止）
+DROP POLICY IF EXISTS "conversation_participants_insert_recruitment_creator" ON public.conversation_participants;
 CREATE POLICY "conversation_participants_insert_recruitment_creator"
   ON public.conversation_participants FOR INSERT
   WITH CHECK (

@@ -4,7 +4,8 @@ ALTER TABLE public.conversation_participants
 
 COMMENT ON COLUMN public.conversation_participants.last_read_at IS 'その会話で最後に既読にした時刻';
 
--- 自分のレコードのみ last_read_at を更新可能
+-- 自分のレコードのみ last_read_at を更新可能（二重実行防止）
+DROP POLICY IF EXISTS "conversation_participants_update_own" ON public.conversation_participants;
 CREATE POLICY "conversation_participants_update_own"
   ON public.conversation_participants FOR UPDATE
   USING (auth.uid() = user_id)

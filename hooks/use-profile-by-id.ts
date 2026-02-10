@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile, Achievement } from "@/types/profile";
-import { safeArray } from "@/lib/utils";
+import { safeArray, normalizeProfile } from "@/lib/utils";
 
 /** 取得した生データを正規化し、全ての配列プロパティを安全な配列に変換する（データ変換レイヤー） */
 function sanitizeProfile(raw: Record<string, unknown> & { bench_press_max?: number }): Profile {
+  const normalized = normalizeProfile(raw) ?? raw;
   const toStrArr = (v: unknown): string[] =>
     safeArray(v as string[] | null).map((x) => String(x));
   const toAchievements = (v: unknown): Achievement[] =>
@@ -20,27 +21,27 @@ function sanitizeProfile(raw: Record<string, unknown> & { bench_press_max?: numb
     });
 
   return {
-    ...raw,
-    name: (raw.nickname ?? raw.username ?? raw.name) as string | null,
-    bench_max: raw.bench_press_max ?? raw.bench_max ?? 0,
-    squat_max: (raw.squat_max as number) ?? 0,
-    deadlift_max: (raw.deadlift_max as number) ?? 0,
-    achievements: toAchievements(raw.achievements),
-    certifications: toStrArr(raw.certifications),
-    email: (raw.email as string) ?? null,
-    header_url: (raw.header_url as string | null) ?? null,
-    followers_count: (raw.followers_count as number) ?? 0,
-    following_count: (raw.following_count as number) ?? 0,
-    collab_count: (raw.collab_count as number) ?? 0,
-    nickname: (raw.nickname as string) ?? null,
-    gender: (raw.gender as string) ?? null,
-    birthday: (raw.birthday as string) ?? null,
-    prefecture: (raw.prefecture as string) ?? null,
-    home_gym: (raw.home_gym as string) ?? null,
-    exercises: toStrArr(raw.exercises).length > 0 ? toStrArr(raw.exercises) : null,
-    is_age_public: raw.is_age_public !== false,
-    is_prefecture_public: raw.is_prefecture_public !== false,
-    is_home_gym_public: raw.is_home_gym_public !== false,
+    ...normalized,
+    name: (normalized.nickname ?? normalized.username ?? normalized.name) as string | null,
+    bench_max: (normalized.bench_press_max ?? normalized.bench_max ?? 0) as number,
+    squat_max: (normalized.squat_max as number) ?? 0,
+    deadlift_max: (normalized.deadlift_max as number) ?? 0,
+    achievements: toAchievements(normalized.achievements),
+    certifications: toStrArr(normalized.certifications),
+    email: (normalized.email as string) ?? null,
+    header_url: (normalized.header_url as string | null) ?? null,
+    followers_count: (normalized.followers_count as number) ?? 0,
+    following_count: (normalized.following_count as number) ?? 0,
+    collab_count: (normalized.collab_count as number) ?? 0,
+    nickname: (normalized.nickname as string) ?? null,
+    gender: (normalized.gender as string) ?? null,
+    birthday: (normalized.birthday as string) ?? null,
+    prefecture: (normalized.prefecture as string) ?? null,
+    home_gym: (normalized.home_gym as string) ?? null,
+    exercises: toStrArr(normalized.exercises).length > 0 ? toStrArr(normalized.exercises) : null,
+    is_age_public: normalized.is_age_public !== false,
+    is_prefecture_public: normalized.is_prefecture_public !== false,
+    is_home_gym_public: normalized.is_home_gym_public !== false,
   } as Profile;
 }
 

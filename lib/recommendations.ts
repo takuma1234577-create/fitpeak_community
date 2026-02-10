@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { safeList, normalizeRecruitment, normalizeProfile } from "@/lib/data-sanitizer";
 
 export type MyProfile = {
   id: string;
@@ -96,14 +97,20 @@ export async function getRecommendedWorkouts(
 
     if (promises.length === 0) {
       const { data } = await baseQuery().order("created_at", { ascending: false }).limit(limit);
-      return (data ?? []) as RecruitmentWithProfile[];
+      return safeList(data as Record<string, unknown>[]).map((r) => {
+        const norm = normalizeRecruitment(r);
+        return (norm ?? r) as RecruitmentWithProfile;
+      });
     }
 
     const results = await Promise.all(promises);
     const seen = new Set<string>();
     const merged: RecruitmentWithProfile[] = [];
     for (const res of results) {
-      const list = (res.data ?? []) as RecruitmentWithProfile[];
+      const list = safeList(res.data as Record<string, unknown>[]).map((r) => {
+        const norm = normalizeRecruitment(r);
+        return (norm ?? r) as RecruitmentWithProfile;
+      });
       for (const row of list) {
         if (!seen.has(row.id)) {
           seen.add(row.id);
@@ -122,15 +129,20 @@ export async function getRecommendedWorkouts(
 const RECOMMENDED_USERS_TARGET = 5;
 
 function toRecommendedUser(row: Record<string, unknown>): RecommendedUser {
+  const normalized = normalizeProfile(row);
+  const r = normalized ?? row;
   return {
-    id: row.id as string,
-    nickname: (row.nickname as string | null) ?? null,
-    username: (row.username as string | null) ?? null,
-    bio: (row.bio as string | null) ?? null,
-    avatar_url: (row.avatar_url as string | null) ?? null,
-    prefecture: (row.prefecture as string | null) ?? null,
-    home_gym: (row.home_gym as string | null) ?? null,
-    exercises: Array.isArray(row.exercises) ? (row.exercises as string[]) : null,
+    id: r.id as string,
+    nickname: (r.nickname as string | null) ?? null,
+    username: (r.username as string | null) ?? null,
+    bio: (r.bio as string | null) ?? null,
+    avatar_url: (r.avatar_url as string | null) ?? null,
+    prefecture: (r.prefecture as string | null) ?? null,
+    home_gym: (r.home_gym as string | null) ?? null,
+    exercises: (() => {
+      const arr = safeList(r.exercises as string[] | null);
+      return arr.length > 0 ? arr : null;
+    })(),
   };
 }
 
@@ -207,11 +219,11 @@ export async function getRecommendedUsers(
       p_limit: need,
     });
 
-    if (error || !Array.isArray(randomRows)) {
+    if (error) {
       return step1;
     }
 
-    for (const row of randomRows as Record<string, unknown>[]) {
+    for (const row of safeList(randomRows as Record<string, unknown>[])) {
       const id = row?.id as string | undefined;
       if (id && !seen.has(id)) {
         seen.add(id);
@@ -243,8 +255,8 @@ export async function getNewArrivalUsers(
       .neq("id", myId)
       .order("created_at", { ascending: false })
       .limit(Math.min(limit, 10));
-    if (error || !Array.isArray(data)) return [];
-    return (data as Record<string, unknown>[]).map((row) => ({
+    if (error) return [];
+    return safeList(data as Record<string, unknown>[]).map((row) => ({
       ...toRecommendedUser(row),
       created_at: (row.created_at as string) ?? "",
     })) as NewArrivalUser[];

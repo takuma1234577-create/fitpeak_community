@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
+import { safeList } from "@/lib/data-sanitizer";
 
 /**
  * 自分と相手の1対1会話を取得。無ければ作成して conversation_id を返す。
@@ -17,7 +18,7 @@ export async function getOrCreateConversation(
     .from("conversation_participants")
     .select("conversation_id")
     .eq("user_id", myUserId);
-  const myIds = (myConvs ?? []).map((r: { conversation_id: string }) => r.conversation_id);
+  const myIds = safeList(myConvs as { conversation_id: string }[] | null).map((r) => r.conversation_id);
   if (myIds.length === 0) {
     return await createNewConversation(sb, myUserId, otherUserId);
   }
@@ -28,7 +29,7 @@ export async function getOrCreateConversation(
     .eq("user_id", otherUserId)
     .in("conversation_id", myIds);
 
-  const rows = (otherInMy ?? []) as { conversation_id: string }[];
+  const rows = safeList(otherInMy as { conversation_id: string }[] | null);
   const convId = rows[0]?.conversation_id;
   if (convId) return convId;
 

@@ -12,6 +12,7 @@ import ChatRoom, {
 import { MessageCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
+import { safeList } from "@/lib/utils";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 
 function formatMessageTime(iso: string) {
@@ -55,7 +56,7 @@ export default function MessagesPage() {
       .from("conversation_participants")
       .select("conversation_id")
       .eq("user_id", user.id);
-    const parts = (myParts ?? []) as { conversation_id: string }[];
+    const parts = safeList(myParts as { conversation_id: string }[] | null);
     const convIds = parts.map((p) => p.conversation_id);
     if (convIds.length === 0) {
       setConversations([]);
@@ -69,7 +70,7 @@ export default function MessagesPage() {
       .in("conversation_id", convIds)
       .order("created_at", { ascending: false });
 
-    const lastMessagesList = (lastMessages ?? []) as MessageRow[];
+    const lastMessagesList = safeList(lastMessages as MessageRow[] | null);
     const lastByConv = new Map<string, { content: string; created_at: string }>();
     for (const m of lastMessagesList) {
       const cid = m.conversation_id;
@@ -83,7 +84,7 @@ export default function MessagesPage() {
       .select("conversation_id, user_id, profiles(id, nickname, username, avatar_url)")
       .in("conversation_id", convIds);
 
-    const participantsList = (participants ?? []) as ParticipantRow[];
+    const participantsList = safeList(participants as ParticipantRow[] | null);
     const otherByConv = new Map<string, { id: string; name: string; avatar: string | null }>();
     for (const p of participantsList) {
       if (p.user_id === user.id) continue;
@@ -140,7 +141,7 @@ export default function MessagesPage() {
         setMessagesLoading(false);
         return;
       }
-      const msgsList = (msgs ?? []) as { id: string; sender_id: string; content: string; created_at: string }[];
+      const msgsList = safeList(msgs as { id: string; sender_id: string; content: string; created_at: string }[] | null);
       const list: Message[] = msgsList.map((m) => ({
         id: m.id,
         text: m.content,

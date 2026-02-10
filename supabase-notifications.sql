@@ -20,6 +20,13 @@ CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(
 
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
+-- 二重実行防止: 既存ポリシーを削除してから作成
+DROP POLICY IF EXISTS "notifications_select_own" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_insert_as_sender" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_insert_own_as_recipient" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_update_own" ON public.notifications;
+DROP POLICY IF EXISTS "notifications_delete_own" ON public.notifications;
+
 -- 自分宛ての通知のみ読める
 CREATE POLICY "notifications_select_own"
   ON public.notifications FOR SELECT

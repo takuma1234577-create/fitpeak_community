@@ -15,6 +15,10 @@ CREATE INDEX IF NOT EXISTS idx_follows_following_id ON public.follows(following_
 
 ALTER TABLE public.follows ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "follows_select_any" ON public.follows;
+DROP POLICY IF EXISTS "follows_insert_own" ON public.follows;
+DROP POLICY IF EXISTS "follows_delete_own" ON public.follows;
+
 CREATE POLICY "follows_select_any"
   ON public.follows FOR SELECT
   USING (true);

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bell } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { safeList } from "@/lib/utils";
 
 type NotificationRow = {
   id: string;
@@ -35,7 +36,7 @@ export default function NotificationsPage() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(100);
-    if (!error && Array.isArray(data)) setList(data as NotificationRow[]);
+    if (!error) setList(safeList(data as NotificationRow[] | null));
     setLoading(false);
   }, []);
 

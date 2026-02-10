@@ -10,7 +10,7 @@ import RecruitmentCard, {
 import { useRecruitModal } from "@/contexts/recruit-modal-context";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { createClient } from "@/utils/supabase/client";
-import { safeArray } from "@/lib/utils";
+import { safeArray, safeList, ensureArray, normalizeRecruitment } from "@/lib/utils";
 
 type SortKey = "newest" | "date_nearest" | "date_furthest";
 
@@ -51,31 +51,26 @@ export default function RecruitmentBoard() {
         setLoading(false);
         return;
       }
-      const rawList = Array.isArray(rows) ? rows : rows != null ? [rows] : [];
-      const list: Record<string, unknown>[] = (rawList as Record<string, unknown>[]) || [];
-      const mapped = (list || []).map((r) => {
-        if (!r || typeof r !== "object") return null;
-        const eventDate = r.event_date != null ? String(r.event_date) : "";
+      const list = ensureArray(rows as Record<string, unknown>[] | Record<string, unknown> | null);
+      const mapped = list.map((r) => {
+        const norm = normalizeRecruitment(r as Record<string, unknown>);
+        if (!norm) return null;
+        const eventDate = norm.event_date != null ? String(norm.event_date) : "";
         const d = eventDate ? new Date(eventDate) : new Date();
         const dateStr = Number.isNaN(d.getTime()) ? "—" : `${d.getMonth() + 1}/${d.getDate()}`;
         const timeStr = Number.isNaN(d.getTime()) ? "—" : d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) + "~";
-        const prof = r.profiles as { id?: string; nickname?: string | null; username?: string | null; avatar_url?: string | null } | null | undefined;
+        const prof = norm.profiles as { id?: string; nickname?: string | null; username?: string | null; avatar_url?: string | null } | null | undefined;
         const name = (prof?.nickname ?? prof?.username ?? "ユーザー") as string;
-        const tagsRaw = (r as { tags?: unknown; target_body_part?: unknown }).tags;
-        const tags = Array.isArray(tagsRaw)
-          ? tagsRaw.map((t) => String(t))
-          : r.target_body_part
-            ? [String(r.target_body_part)]
-            : [];
+        const tags = (norm.tags as string[]) ?? [];
         return {
-          id: String(r.id),
-          title: String(r.title ?? ""),
-          description: r.description != null ? String(r.description) : "",
+          id: String(norm.id),
+          title: String(norm.title ?? ""),
+          description: norm.description != null ? String(norm.description) : "",
           date: dateStr,
           time: timeStr,
-          location: r.location != null ? String(r.location) : "未設定",
-          tags: tags || [],
-          user_id: String(r.user_id ?? ""),
+          location: norm.location != null ? String(norm.location) : "未設定",
+          tags,
+          user_id: String(norm.user_id ?? ""),
           user: { name, title: "", initial: name.charAt(0) || "?", avatar: prof?.avatar_url ?? undefined },
           spots: 1,
           spotsLeft: 1,
@@ -83,7 +78,7 @@ export default function RecruitmentBoard() {
         };
       });
       const filtered = safeArray(mapped).filter((p): p is NonNullable<typeof p> => p != null) as RecruitmentPost[];
-      setPosts(safeArray(filtered));
+      setPosts(Array.isArray(filtered) ? filtered : []);
 
       if (user && filtered.length > 0) {
         const ids = filtered.map((p) => p.id);
@@ -93,7 +88,7 @@ export default function RecruitmentBoard() {
           .eq("user_id", user.id)
           .in("recruitment_id", ids);
         const statusMap: Record<string, "pending" | "approved" | "rejected" | "withdrawn"> = {};
-        (Array.isArray(parts) ? parts : []).forEach((p: { recruitment_id: string; status: string }) => {
+        safeList(parts as { recruitment_id: string; status: string }[] | null).forEach((p) => {
           if (["pending", "approved", "rejected", "withdrawn"].includes(p.status)) {
             statusMap[p.recruitment_id] = p.status as "pending" | "approved" | "rejected" | "withdrawn";
           }
@@ -116,7 +111,7 @@ export default function RecruitmentBoard() {
   type PostWithDate = RecruitmentPost & { event_date?: string };
   const safeBlockedIds = blockedIds instanceof Set ? blockedIds : new Set<string>();
   const displayPosts = ((): RecruitmentPost[] => {
-    const safePosts = Array.isArray(posts) ? posts : [];
+    const safePosts = ensureArray(posts);
     const withDate = (safePosts as PostWithDate[]).filter((p) => !p.user_id || !safeBlockedIds.has(p.user_id));
     if (sort === "newest") return withDate;
     const now = Date.now();
@@ -128,7 +123,7 @@ export default function RecruitmentBoard() {
     });
     return sorted.map(({ event_date: _ed, ...p }) => p);
   })();
-  const displayRecruitments = safeArray(displayPosts);
+  const displayRecruitments = ensureArray(displayPosts);
 
   return (
     <div className="space-y-6">
@@ -183,7 +178,7 @@ export default function RecruitmentBoard() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {safeArray(displayRecruitments)
+          {ensureArray(displayRecruitments)
             .filter((post): post is RecruitmentPost => post != null && typeof post === "object" && typeof post.id === "string" && post.user != null)
             .map((post) => (
             <RecruitmentCard
