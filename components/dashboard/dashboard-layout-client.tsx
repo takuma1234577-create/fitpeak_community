@@ -5,7 +5,7 @@ import DashboardHeader from "@/components/dashboard/dashboard-header";
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
 import BottomNav from "@/components/dashboard/bottom-nav";
 import Fab from "@/components/dashboard/fab";
-import CreateRecruitmentDialog from "@/components/recruit/CreateRecruitmentDialog";
+import CreateRecruitmentDialog from "@/components/dashboard/create-recruitment-dialog";
 
 /** 個別チャット画面のパスか（/messages/ から始まりIDが含まれる、または /dashboard/messages/[id]） */
 export function isIndividualChatPath(pathname: string | null): boolean {

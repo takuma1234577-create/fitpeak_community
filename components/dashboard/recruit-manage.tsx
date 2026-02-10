@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -20,25 +20,33 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
-import { BODY_PARTS } from "@/lib/recruit/constants";
+import { bodyParts } from "@/components/dashboard/filter-bar";
+import { PREFECTURES } from "@/lib/constants";
 import { safeArray } from "@/lib/utils";
-import type { RecruitmentRow, PendingParticipant } from "@/lib/recruit/types";
-import { updateRecruitment } from "@/lib/recruit/api";
-import { useMyRecruitments } from "@/hooks/use-my-recruitments";
 
-export default function RecruitManagePage() {
-  const {
-    list,
-    pendingByRecruitment,
-    loading,
-    actionLoading,
-    listRef,
-    refetch,
-    removeRecruitment,
-    approveParticipant,
-    rejectParticipant,
-  } = useMyRecruitments();
+type RecruitmentRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  target_body_part: string | null;
+  event_date: string;
+  location: string | null;
+  status: string;
+  created_at: string;
+  chat_room_id: string | null;
+};
 
+type PendingParticipant = {
+  user_id: string;
+  recruitment_id: string;
+  status: string;
+  profiles: { nickname: string | null; username: string | null; avatar_url: string | null } | null;
+};
+
+export default function RecruitManage() {
+  const [list, setList] = useState<RecruitmentRow[]>([]);
+  const [pendingByRecruitment, setPendingByRecruitment] = useState<Record<string, PendingParticipant[]>>({});
+  const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<RecruitmentRow | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -49,6 +57,57 @@ export default function RecruitManagePage() {
   const [editLocation, setEditLocation] = useState("");
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const listRef = useRef<Record<string, HTMLLIElement | null>>({});
+
+  const fetchList = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    const { data, error } = await (supabase as any)
+      .from("recruitments")
+      .select("id, title, description, target_body_part, event_date, location, status, created_at, chat_room_id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    const safeList = Array.isArray(data) ? (data as RecruitmentRow[]) : [];
+    if (!error) {
+      setList(safeList);
+      const ids = safeList.map((r) => r.id);
+      if (ids.length > 0) {
+        const { data: pending } = await (supabase as any)
+          .from("recruitment_participants")
+          .select("recruitment_id, user_id, status, profiles(nickname, username, avatar_url)")
+          .in("recruitment_id", ids)
+          .eq("status", "pending");
+        const byRec: Record<string, PendingParticipant[]> = {};
+        ids.forEach((id) => (byRec[id] = []));
+        const pendingList = Array.isArray(pending) ? pending : pending != null ? [pending] : [];
+        pendingList.forEach((p: PendingParticipant) => {
+          if (!byRec[p.recruitment_id]) byRec[p.recruitment_id] = [];
+          byRec[p.recruitment_id].push(p);
+        });
+        setPendingByRecruitment(byRec);
+      }
+    } else {
+      setList([]);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchList();
+  }, [fetchList]);
+
+  useEffect(() => {
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const r = params?.get("r");
+    if (r && list.length > 0 && listRef.current[r]) {
+      listRef.current[r]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [list]);
 
   const openEdit = (r: RecruitmentRow) => {
     setEditing(r);
@@ -87,23 +146,98 @@ export default function RecruitManagePage() {
     const eventDateTime = new Date(dateTime).toISOString();
     setEditSubmitting(true);
     const supabase = createClient();
-    const { error } = await updateRecruitment(supabase, editing.id, {
-      title: editTitle.trim(),
-      description: editDescription.trim() || null,
-      target_body_part: editTargetBodyPart && editTargetBodyPart !== "all" ? editTargetBodyPart : null,
-      event_date: eventDateTime,
-      location: editLocation.trim() || null,
-    });
+    const { error } = await (supabase as any)
+      .from("recruitments")
+      .update({
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+        target_body_part: editTargetBodyPart && editTargetBodyPart !== "all" ? editTargetBodyPart : null,
+        event_date: eventDateTime,
+        location: editLocation.trim() || null,
+      })
+      .eq("id", editing.id);
     setEditSubmitting(false);
     if (error) {
-      setEditError(error);
+      setEditError(error.message ?? "更新に失敗しました");
       return;
     }
     closeEdit();
-    refetch();
+    fetchList();
   };
 
-  const safeList = safeArray(list);
+  const handleDelete = async (r: RecruitmentRow) => {
+    if (!confirm(`「${r.title}」を募集中止（削除）しますか？参加者に通知が送られます。`)) return;
+    setActionLoading(r.id);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: participants } = await (supabase as any)
+      .from("recruitment_participants")
+      .select("user_id")
+      .eq("recruitment_id", r.id)
+      .in("status", ["pending", "approved"]);
+    const userIds = (participants ?? []).map((p: { user_id: string }) => p.user_id);
+    for (const uid of userIds) {
+      if (uid === user?.id) continue;
+      await (supabase as any).from("notifications").insert({
+        user_id: uid,
+        sender_id: user?.id ?? null,
+        type: "cancel",
+        content: `「${r.title}」の募集が中止されました`,
+        link: "/dashboard/recruit",
+      });
+    }
+    await (supabase as any).from("recruitments").delete().eq("id", r.id);
+    setActionLoading(null);
+    fetchList();
+  };
+
+  const handleApprove = async (
+    recruitmentId: string,
+    recruitmentTitle: string,
+    participantUserId: string,
+    chatRoomId: string | null
+  ) => {
+    setActionLoading(`${recruitmentId}-${participantUserId}`);
+    const supabase = createClient();
+    const { error: updateErr } = await (supabase as any)
+      .from("recruitment_participants")
+      .update({ status: "approved", updated_at: new Date().toISOString() })
+      .eq("recruitment_id", recruitmentId)
+      .eq("user_id", participantUserId);
+    if (updateErr) {
+      setActionLoading(null);
+      return;
+    }
+    if (chatRoomId) {
+      await (supabase as any)
+        .from("conversation_participants")
+        .upsert(
+          { conversation_id: chatRoomId, user_id: participantUserId },
+          { onConflict: "conversation_id,user_id" }
+        );
+    }
+    await (supabase as any).from("notifications").insert({
+      user_id: participantUserId,
+      sender_id: (await supabase.auth.getUser()).data.user?.id ?? null,
+      type: "approve",
+      content: `「${recruitmentTitle}」への参加が承認されました`,
+      link: chatRoomId ? `/dashboard/messages/${chatRoomId}` : "/dashboard/recruit",
+    });
+    setActionLoading(null);
+    fetchList();
+  };
+
+  const handleReject = async (recruitmentId: string, participantUserId: string) => {
+    setActionLoading(`${recruitmentId}-${participantUserId}`);
+    const supabase = createClient();
+    await (supabase as any)
+      .from("recruitment_participants")
+      .update({ status: "rejected", updated_at: new Date().toISOString() })
+      .eq("recruitment_id", recruitmentId)
+      .eq("user_id", participantUserId);
+    setActionLoading(null);
+    fetchList();
+  };
 
   return (
     <div className="space-y-6">
@@ -117,12 +251,11 @@ export default function RecruitManagePage() {
         </Link>
         <h1 className="text-xl font-black tracking-wide text-foreground">自分の合トレ管理</h1>
       </div>
-
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
         </div>
-      ) : safeList.length === 0 ? (
+      ) : list.length === 0 ? (
         <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">まだ募集を作成していません</p>
           <Link
@@ -134,20 +267,18 @@ export default function RecruitManagePage() {
         </div>
       ) : (
         <ul className="space-y-4">
-          {safeList.map((r) => {
+          {(list || []).map((r) => {
             const d = new Date(r.event_date);
             const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
             const timeStr = d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-            const pendingList = safeArray(pendingByRecruitment[r.id]) as PendingParticipant[];
+            const pendingList = (pendingByRecruitment[r.id] ?? []) as PendingParticipant[];
             return (
               <li
                 key={r.id}
-                ref={(el) => {
-                  listRef.current[r.id] = el;
-                }}
+                ref={(el) => { listRef.current[r.id] = el; }}
                 className="flex flex-col gap-3 rounded-xl border border-border/40 bg-card px-4 py-4"
               >
-                <div className="flex justify-between gap-2">
+                <div className="flex flex-start justify-between gap-2">
                   <h2 className="font-bold text-foreground">{r.title}</h2>
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${
@@ -172,15 +303,11 @@ export default function RecruitManagePage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => removeRecruitment(r)}
+                    onClick={() => handleDelete(r)}
                     disabled={!!actionLoading}
                     className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                   >
-                    {actionLoading === r.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
+                    {actionLoading === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                     削除
                   </button>
                   <button
@@ -199,36 +326,27 @@ export default function RecruitManagePage() {
                       承認待ち ({pendingList.length}名)
                     </p>
                     <ul className="space-y-2">
-                      {pendingList.map((p) => {
+                      {(pendingList || []).map((p) => {
                         const name = p.profiles?.nickname || p.profiles?.username || "ユーザー";
                         const key = `${r.id}-${p.user_id}`;
                         const isLoading = actionLoading === key;
                         return (
-                          <li
-                            key={key}
-                            className="flex items-center justify-between gap-2 rounded bg-card px-2 py-1.5 text-sm"
-                          >
+                          <li key={key} className="flex items-center justify-between gap-2 rounded bg-card px-2 py-1.5 text-sm">
                             <span className="font-medium text-foreground">{name}</span>
                             <div className="flex items-center gap-1">
                               <button
                                 type="button"
                                 disabled={!!actionLoading}
-                                onClick={() =>
-                                  approveParticipant(r.id, r.title, p.user_id, r.chat_room_id)
-                                }
+                                onClick={() => handleApprove(r.id, r.title, p.user_id, r.chat_room_id)}
                                 className="flex items-center gap-1 rounded border border-green-500/50 bg-green-500/10 px-2 py-1 text-xs font-bold text-green-600 hover:bg-green-500/20 dark:text-green-400 disabled:opacity-50"
                               >
-                                {isLoading ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  <UserPlus className="h-3 w-3" />
-                                )}
+                                {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
                                 承認
                               </button>
                               <button
                                 type="button"
                                 disabled={!!actionLoading}
-                                onClick={() => rejectParticipant(r.id, p.user_id)}
+                                onClick={() => handleReject(r.id, p.user_id)}
                                 className="flex items-center gap-1 rounded border border-red-500/50 bg-red-500/10 px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50"
                               >
                                 <UserX className="h-3 w-3" />
@@ -286,7 +404,7 @@ export default function RecruitManagePage() {
                 onChange={(e) => setEditTargetBodyPart(e.target.value)}
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
-                {safeArray(BODY_PARTS).map((p) => (
+                {safeArray(bodyParts).map((p) => (
                   <option key={p.value} value={p.value}>
                     {p.label}
                   </option>
@@ -331,11 +449,7 @@ export default function RecruitManagePage() {
             </div>
             {editError && <p className="text-sm text-destructive">{editError}</p>}
             <DialogFooter className="gap-2 sm:gap-0">
-              <button
-                type="button"
-                onClick={closeEdit}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary"
-              >
+              <button type="button" onClick={closeEdit} className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary">
                 キャンセル
               </button>
               <button

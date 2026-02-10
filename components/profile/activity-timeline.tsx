@@ -28,24 +28,27 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
   const [loading, setLoading] = useState(!!profileId);
 
   const fetchActivities = useCallback(async (id: string) => {
-    const supabase = createClient();
-    const [recResp, gmResp] = await Promise.all([
-      (supabase as any)
-        .from("recruitments")
-        .select("id, title, description, event_date, created_at")
-        .eq("user_id", id)
-        .order("created_at", { ascending: false })
-        .limit(20),
-      (supabase as any)
-        .from("group_members")
-        .select("group_id, joined_at, groups(id, name)")
-        .eq("user_id", id)
-        .order("joined_at", { ascending: false })
-        .limit(20),
-    ]);
-    const recruitments = (Array.isArray(recResp.data) ? recResp.data : []) as { id: string; title: string; description: string | null; event_date: string; created_at: string }[];
-    const members = (Array.isArray(gmResp.data) ? gmResp.data : []) as { group_id: string; joined_at: string; groups: { id: string; name: string } | null }[];
-    const recItems: ActivityItem[] = safeArray(recruitments).map((r) => ({
+    try {
+      const supabase = createClient();
+      const [recResp, gmResp] = await Promise.all([
+        (supabase as any)
+          .from("recruitments")
+          .select("id, title, description, event_date, created_at")
+          .eq("user_id", id)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        (supabase as any)
+          .from("group_members")
+          .select("group_id, joined_at, groups(id, name)")
+          .eq("user_id", id)
+          .order("joined_at", { ascending: false })
+          .limit(20),
+      ]).catch(() => [null, null]);
+      const recData = recResp?.data != null && Array.isArray(recResp.data) ? recResp.data : [];
+      const gmData = gmResp?.data != null && Array.isArray(gmResp.data) ? gmResp.data : [];
+      const recruitments = recData as { id: string; title: string; description: string | null; event_date: string; created_at: string }[];
+      const members = gmData as { group_id: string; joined_at: string; groups: { id: string; name: string } | null }[];
+      const recItems: ActivityItem[] = safeArray(recruitments).map((r) => ({
       type: "recruitment",
       id: r.id,
       title: r.title,
@@ -61,12 +64,16 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
         name: m.groups!.name,
         date: m.joined_at,
       }));
-    const merged = [...recItems, ...groupItems].sort((a, b) => {
-      const tA = a.type === "recruitment" ? a.createdAt : a.date;
-      const tB = b.type === "recruitment" ? b.createdAt : b.date;
-      return tB.localeCompare(tA);
-    });
-    setItems(merged.slice(0, 20));
+      const merged = [...recItems, ...groupItems].sort((a, b) => {
+        const tA = a.type === "recruitment" ? a.createdAt : a.date;
+        const tB = b.type === "recruitment" ? b.createdAt : b.date;
+        return tB.localeCompare(tA);
+      });
+      setItems(merged.slice(0, 20));
+    } catch (e) {
+      console.warn("[ActivityTimeline] 取得エラー (続行):", e);
+      setItems([]);
+    }
   }, []);
 
   useEffect(() => {

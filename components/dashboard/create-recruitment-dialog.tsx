@@ -22,8 +22,23 @@ import { createClient } from "@/utils/supabase/client";
 import { useRecruitModal } from "@/contexts/recruit-modal-context";
 import { Loader2, CalendarIcon } from "lucide-react";
 import { cn, safeArray } from "@/lib/utils";
-import { BODY_PARTS, LEVEL_OPTIONS, TIME_OPTIONS, getPrefectures } from "@/lib/recruit/constants";
-import { createRecruitment } from "@/lib/recruit/api";
+import { bodyParts } from "./filter-bar";
+import { PREFECTURES } from "@/lib/constants";
+
+const levelOptions = [
+  { value: "", label: "指定なし" },
+  { value: "beginner", label: "初心者" },
+  { value: "intermediate", label: "中級者" },
+  { value: "advanced", label: "上級者" },
+  { value: "competitor", label: "大会勢" },
+];
+
+const timeOptions: { value: string; label: string }[] = [];
+for (let h = 0; h < 24; h++) {
+  const hh = h.toString().padStart(2, "0");
+  timeOptions.push({ value: `${hh}:00`, label: `${hh}:00` });
+  timeOptions.push({ value: `${hh}:30`, label: `${hh}:30` });
+}
 
 export default function CreateRecruitmentDialog() {
   const { open, setOpen } = useRecruitModal();
@@ -31,15 +46,13 @@ export default function CreateRecruitmentDialog() {
   const [description, setDescription] = useState("");
   const [targetBodyPart, setTargetBodyPart] = useState("");
   const [eventDate, setEventDate] = useState("");
-  const [eventTime, setEventTime] = useState("12:00");
+  const [eventTime, setEventTime] = useState("");
   const [location, setLocation] = useState("");
   const [area, setArea] = useState("");
   const [level, setLevel] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dateOpen, setDateOpen] = useState(false);
-
-  const prefectures = getPrefectures();
 
   const reset = () => {
     setTitle("");
@@ -80,7 +93,6 @@ export default function CreateRecruitmentDialog() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setError("ログインしてください");
-        setIsSubmitting(false);
         return;
       }
       const sb = supabase as any;
@@ -92,7 +104,7 @@ export default function CreateRecruitmentDialog() {
         return;
       }
       await sb.from("conversation_participants").insert({ conversation_id: conv.id, user_id: user.id });
-      const { error: insertError } = await createRecruitment(sb, {
+      const baseRow = {
         user_id: user.id,
         title: title.trim(),
         description: description.trim() || null,
@@ -101,8 +113,9 @@ export default function CreateRecruitmentDialog() {
         location: location.trim() || null,
         status: "open",
         chat_room_id: conv.id,
-      });
-      if (insertError) throw new Error(insertError);
+      };
+      const { error: insertError } = await sb.from("recruitments").insert(baseRow);
+      if (insertError) throw insertError;
       handleOpenChange(false);
       window.location.reload();
     } catch (err) {
@@ -157,7 +170,7 @@ export default function CreateRecruitmentDialog() {
               onChange={(e) => setTargetBodyPart(e.target.value)}
               className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
             >
-              {safeArray(BODY_PARTS).map((p) => (
+              {safeArray(bodyParts).map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
                 </option>
@@ -175,7 +188,7 @@ export default function CreateRecruitmentDialog() {
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
                 <option value="all">指定なし</option>
-                {safeArray(prefectures).map((p) => (
+                {safeArray(PREFECTURES).map((p) => (
                   <option key={p} value={p}>
                     {p}
                   </option>
@@ -191,7 +204,7 @@ export default function CreateRecruitmentDialog() {
                 onChange={(e) => setLevel(e.target.value)}
                 className="w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20"
               >
-                {safeArray(LEVEL_OPTIONS).map((opt) => (
+                {safeArray(levelOptions).map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -209,21 +222,15 @@ export default function CreateRecruitmentDialog() {
                   <button
                     type="button"
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20",
+                      "w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20 flex items-center gap-2",
                       !eventDate && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="h-4 w-4 shrink-0 text-gold/70" />
-                    {eventDate
-                      ? new Date(eventDate + "T12:00:00").toLocaleDateString("ja-JP", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })
-                      : "日付を選択"}
+                    {eventDate ? new Date(eventDate + "T12:00:00").toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" }) : "日付を選択"}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto border-border bg-card p-0" align="start">
+                <PopoverContent className="w-auto p-0 border-border bg-card" align="start">
                   <Calendar
                     mode="single"
                     selected={eventDate ? new Date(eventDate + "T12:00:00") : undefined}
@@ -249,7 +256,7 @@ export default function CreateRecruitmentDialog() {
                   <SelectValue placeholder="00:00〜23:30" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[240px] border-border bg-card">
-                  {safeArray(TIME_OPTIONS).map((opt) => (
+                  {safeArray(timeOptions).map((opt) => (
                     <SelectItem
                       key={opt.value}
                       value={opt.value}
@@ -292,7 +299,11 @@ export default function CreateRecruitmentDialog() {
               disabled={isSubmitting}
               className="flex items-center justify-center gap-2 rounded-lg bg-gold px-4 py-2.5 text-sm font-black text-[#050505] transition-colors hover:bg-gold-light disabled:opacity-60"
             >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "募集する"}
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "募集する"
+              )}
             </button>
           </DialogFooter>
         </form>

@@ -354,7 +354,7 @@ function RecommendedUsersSection({
         linkLabel="検索で仲間を探す"
       />
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {safeArray(users).map((user) => (
+        {safeUsers.map((user) => (
           <RecommendedUserCard key={user.id} user={user} myUserId={myUserId} />
         ))}
       </div>

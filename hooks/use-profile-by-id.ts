@@ -49,22 +49,23 @@ export function useProfileById(profileId: string | null) {
   const [isLoading, setIsLoading] = useState(!!profileId);
 
   const fetchProfile = useCallback(async (id: string) => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", id)
-      .single();
-    if (error || !data) {
-      console.error("[プロフィール] 他ユーザー取得失敗:", {
-        profileId: id,
-        reason: error ? error.message : "data is null",
-        code: error?.code,
-      });
-      setProfile(null);
-      return null;
-    }
-    const row = data as Record<string, unknown> & { bench_press_max?: number };
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error || !data) {
+        console.error("[プロフィール] 他ユーザー取得失敗:", {
+          profileId: id,
+          reason: error ? error.message : "data is null",
+          code: error?.code,
+        });
+        setProfile(null);
+        return null;
+      }
+      const row = data as Record<string, unknown> & { bench_press_max?: number };
     let followers_count = 0;
     let following_count = 0;
     try {
@@ -90,6 +91,11 @@ export function useProfileById(profileId: string | null) {
     } catch (e) {
       console.error("[プロフィール] データ正規化でエラー:", e);
       if (e instanceof Error && e.stack) console.error("[プロフィール] スタック:", e.stack);
+      setProfile(null);
+      return null;
+    }
+    } catch (e) {
+      console.error("[プロフィール] 取得で例外:", e);
       setProfile(null);
       return null;
     }

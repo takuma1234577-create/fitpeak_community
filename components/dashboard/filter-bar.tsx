@@ -9,12 +9,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SlidersHorizontal } from "lucide-react";
-import { BODY_PARTS, LEVEL_FILTER_OPTIONS, getPrefectures } from "@/lib/recruit/constants";
+import { PREFECTURES } from "@/lib/constants";
 import { safeArray } from "@/lib/utils";
 
-export default function RecruitmentFilters() {
+export const bodyParts = [
+  { value: "all", label: "全部位" },
+  { value: "chest", label: "胸" },
+  { value: "back", label: "背中" },
+  { value: "legs", label: "脚" },
+  { value: "shoulders", label: "肩" },
+  { value: "arms", label: "腕" },
+  { value: "full", label: "全身" },
+];
+
+const levels = [
+  { value: "all", label: "全レベル" },
+  { value: "beginner", label: "初心者" },
+  { value: "intermediate", label: "中級者" },
+  { value: "advanced", label: "上級者" },
+  { value: "competitor", label: "大会勢" },
+];
+
+export default function FilterBar() {
   const [prefecture, setPrefecture] = useState<string>("all");
-  const prefectures = getPrefectures();
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
@@ -22,28 +39,34 @@ export default function RecruitmentFilters() {
         <SlidersHorizontal className="h-4 w-4" />
         <span className="hidden sm:inline">フィルター</span>
       </div>
+
       <div className="flex flex-1 flex-wrap gap-2">
         <Select value={prefecture} onValueChange={setPrefecture}>
           <SelectTrigger className="h-9 w-full border-border/60 bg-secondary/60 text-sm font-semibold focus:border-gold/50 focus:ring-gold/20 sm:w-[160px] [&>span]:text-foreground">
             <SelectValue placeholder="都道府県" />
           </SelectTrigger>
-          <SelectContent className="max-h-[300px] border-border bg-card">
+          <SelectContent className="border-border bg-card max-h-[300px]">
             <SelectItem value="all" className="font-medium focus:bg-gold/10 focus:text-gold">
               全県
             </SelectItem>
-            {safeArray(prefectures).map((p) => (
-              <SelectItem key={p} value={p} className="font-medium focus:bg-gold/10 focus:text-gold">
+            {safeArray(PREFECTURES).map((p) => (
+              <SelectItem
+                key={p}
+                value={p}
+                className="font-medium focus:bg-gold/10 focus:text-gold"
+              >
                 {p}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+
         <Select defaultValue="all">
           <SelectTrigger className="h-9 w-full border-border/60 bg-secondary/60 text-sm font-semibold focus:border-gold/50 focus:ring-gold/20 sm:w-[130px] [&>span]:text-foreground">
             <SelectValue placeholder="部位" />
           </SelectTrigger>
           <SelectContent className="border-border bg-card">
-            {safeArray(BODY_PARTS).map((part) => (
+            {safeArray(bodyParts).map((part) => (
               <SelectItem
                 key={part.value}
                 value={part.value}
@@ -54,12 +77,13 @@ export default function RecruitmentFilters() {
             ))}
           </SelectContent>
         </Select>
+
         <Select defaultValue="all">
           <SelectTrigger className="h-9 w-full border-border/60 bg-secondary/60 text-sm font-semibold focus:border-gold/50 focus:ring-gold/20 sm:w-[140px] [&>span]:text-foreground">
             <SelectValue placeholder="レベル" />
           </SelectTrigger>
           <SelectContent className="border-border bg-card">
-            {safeArray(LEVEL_FILTER_OPTIONS).map((level) => (
+            {safeArray(levels).map((level) => (
               <SelectItem
                 key={level.value}
                 value={level.value}
