@@ -25,6 +25,7 @@ import type { RecommendedUser, NewArrivalUser } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { useProfileModal } from "@/contexts/profile-modal-context";
+import UserMatchingCarousel from "@/components/dashboard/user-matching-carousel";
 
 function SectionHeader({
   icon: Icon,
@@ -638,6 +639,7 @@ export default function HomePage({
 
   return (
     <div className="flex flex-col gap-8">
+      <UserMatchingCarousel myUserId={myUserId} onOpenProfile={openProfileModal} />
       <RecommendedRecruitmentsSection />
       <MyScheduleSection />
       <RecommendedUsersSection users={filteredRecommendedUsers} myUserId={myUserId} onOpenProfile={openProfileModal} />
