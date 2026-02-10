@@ -95,6 +95,9 @@ export default function ProfilePage() {
         (otherProfile as { username?: string | null }).username ||
         (otherProfile as { name?: string | null }).name) ??
       "名前未設定";
+    const followersCount = (otherProfile as { followers_count?: number }).followers_count ?? 0;
+    const followingCount = (otherProfile as { following_count?: number }).following_count ?? 0;
+    const collabCount = (otherProfile as { collab_count?: number }).collab_count ?? 0;
     return (
       <main className="min-h-screen bg-background">
         <div className="mx-auto max-w-lg">
@@ -103,6 +106,13 @@ export default function ProfilePage() {
             avatarUrl={otherProfile.avatar_url ?? null}
             name={name}
             onBack={() => router.push("/dashboard")}
+            followersCount={followersCount}
+            followingCount={followingCount}
+            collabCount={collabCount}
+            isFollowing={isFollowing}
+            onFollow={onFollow}
+            followLoading={followLoading}
+            isOwnProfile={false}
           />
         </div>
       </main>

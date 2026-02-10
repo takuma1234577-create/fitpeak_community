@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Users, Loader2 } from "lucide-react";
 
 export interface OtherProfileTopProps {
   /** ヘッダー画像URL。未設定時はグラデーション */
@@ -12,6 +12,20 @@ export interface OtherProfileTopProps {
   name: string;
   /** 戻る/閉じるボタン押下（モーダルでは閉じる、ページでは戻る） */
   onBack?: () => void;
+  /** フォロワー数 */
+  followersCount?: number;
+  /** フォロー中数 */
+  followingCount?: number;
+  /** 合トレ実績数 */
+  collabCount?: number;
+  /** フォロー中か */
+  isFollowing?: boolean;
+  /** フォローボタン押下 */
+  onFollow?: () => void;
+  /** フォロー処理中 */
+  followLoading?: boolean;
+  /** 自分自身のプロフィールの場合はフォローボタンを非表示 */
+  isOwnProfile?: boolean;
 }
 
 export default function OtherProfileTop({
@@ -19,11 +33,24 @@ export default function OtherProfileTop({
   avatarUrl,
   name,
   onBack,
+  followersCount = 0,
+  followingCount = 0,
+  collabCount = 0,
+  isFollowing = false,
+  onFollow,
+  followLoading = false,
+  isOwnProfile = false,
 }: OtherProfileTopProps) {
   const initial = (name || "?").charAt(0).toUpperCase();
   const avatarSrc = avatarUrl
     ? `${avatarUrl}${avatarUrl.includes("?") ? "&" : "?"}v=${Date.now()}`
     : null;
+
+  const stats = [
+    { label: "フォロワー", value: followersCount.toLocaleString() },
+    { label: "フォロー中", value: followingCount.toLocaleString() },
+    { label: "合トレ実績", value: collabCount.toLocaleString() },
+  ];
 
   return (
     <section className="relative">
@@ -59,8 +86,8 @@ export default function OtherProfileTop({
       </div>
 
       {/* アバター + 名前 */}
-      <div className="relative px-5 pb-5 sm:px-8">
-        <div className="-mt-12 mb-3 flex flex-col items-start gap-3">
+      <div className="relative px-5 pb-4 sm:px-8">
+        <div className="-mt-12 mb-4 flex flex-col items-start gap-3">
           <div className="flex h-24 w-24 overflow-hidden rounded-full border-4 border-background bg-secondary shadow-xl shadow-black/40 sm:h-28 sm:w-28">
             {avatarSrc ? (
               <Image
@@ -81,6 +108,42 @@ export default function OtherProfileTop({
             {name || "名前未設定"}
           </h1>
         </div>
+
+        {/* フォロワー・フォロー中・合トレ実績 */}
+        <div className="flex items-center gap-0 border-t border-border/60 pt-4">
+          {stats.map((stat, i) => (
+            <div
+              key={stat.label}
+              className={`flex-1 text-center ${i !== stats.length - 1 ? "border-r border-border/40" : ""}`}
+            >
+              <p className="text-xl font-black text-foreground sm:text-2xl">{stat.value}</p>
+              <p className="mt-0.5 text-xs font-semibold tracking-wide text-muted-foreground">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* フォローボタン（他ユーザーのときのみ） */}
+        {!isOwnProfile && onFollow != null && (
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={onFollow}
+              disabled={followLoading}
+              className={`flex w-full items-center justify-center gap-2 rounded-lg border py-3 text-sm font-bold tracking-wide transition-all active:scale-[0.98] disabled:opacity-60 ${
+                isFollowing
+                  ? "border-gold/50 bg-gold/10 text-gold hover:bg-gold/20"
+                  : "border-border bg-transparent text-foreground hover:border-gold/30 hover:bg-secondary"
+              }`}
+            >
+              {followLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Users className="h-4 w-4" />
+              )}
+              {isFollowing ? "フォロー中" : "フォローする"}
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
