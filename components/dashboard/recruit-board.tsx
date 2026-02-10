@@ -26,10 +26,11 @@ type RecruitmentRow = {
   location: string | null;
   status: string;
   user_id: string;
+  level?: string | null;
   profiles: { nickname: string | null; username: string | null; avatar_url: string | null } | null;
 };
 
-type RecruitmentDetail = RecruitmentRow & { level?: string | null };
+type RecruitmentDetail = RecruitmentRow;
 
 export default function RecruitBoard() {
   const router = useRouter();
@@ -41,6 +42,9 @@ export default function RecruitBoard() {
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<RecruitmentDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [participantStatus, setParticipantStatus] = useState<"none" | "pending" | "approved" | "rejected" | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const modalOpen = !!detailId;
 
   const fetchList = useCallback(async () => {
@@ -49,7 +53,7 @@ export default function RecruitBoard() {
       const supabase = createClient();
       let q = (supabase as any)
         .from("recruitments")
-        .select("id, title, description, target_body_part, event_date, location, status, user_id, profiles(nickname, username, avatar_url)")
+        .select("id, title, description, target_body_part, event_date, location, status, user_id, level, profiles(nickname, username, avatar_url)")
         .eq("status", "open")
         .order("created_at", { ascending: false });
 
@@ -82,35 +86,100 @@ export default function RecruitBoard() {
     fetchList();
   }, [fetchList]);
 
+  // カードクリック時は一覧の行を即表示し、別途1件取得で最新を反映
   useEffect(() => {
     if (!detailId) {
       setDetail(null);
+      setParticipantStatus(null);
+      setCurrentUserId(null);
       return;
     }
-    let cancelled = false;
+    const fromList = list.find((r) => r.id === detailId);
+    if (fromList) {
+      setDetail(fromList as RecruitmentDetail);
+    } else {
+      setDetail(null);
+    }
     setDetailLoading(true);
+    let cancelled = false;
     (async () => {
       try {
         const supabase = createClient();
-        const { data, error } = await (supabase as any)
+        const { data: recData, error: recError } = await (supabase as any)
           .from("recruitments")
-          .select("id, title, description, target_body_part, event_date, location, status, user_id, level, profiles(nickname, username, avatar_url)")
+          .select("id, title, description, target_body_part, event_date, location, status, user_id, level")
           .eq("id", detailId)
           .maybeSingle();
         if (cancelled) return;
-        if (error || !data) {
-          setDetail(null);
+        if (recError || !recData) {
+          if (!fromList) setDetail(null);
           return;
         }
-        setDetail(data as RecruitmentDetail);
+        const userId = recData.user_id;
+        const { data: profileData } = await (supabase as any)
+          .from("profiles")
+          .select("nickname, username, avatar_url")
+          .eq("id", userId)
+          .maybeSingle();
+        if (cancelled) return;
+        setDetail({
+          ...recData,
+          profiles: profileData ?? null,
+        } as RecruitmentDetail);
       } catch {
-        if (!cancelled) setDetail(null);
+        if (!cancelled && !fromList) setDetail(null);
       } finally {
         if (!cancelled) setDetailLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [detailId]);
+  }, [detailId, list]);
+
+  // モーダル用: 現在ユーザーと参加申請状態を取得
+  useEffect(() => {
+    if (!detailId || !detail) return;
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
+      setCurrentUserId(user?.id ?? null);
+      if (!user?.id) {
+        setParticipantStatus("none");
+        return;
+      }
+      const { data } = await (supabase as any)
+        .from("recruitment_participants")
+        .select("status")
+        .eq("recruitment_id", detailId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setParticipantStatus((data?.status as "pending" | "approved" | "rejected") ?? "none");
+    })();
+    return () => { cancelled = true; };
+  }, [detailId, detail]);
+
+  const handleApply = useCallback(async () => {
+    if (!detailId || !detail || applying) return;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (detail.user_id === user.id) return; // 自分の募集
+    setApplying(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("recruitment_participants")
+        .insert({ recruitment_id: detailId, user_id: user.id, status: "pending" });
+      if (error) {
+        if (error.code === "23505") setParticipantStatus("pending"); // 重複＝申請済み
+        return;
+      }
+      setParticipantStatus("pending");
+    } finally {
+      setApplying(false);
+    }
+  }, [detailId, detail, applying]);
 
   const closeDetail = useCallback(() => {
     router.push("/dashboard/recruit", { scroll: false });
@@ -256,6 +325,26 @@ export default function RecruitBoard() {
                   </p>
                 </div>
               )}
+              <div className="pt-2">
+                {currentUserId && detail.user_id === currentUserId ? (
+                  <p className="text-center text-sm text-muted-foreground">自分の募集です</p>
+                ) : participantStatus === "pending" ? (
+                  <p className="text-center text-sm font-semibold text-gold">申請中です</p>
+                ) : participantStatus === "approved" ? (
+                  <p className="text-center text-sm font-semibold text-green-500">参加が承認されました</p>
+                ) : participantStatus === "rejected" ? (
+                  <p className="text-center text-sm text-muted-foreground">申請は却下されました</p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleApply}
+                    disabled={applying || !currentUserId}
+                    className="w-full rounded-lg bg-gold py-3.5 text-sm font-black uppercase tracking-wider text-[#050505] shadow-lg shadow-gold/25 transition-all hover:bg-gold-light disabled:opacity-60"
+                  >
+                    {applying ? "送信中…" : "参加申請する"}
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <p className="py-6 text-center text-sm text-muted-foreground">
