@@ -38,6 +38,13 @@
 
 - テーブル・インデックスはもともと `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` のため、二重実行で失敗しません。
 
+## ブロックリスト・通報
+
+- **ブロックリストのみ** … `supabase-blocks-list.sql`（blocks テーブル＋RLS）
+- **ブロック＋通報** … `supabase-blocks-reports.sql`（blocks と reports をまとめて作成）
+
+どちらか一方を実行すればブロック機能は使えます。通報機能も使う場合は `supabase-blocks-reports.sql` を実行してください。
+
 ## 推奨実行順（新規セットアップ時）
 
 1. `schema.sql`（土台）
@@ -48,7 +55,7 @@
 6. `supabase-add-profile-columns.sql`（必要な場合）
 7. `supabase-follows-table.sql`
 8. `supabase-notifications.sql`
-9. `supabase-blocks-reports.sql`
+9. `supabase-blocks-reports.sql`（またはブロックのみなら `supabase-blocks-list.sql`）
 10. `supabase-recruitment-participants.sql`（および `supabase-recruitment-participants-withdrawn.sql` など関連）
 11. その他 `supabase-*.sql`（storage / messages など）
 
