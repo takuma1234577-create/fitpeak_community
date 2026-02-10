@@ -2,7 +2,6 @@ import HomePage from "@/components/dashboard/home-page";
 import { createClient } from "@/utils/supabase/server";
 import {
   getMyProfile,
-  getRecommendedWorkouts,
   getRecommendedUsers,
   getNewArrivalUsers,
 } from "@/lib/recommendations";
@@ -11,7 +10,6 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  let recommendedWorkouts: Awaited<ReturnType<typeof getRecommendedWorkouts>> = [];
   let recommendedUsers: Awaited<ReturnType<typeof getRecommendedUsers>> = [];
   let newArrivalUsers: Awaited<ReturnType<typeof getNewArrivalUsers>> = [];
   let myProfile: Awaited<ReturnType<typeof getMyProfile>> = null;
@@ -21,8 +19,7 @@ export default async function DashboardPage() {
     myUserId = user.id;
     try {
       myProfile = await getMyProfile(supabase, user.id);
-      [recommendedWorkouts, recommendedUsers, newArrivalUsers] = await Promise.all([
-        getRecommendedWorkouts(supabase, myProfile, 10),
+      [recommendedUsers, newArrivalUsers] = await Promise.all([
         getRecommendedUsers(supabase, myProfile, user.id, 5),
         getNewArrivalUsers(supabase, user.id, 7),
       ]);
@@ -33,7 +30,6 @@ export default async function DashboardPage() {
 
   return (
     <HomePage
-      recommendedWorkouts={recommendedWorkouts}
       recommendedUsers={recommendedUsers}
       newArrivalUsers={newArrivalUsers}
       myUserId={myUserId}

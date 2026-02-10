@@ -11,7 +11,6 @@ import {
   Dumbbell,
   Users,
   FolderOpen,
-  CalendarDays,
   ChevronRight,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
@@ -38,21 +37,9 @@ type GroupRow = {
   category: string | null;
 };
 
-type RecruitmentRow = {
-  id: string;
-  user_id?: string;
-  title: string;
-  description: string | null;
-  target_body_part: string | null;
-  event_date: string;
-  location: string | null;
-  status: string;
-};
-
 type SearchResults = {
   users: ProfileRow[];
   groups: GroupRow[];
-  recruitments: RecruitmentRow[];
 };
 
 function stripHash(kw: string) {
@@ -67,7 +54,6 @@ export default function SearchPage() {
   const [results, setResults] = useState<SearchResults>({
     users: [],
     groups: [],
-    recruitments: [],
   });
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -78,7 +64,7 @@ export default function SearchPage() {
     setQuery(term);
     setSearched(true);
     if (!term) {
-      setResults({ users: [], groups: [], recruitments: [] });
+      setResults({ users: [], groups: [] });
       return;
     }
     setLoading(true);
@@ -87,31 +73,24 @@ export default function SearchPage() {
       const sb = supabase as any;
       const pattern = `%${term}%`;
 
-      const [profilesRes, groupsRes, recruitmentsRes] = await Promise.all([
+      const [profilesRes, groupsRes] = await Promise.all([
         sb.rpc("search_profiles", { search_text: term }),
         sb
           .from("groups")
           .select("id, name, description, category")
           .or(`name.ilike.${pattern},category.ilike.${pattern},description.ilike.${pattern}`),
-        sb
-          .from("recruitments")
-          .select("id, user_id, title, description, target_body_part, event_date, location, status")
-          .eq("status", "open")
-          .or(`title.ilike.${pattern},target_body_part.ilike.${pattern},location.ilike.${pattern},description.ilike.${pattern}`),
       ]);
 
       setResults({
         users: safeList(profilesRes.data as ProfileRow[] | null),
         groups: safeList(groupsRes.data as GroupRow[] | null),
-        recruitments: safeList(recruitmentsRes.data as RecruitmentRow[] | null),
       });
 
       if (profilesRes.error) console.error("search_profiles:", profilesRes.error);
       if (groupsRes.error) console.error("groups search:", groupsRes.error);
-      if (recruitmentsRes.error) console.error("recruitments search:", recruitmentsRes.error);
     } catch (err) {
       console.error("Search error:", err);
-      setResults({ users: [], groups: [], recruitments: [] });
+      setResults({ users: [], groups: [] });
     } finally {
       setLoading(false);
     }
@@ -132,13 +111,11 @@ export default function SearchPage() {
   };
 
   const safeUsers = safeList(results.users);
-  const safeRecruitments = safeList(results.recruitments);
   const safeGroups = safeList(results.groups);
-  const showKeywords = !searched || (!query.trim() && safeUsers.length === 0 && safeGroups.length === 0 && safeRecruitments.length === 0 && !loading);
+  const showKeywords = !searched || (!query.trim() && safeUsers.length === 0 && safeGroups.length === 0 && !loading);
 
   const filteredUsers = safeUsers.filter((u) => !blockedIds.has(u.id));
-  const filteredRecruitments = safeRecruitments.filter((r) => !r.user_id || !blockedIds.has(r.user_id));
-  const totalCount = filteredUsers.length + safeGroups.length + filteredRecruitments.length;
+  const totalCount = filteredUsers.length + safeGroups.length;
   const userPreviewCount = 5;
   const showUserMore = filteredUsers.length > userPreviewCount;
   const usersToShow = viewParam === "users" ? filteredUsers : filteredUsers.slice(0, userPreviewCount);
@@ -316,61 +293,6 @@ export default function SearchPage() {
                 )}
               </section>
 
-              {/* 3. 合トレ検索 (Recruitments) */}
-              <section className="flex flex-col gap-3">
-                <h2 className="flex items-center gap-2 text-base font-black tracking-tight text-foreground">
-                  <CalendarDays className="h-4 w-4 text-gold" />
-                  Recruitments / 合トレ募集
-                </h2>
-                {filteredRecruitments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">該当する募集はありません</p>
-                ) : (
-                  <ul className="grid gap-2 sm:grid-cols-2">
-                    {safeList(filteredRecruitments).map((rec) => {
-                      const eventDate = rec.event_date
-                        ? new Date(rec.event_date).toLocaleDateString("ja-JP", {
-                            month: "numeric",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "";
-                      return (
-                        <li key={rec.id}>
-                          <Link
-                            href={`/dashboard/recruit?r=${rec.id}`}
-                            className="flex flex-col gap-1.5 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all hover:border-gold/30 hover:bg-card/80"
-                          >
-                            <p className="font-bold text-foreground">{rec.title}</p>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              {rec.target_body_part && (
-                                <span className="text-gold">{rec.target_body_part}</span>
-                              )}
-                              {rec.location && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  {rec.location}
-                                </span>
-                              )}
-                              {eventDate && (
-                                <span className="flex items-center gap-1">
-                                  <CalendarDays className="h-3 w-3" />
-                                  {eventDate}
-                                </span>
-                              )}
-                            </div>
-                            {rec.description && (
-                              <p className="line-clamp-2 text-xs text-muted-foreground">
-                                {rec.description}
-                              </p>
-                            )}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </section>
             </>
           )}
         </div>

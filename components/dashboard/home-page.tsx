@@ -20,11 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { safeArray, safeList } from "@/lib/utils";
-import type {
-  RecruitmentWithProfile,
-  RecommendedUser,
-  NewArrivalUser,
-} from "@/lib/recommendations";
+import type { RecommendedUser, NewArrivalUser } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 
@@ -38,16 +34,6 @@ const todayMotivation = {
   }),
   message: "今日は胸の日です。限界を超えろ。",
 };
-
-function formatRecruitDate(d: string) {
-  const date = new Date(d);
-  return `${date.getMonth() + 1}/${date.getDate()}`;
-}
-
-function formatRecruitTime(d: string) {
-  const date = new Date(d);
-  return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) + "~";
-}
 
 function SectionHeader({
   icon: Icon,
@@ -118,151 +104,6 @@ function MyScheduleSection() {
           <ChevronRight className="h-3.5 w-3.5" />
         </Link>
       </div>
-    </section>
-  );
-}
-
-const EMPTY_MESSAGE =
-  "まだおすすめはありません。プロフィールを充実させましょう！";
-
-function RecommendedWorkoutsSection({
-  posts,
-}: {
-  posts: RecruitmentWithProfile[] | null | undefined;
-}) {
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-  const safePosts = safeArray(posts);
-  const scroll = (dir: "left" | "right") => {
-    scrollRef.current?.scrollBy({
-      left: dir === "left" ? -300 : 300,
-      behavior: "smooth",
-    });
-  };
-
-  return (
-    <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <Dumbbell className="h-5 w-5 text-gold" />
-          <h2 className="text-lg font-extrabold tracking-wide text-foreground">
-            おすすめの合トレ (Recommended Workouts)
-          </h2>
-        </div>
-        {safePosts.length > 0 && (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => scroll("left")}
-              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
-              aria-label="前へスクロール"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => scroll("right")}
-              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
-              aria-label="次へスクロール"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <Link
-              href="/dashboard/recruit"
-              className="ml-2 flex items-center gap-1 text-xs font-semibold text-gold/80 transition-colors hover:text-gold"
-            >
-              すべて見る
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {safePosts.length === 0 ? (
-        <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
-          <Dumbbell className="mx-auto h-10 w-10 text-muted-foreground/40" />
-          <p className="mt-2 text-sm font-semibold text-muted-foreground">
-            {EMPTY_MESSAGE}
-          </p>
-          <Link
-            href="/dashboard/recruit"
-            className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-gold transition-colors hover:text-gold-light"
-          >
-            合トレ募集を探す
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      ) : (
-        <div
-          ref={scrollRef}
-          className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          {safePosts.map((post) => {
-            const profile = post?.profiles;
-            const name = profile?.nickname || profile?.username || "ユーザー";
-            const initial = name?.charAt(0) ?? "?";
-            const tagsRaw = (post as Record<string, unknown>).tags;
-            const tags = Array.isArray(tagsRaw)
-              ? (tagsRaw as string[]).map((t) => String(t))
-              : post?.target_body_part
-                ? [post.target_body_part]
-                : [];
-            return (
-              <Link
-                key={post.id}
-                href={`/dashboard/recruit?r=${post.id}`}
-                className="group flex w-[300px] shrink-0 flex-col rounded-xl border border-border/60 bg-card transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/[0.04]"
-              >
-                <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
-                  <div className="flex items-center gap-1.5 text-sm text-foreground">
-                    <CalendarDays className="h-3.5 w-3.5 text-gold" />
-                    <span className="font-bold">{formatRecruitDate(post.event_date)}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatRecruitTime(post.event_date)}
-                    </span>
-                  </div>
-                  {post.location && (
-                    <div className="flex max-w-[100px] items-center gap-1 truncate text-[11px] text-muted-foreground">
-                      <MapPin className="h-3 w-3 shrink-0 text-gold/70" />
-                      <span className="truncate font-medium">{post.location}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-1 flex-col gap-3 px-4 py-3.5">
-                  <h3 className="line-clamp-2 text-sm font-bold leading-snug text-foreground">
-                    {post.title}
-                  </h3>
-                  {Array.isArray(tags) && tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {(tags ?? []).map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="border-0 bg-gold/10 px-2 py-0.5 text-[11px] font-semibold text-gold/90 hover:bg-gold/20"
-                        >
-                          #{tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between border-t border-border/40 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="relative h-7 w-7 shrink-0 ring-1 ring-border">
-                      <AvatarImage src={profile?.avatar_url ?? undefined} alt={name} />
-                      <AvatarFallback className="text-[10px]">{initial}</AvatarFallback>
-                    </Avatar>
-                    <span className="max-w-[140px] truncate text-xs font-semibold text-muted-foreground">
-                      {name}
-                    </span>
-                  </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-gold/60" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
     </section>
   );
 }
@@ -607,20 +448,17 @@ function YourGroupsSection() {
 }
 
 type HomePageProps = {
-  recommendedWorkouts: RecruitmentWithProfile[];
   recommendedUsers: RecommendedUser[];
   newArrivalUsers: NewArrivalUser[];
   myUserId: string | null;
 };
 
 export default function HomePage({
-  recommendedWorkouts,
   recommendedUsers,
   newArrivalUsers,
   myUserId,
 }: HomePageProps) {
   const { blockedIds } = useBlockedUserIds();
-  const filteredWorkouts = recommendedWorkouts.filter((r) => !blockedIds.has(r.user_id));
   const filteredRecommendedUsers = recommendedUsers.filter((u) => !blockedIds.has(u.id));
   const filteredNewArrivalUsers = newArrivalUsers.filter((u) => !blockedIds.has(u.id));
 
@@ -628,7 +466,6 @@ export default function HomePage({
     <div className="flex flex-col gap-8">
       <HeroSection />
       <MyScheduleSection />
-      <RecommendedWorkoutsSection posts={filteredWorkouts} />
       <RecommendedUsersSection users={filteredRecommendedUsers} myUserId={myUserId} />
       <NewArrivalUsersSection users={filteredNewArrivalUsers} myUserId={myUserId} />
       <YourGroupsSection />
