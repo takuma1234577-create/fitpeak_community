@@ -538,9 +538,36 @@ export default function IndividualChatView({
                       className="max-h-64 w-full rounded-lg object-cover"
                     />
                   )}
-                  {msg.message_type !== "image" && msg.message_type !== "video" && (
-                    <>{msg.content}</>
-                  )}
+                  {msg.message_type === "recruitment_approved" && (() => {
+                    try {
+                      const payload = JSON.parse(msg.content) as { recruitmentId?: string; title?: string; text?: string };
+                      const rId = payload.recruitmentId;
+                      const title = payload.title ?? "合トレ";
+                      const text = payload.text ?? "合トレを承認しました。";
+                      return (
+                        <div className="space-y-2">
+                          {rId && (
+                            <Link
+                              href={`/dashboard/recruit?r=${rId}`}
+                              className="block rounded-lg border border-border/60 bg-background/80 p-2.5 transition-colors hover:border-gold/40"
+                            >
+                              <span className="flex items-center gap-1.5 text-sm font-bold text-gold">
+                                <Dumbbell className="h-4 w-4 shrink-0" />
+                                {title}
+                              </span>
+                              <span className="mt-1 block text-xs text-muted-foreground">募集を見る</span>
+                            </Link>
+                          )}
+                          <p className="text-sm">{text}</p>
+                        </div>
+                      );
+                    } catch {
+                      return <>{msg.content}</>;
+                    }
+                  })()}
+                  {msg.message_type !== "image" &&
+                    msg.message_type !== "video" &&
+                    msg.message_type !== "recruitment_approved" && <>{msg.content}</>}
                 </div>
 
                 <div

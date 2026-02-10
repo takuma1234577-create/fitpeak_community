@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, ImagePlus, MessageCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Send, ImagePlus, MessageCircle, Loader2, Dumbbell } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
@@ -187,7 +188,31 @@ export default function GroupChatTab({
                         : "rounded-bl-md bg-[#2a2a2a] text-foreground"
                     )}
                   >
-                    {msg.content}
+                    {(() => {
+                      try {
+                        const j = JSON.parse(msg.content) as { recruitmentId?: string; title?: string; text?: string };
+                        if (j.recruitmentId && j.text) {
+                          return (
+                            <div className="space-y-2">
+                              <Link
+                                href={`/dashboard/recruit?r=${j.recruitmentId}`}
+                                className="block rounded-lg border border-border/60 bg-background/80 p-2.5 transition-colors hover:border-gold/40"
+                              >
+                                <span className="flex items-center gap-1.5 text-sm font-bold text-gold">
+                                  <Dumbbell className="h-4 w-4 shrink-0" />
+                                  {j.title ?? "合トレ"}
+                                </span>
+                                <span className="mt-1 block text-xs text-muted-foreground">募集を見る</span>
+                              </Link>
+                              <p>{j.text}</p>
+                            </div>
+                          );
+                        }
+                      } catch {
+                        /* not JSON */
+                      }
+                      return <>{msg.content}</>;
+                    })()}
                   </div>
                   <span className="text-[10px] text-muted-foreground/40">
                     {new Date(msg.created_at).toLocaleTimeString("ja-JP", {

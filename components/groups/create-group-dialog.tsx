@@ -116,41 +116,68 @@ export default function CreateGroupDialog({
       }
       // created_by が profiles(id) を参照するため、プロフィールが無いと FK で失敗する。先に upsert する。
       await sb.from("profiles").upsert({ id: user.id }, { onConflict: "id" });
+
+      const row: Record<string, unknown> = {
+        name: groupName.trim(),
+        description: description.trim() || null,
+        category: category || null,
+        created_by: user.id,
+        is_private: isPrivate,
+      };
+
+      let group: { id: string } | null = null;
+      let groupErr: { message?: string } | null = null;
+
       const { data: conv, error: convErr } = await sb
         .from("conversations")
         .insert({})
         .select("id")
         .single();
+
       if (convErr || !conv) {
         setError(convErr?.message ?? "チャット用の会話を作成できませんでした。");
         setSubmitting(false);
         return;
       }
-      const { data: group, error: groupErr } = await sb
-        .from("groups")
-        .insert({
-          name: groupName.trim(),
-          description: description.trim() || null,
-          category: category || null,
-          created_by: user.id,
-          is_private: isPrivate,
-          chat_room_id: conv.id,
-        })
-        .select("id")
-        .single();
+
+      const insertWithChatRoom = { ...row, chat_room_id: conv.id };
+      const res = await sb.from("groups").insert(insertWithChatRoom).select("id").single();
+      groupErr = res.error;
+      group = res.data;
+
+      if (groupErr && (groupErr.message?.includes("chat_room_id") || groupErr.message?.includes("schema cache") || groupErr.message?.includes("is_private"))) {
+        const fallbackRow = {
+          name: row.name,
+          description: row.description,
+          category: row.category,
+          created_by: row.created_by,
+        };
+        const fallback = await sb
+          .from("groups")
+          .insert(fallbackRow)
+          .select("id")
+          .single();
+        groupErr = fallback.error;
+        group = fallback.data;
+      }
+
       if (groupErr || !group) {
         setError(groupErr?.message ?? "グループの作成に失敗しました。");
         setSubmitting(false);
         return;
       }
+
       await sb.from("group_members").insert({
         group_id: group.id,
         user_id: user.id,
       });
-      await sb.from("conversation_participants").insert({
-        conversation_id: conv.id,
-        user_id: user.id,
-      });
+
+      if (conv?.id) {
+        await sb.from("conversation_participants").insert({
+          conversation_id: conv.id,
+          user_id: user.id,
+        });
+      }
       setOpen(false);
       setGroupName("");
       setDescription("");

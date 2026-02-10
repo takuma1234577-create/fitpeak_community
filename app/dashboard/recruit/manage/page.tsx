@@ -205,8 +205,38 @@ export default function RecruitManagePage() {
         .update({ status: "approved" })
         .eq("recruitment_id", recruitmentId)
         .eq("user_id", userId);
+      if (error) {
+        setApproving(null);
+        return;
+      }
+      const { data: rec } = await (supabase as any)
+        .from("recruitments")
+        .select("group_id, chat_room_id, user_id, title")
+        .eq("id", recruitmentId)
+        .single();
+      if (rec?.group_id) {
+        await (supabase as any).from("group_members").insert({ group_id: rec.group_id, user_id: userId });
+      }
+      if (rec?.chat_room_id) {
+        await (supabase as any)
+          .from("conversation_participants")
+          .insert({ conversation_id: rec.chat_room_id, user_id: userId });
+        const content = JSON.stringify({
+          recruitmentId,
+          title: rec.title ?? "",
+          text: "合トレを承認しました。",
+        });
+        await (supabase as any)
+          .from("messages")
+          .insert({
+            conversation_id: rec.chat_room_id,
+            sender_id: rec.user_id,
+            content,
+            message_type: "recruitment_approved",
+          });
+      }
       setApproving(null);
-      if (!error) loadAll();
+      loadAll();
     },
     [loadAll]
   );

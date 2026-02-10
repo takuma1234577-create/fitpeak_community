@@ -90,6 +90,41 @@ export default function NewRecruitPage() {
       }
       const dateTime = `${eventDate}T${eventTime}:00`;
       const eventDateTime = new Date(dateTime).toISOString();
+      const sb = supabase as any;
+
+      let chatRoomId: string | null = null;
+      let groupId: string | null = null;
+
+      const { data: conv, error: convErr } = await sb.from("conversations").insert({}).select("id").single();
+      if (!convErr && conv?.id) {
+        chatRoomId = conv.id;
+        let grpRes = await sb
+          .from("groups")
+          .insert({
+            name: title.trim().slice(0, 100) || "合トレ",
+            description: description.trim() || null,
+            category: "合トレ",
+            created_by: user.id,
+            is_private: false,
+            chat_room_id: conv.id,
+          })
+          .select("id")
+          .single();
+        if (grpRes.error) {
+          grpRes = await sb
+            .from("groups")
+            .insert({
+              name: title.trim().slice(0, 100) || "合トレ",
+              description: description.trim() || null,
+              category: "合トレ",
+              created_by: user.id,
+            })
+            .select("id")
+            .single();
+        }
+        if (!grpRes.error && grpRes.data?.id) groupId = grpRes.data.id;
+      }
+
       const row: Record<string, unknown> = {
         user_id: user.id,
         title: title.trim(),
@@ -100,18 +135,37 @@ export default function NewRecruitPage() {
         status: "open",
       };
       if (level !== "all") (row as Record<string, string>).level = level;
+      if (chatRoomId) (row as Record<string, string>).chat_room_id = chatRoomId;
+      if (groupId) (row as Record<string, string>).group_id = groupId;
 
-      let { error: insertError } = await (supabase as any).from("recruitments").insert(row);
-      if (insertError && level !== "all") {
-        delete (row as Record<string, string>).level;
-        const retry = await (supabase as any).from("recruitments").insert(row);
+      let { data: insertedRec, error: insertError } = await sb.from("recruitments").insert(row).select("id").single();
+      if (insertError && (level !== "all" || chatRoomId || groupId)) {
+        const fallback: Record<string, unknown> = {
+          user_id: user.id,
+          title: title.trim(),
+          description: description.trim() || null,
+          target_body_part: bodyPart === "all" ? null : bodyPart,
+          event_date: eventDateTime,
+          location: area.trim() || null,
+          status: "open",
+        };
+        const retry = await sb.from("recruitments").insert(fallback).select("id").single();
         insertError = retry.error;
+        insertedRec = retry.data;
       }
-      if (insertError) {
-        setError(insertError.message ?? "作成に失敗しました");
+      if (insertError || !insertedRec) {
+        setError(insertError?.message ?? "作成に失敗しました");
         setSubmitting(false);
         return;
       }
+
+      if (chatRoomId) {
+        await sb.from("conversation_participants").insert({ conversation_id: chatRoomId, user_id: user.id });
+      }
+      if (groupId) {
+        await sb.from("group_members").insert({ group_id: groupId, user_id: user.id });
+      }
+
       router.push("/dashboard/recruit");
       router.refresh();
     } catch (e) {
