@@ -13,7 +13,6 @@ import ProfileHeader from "@/components/profile/profile-header";
 import FollowListModal from "@/components/profile/follow-list-modal";
 import type { FollowTab } from "@/components/profile/follow-list-modal";
 import StatsGrid from "@/components/profile/stats-grid";
-import MyGears from "@/components/profile/my-gears";
 import ActivityTimeline from "@/components/profile/activity-timeline";
 import ProfileDetails from "@/components/profile/profile-details";
 import OtherProfileTop from "@/components/profile/other-profile-top";
@@ -118,6 +117,9 @@ export default function ProfilePage() {
           ? homeGym || (otherProfile as { gym?: string | null }).gym
           : "非公開"
         : null;
+    const benchMax = (otherProfile as { bench_max?: number }).bench_max ?? (otherProfile as { bench_press_max?: number }).bench_press_max ?? 0;
+    const squatMax = (otherProfile as { squat_max?: number }).squat_max ?? 0;
+    const deadliftMax = (otherProfile as { deadlift_max?: number }).deadlift_max ?? 0;
     return (
       <main className="min-h-screen bg-background">
         <div className="mx-auto max-w-lg">
@@ -142,6 +144,8 @@ export default function ProfilePage() {
             isOwnProfile={false}
             onMessage={handleMessage}
           />
+          <div className="mx-5 h-px bg-border/40 sm:mx-8" />
+          <StatsGrid benchMax={benchMax} squatMax={squatMax} deadliftMax={deadliftMax} />
         </div>
       </main>
     );
@@ -266,10 +270,6 @@ export default function ProfilePage() {
           trainingYears={(p as { training_years?: number }).training_years ?? 0}
           goal={p.goal ?? null}
         />
-
-        <div className="mx-5 h-px bg-border/40 sm:mx-8" />
-
-        <MyGears />
 
         <div className="mx-5 h-px bg-border/40 sm:mx-8" />
 

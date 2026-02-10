@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { ChevronLeft, Users, Loader2, MessageCircle, MapPin, Dumbbell, Calendar, Target } from "lucide-react";
+import { toGenderLabel } from "@/lib/constants";
 
 export interface OtherProfileTopProps {
   /** ヘッダー画像URL。未設定時はグラデーション */
@@ -154,9 +155,9 @@ export default function OtherProfileTop({
               {ageDisplay}
             </span>
           )}
-          {gender && (
+          {toGenderLabel(gender) && (
             <span className="inline-flex items-center rounded-full border border-border/60 bg-secondary/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              {gender}
+              {toGenderLabel(gender)}
             </span>
           )}
           {gym && (

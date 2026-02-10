@@ -31,3 +31,13 @@ export const GENDER_OPTIONS = [
   { value: "Female", label: "女性" },
   { value: "Other", label: "その他" },
 ] as const;
+
+/** DBの性別値（Male / Female / Other など）を日本語ラベルに変換 */
+export function toGenderLabel(value: string | null | undefined): string | null {
+  if (value == null || value === "") return null;
+  const v = value.trim();
+  if (v === "Male") return "男性";
+  if (v === "Female" || v === "female") return "女性";
+  if (v === "Other" || v === "other") return "その他";
+  return v;
+}
