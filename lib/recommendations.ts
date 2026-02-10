@@ -165,28 +165,21 @@ export async function getRecommendedUsers(
     // Step 1: おすすめ（ジム・住まい・種目一致）で最大 target 名
     const promises: Promise<{ data: RecommendedUser[] | null }>[] = [];
 
+    const visibleFilter = () =>
+      sb.from("profiles").select(fields).neq("id", myId).eq("email_confirmed", true).not("nickname", "is", null);
     if (myProfile?.home_gym?.trim()) {
       const pattern = `%${myProfile.home_gym.trim()}%`;
-      promises.push(
-        sb.from("profiles").select(fields).neq("id", myId).ilike("home_gym", pattern).limit(target)
-      );
+      promises.push(visibleFilter().ilike("home_gym", pattern).limit(target));
     }
     if (myProfile?.prefecture?.trim()) {
       promises.push(
-        sb
-          .from("profiles")
-          .select(fields)
-          .neq("id", myId)
-          .eq("prefecture", myProfile.prefecture.trim())
-          .limit(target)
+        visibleFilter().eq("prefecture", myProfile.prefecture.trim()).limit(target)
       );
     }
     if (myProfile?.exercises?.length) {
       const ex = myProfile.exercises.filter(Boolean);
       if (ex.length > 0) {
-        promises.push(
-          sb.from("profiles").select(fields).neq("id", myId).overlaps("exercises", ex).limit(target)
-        );
+        promises.push(visibleFilter().overlaps("exercises", ex).limit(target));
       }
     }
 
@@ -253,6 +246,8 @@ export async function getNewArrivalUsers(
       .from("profiles")
       .select(fields)
       .neq("id", myId)
+      .eq("email_confirmed", true)
+      .not("nickname", "is", null)
       .order("created_at", { ascending: false })
       .limit(Math.min(limit, 10));
     if (error) return [];

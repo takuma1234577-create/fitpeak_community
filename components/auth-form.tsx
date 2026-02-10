@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { syncEmailConfirmed } from "@/lib/sync-email-confirmed";
 
 /** プロフィール作成済みか（nickname または username が入っていれば作成済みとみなす） */
 async function checkProfileCreated(supabase: SupabaseClient, userId: string): Promise<boolean> {
@@ -157,6 +158,9 @@ export default function AuthForm() {
           setAuthError(error.message === "Invalid login credentials" ? "メールアドレスまたはパスワードが正しくありません" : error.message);
           return;
         }
+        if (authData.user) {
+          await syncEmailConfirmed(supabase, authData.user);
+        }
         const hasProfile = authData.user
           ? await checkProfileCreated(supabase, authData.user.id)
           : false;
@@ -190,6 +194,7 @@ export default function AuthForm() {
           return;
         }
         if (data.session && data.user) {
+          await syncEmailConfirmed(supabase, data.user);
           const hasProfile = await checkProfileCreated(supabase, data.user.id);
           window.location.href = hasProfile ? "/dashboard" : "/onboarding";
         } else {

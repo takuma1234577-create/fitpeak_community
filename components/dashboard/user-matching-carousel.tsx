@@ -209,6 +209,8 @@ export default function UserMatchingCarousel({
       let query = (supabase as any)
         .from("profiles")
         .select(fields)
+        .eq("email_confirmed", true)
+        .not("nickname", "is", null)
         .order("created_at", { ascending: false })
         .limit(15);
 

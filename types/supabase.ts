@@ -43,6 +43,7 @@ export interface Database {
           is_age_public: boolean;
           is_prefecture_public: boolean;
           is_home_gym_public: boolean;
+          email_confirmed: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -74,6 +75,7 @@ export interface Database {
           is_age_public?: boolean;
           is_prefecture_public?: boolean;
           is_home_gym_public?: boolean;
+          email_confirmed?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -105,6 +107,7 @@ export interface Database {
           is_age_public?: boolean;
           is_prefecture_public?: boolean;
           is_home_gym_public?: boolean;
+          email_confirmed?: boolean;
           created_at?: string;
           updated_at?: string;
         };

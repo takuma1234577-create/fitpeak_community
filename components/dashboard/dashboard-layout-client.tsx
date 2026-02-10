@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 import DashboardHeader from "@/components/dashboard/dashboard-header";
+import { syncEmailConfirmed } from "@/lib/sync-email-confirmed";
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
 import BottomNav from "@/components/dashboard/bottom-nav";
 import Fab from "@/components/dashboard/fab";
@@ -21,6 +24,18 @@ export default function DashboardLayoutClient({
 }) {
   const pathname = usePathname();
   const isChat = isIndividualChatPath(pathname);
+  const syncedRef = useRef(false);
+
+  useEffect(() => {
+    if (syncedRef.current) return;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      syncedRef.current = true;
+      await syncEmailConfirmed(supabase, user);
+    })();
+  }, []);
 
   if (isChat) {
     return (

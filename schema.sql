@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   is_age_public boolean DEFAULT true,
   is_prefecture_public boolean DEFAULT true,
   is_home_gym_public boolean DEFAULT true,
+  email_confirmed boolean DEFAULT false NOT NULL,
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL
 );
