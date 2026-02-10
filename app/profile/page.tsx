@@ -16,6 +16,7 @@ import StatsGrid from "@/components/profile/stats-grid";
 import ActivityTimeline from "@/components/profile/activity-timeline";
 import ProfileDetails from "@/components/profile/profile-details";
 import OtherProfileTop from "@/components/profile/other-profile-top";
+import OtherProfileSections from "@/components/profile/other-profile-sections";
 import { Loader2 } from "lucide-react";
 import { safeArray } from "@/lib/utils";
 import type { Achievement } from "@/types/profile";
@@ -158,6 +159,7 @@ export default function ProfilePage() {
           )}
           <div className="mx-5 h-px bg-border/40 sm:mx-8" />
           <StatsGrid benchMax={benchMax} squatMax={squatMax} deadliftMax={deadliftMax} />
+          {profileUserId && <OtherProfileSections profileUserId={profileUserId} />}
         </div>
       </main>
     );
