@@ -25,17 +25,6 @@ import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { useProfileModal } from "@/contexts/profile-modal-context";
 
-const todayMotivation = {
-  greeting: "おかえりなさい。",
-  date: new Date().toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  }),
-  message: "今日は胸の日です。限界を超えろ。",
-};
-
 function SectionHeader({
   icon: Icon,
   title,
@@ -68,22 +57,102 @@ function SectionHeader({
   );
 }
 
-function HeroSection() {
+type RecruitmentItem = {
+  id: string;
+  title: string;
+  target_body_part: string | null;
+  event_date: string;
+  location: string | null;
+  created_at: string;
+  profiles: { nickname: string | null; username: string | null } | null;
+};
+
+function RecommendedRecruitmentsSection() {
+  const [list, setList] = useState<RecruitmentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data, error } = await (supabase as any)
+        .from("recruitments")
+        .select("id, title, target_body_part, event_date, location, created_at, profiles(nickname, username)")
+        .eq("status", "open")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (!cancelled) {
+        if (error) {
+          console.error("recruitments fetch:", error);
+          setList([]);
+        } else {
+          setList(safeList((data ?? []) as RecruitmentItem[]));
+        }
+        setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="flex flex-col gap-4">
+        <SectionHeader icon={Dumbbell} title="おすすめ合トレ" href="/dashboard/recruit" linkLabel="すべて見る" />
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-gold/60" />
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-border/40">
-      <div className="absolute inset-0 bg-gradient-to-r from-gold/20 via-gold/10 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-      <div className="relative flex flex-col gap-4 px-6 py-8 sm:px-8 sm:py-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-foreground" suppressHydrationWarning>
-          {todayMotivation.date}
-        </p>
-        <h1 className="text-balance text-2xl font-black leading-tight text-foreground sm:text-3xl">
-          {todayMotivation.greeting}
-        </h1>
-        <p className="text-sm font-bold text-foreground sm:text-base">
-          {todayMotivation.message}
-        </p>
-      </div>
+    <section className="flex flex-col gap-4">
+      <SectionHeader icon={Dumbbell} title="おすすめ合トレ" href="/dashboard/recruit" linkLabel="すべて見る" />
+      {list.length === 0 ? (
+        <div className="rounded-xl border border-border/40 bg-card/50 px-5 py-8 text-center">
+          <Dumbbell className="mx-auto h-10 w-10 text-muted-foreground/40" />
+          <p className="mt-2 text-sm font-semibold text-muted-foreground">募集中の合トレはありません</p>
+          <Link
+            href="/dashboard/recruit"
+            className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-foreground transition-colors hover:text-gold-light"
+          >
+            合トレ募集を探す
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {list.map((r) => {
+            const name = r.profiles?.nickname || r.profiles?.username || "ユーザー";
+            const date = r.event_date
+              ? new Date(r.event_date).toLocaleDateString("ja-JP", {
+                  month: "numeric",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "—";
+            return (
+              <li key={r.id}>
+                <Link
+                  href={`/dashboard/recruit?r=${r.id}`}
+                  className="block rounded-xl border border-border/40 bg-card p-4 transition-all hover:border-gold/30 hover:bg-card/80"
+                >
+                  <p className="font-bold text-foreground">{r.title}</p>
+                  {r.target_body_part && (
+                    <span className="mt-0.5 inline-block text-xs text-foreground">{r.target_body_part}</span>
+                  )}
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {date}
+                    {r.location && ` ・ ${r.location}`}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground/80">{name}</p>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }
@@ -199,7 +268,7 @@ function RecommendedUsersSection({
     <section className="flex flex-col gap-4">
       <SectionHeader
         icon={Users}
-        title="おすすめのユーザー (Recommended Users)"
+        title="おすすめのユーザー"
         href="/dashboard/search"
         linkLabel="検索で仲間を探す"
       />
@@ -284,7 +353,7 @@ function NewArrivalUsersSection({
         <div className="flex items-center gap-2.5">
           <Users className="h-5 w-5 text-gold" />
           <h2 className="text-lg font-extrabold tracking-wide text-foreground">
-            新規ユーザー (New Arrivals)
+            新規ユーザー
           </h2>
         </div>
         {safeUsers.length > 0 && (
@@ -489,7 +558,7 @@ export default function HomePage({
 
   return (
     <div className="flex flex-col gap-8">
-      <HeroSection />
+      <RecommendedRecruitmentsSection />
       <MyScheduleSection />
       <RecommendedUsersSection users={filteredRecommendedUsers} myUserId={myUserId} onOpenProfile={openProfileModal} />
       <NewArrivalUsersSection users={filteredNewArrivalUsers} myUserId={myUserId} onOpenProfile={openProfileModal} />

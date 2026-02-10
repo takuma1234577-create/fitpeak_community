@@ -6,7 +6,6 @@ import {
   MapPin,
   Dumbbell,
   Users,
-  Handshake,
   Settings,
   Share2,
   ChevronLeft,
@@ -261,25 +260,7 @@ export default function ProfileHeader({
                 {isFollowing ? "フォロー中" : "フォローする"}
               </button>
             </div>
-          ) : (
-            <div className="ml-auto mb-2 hidden items-center gap-2 sm:flex">
-              <button
-                type="button"
-                className="flex items-center gap-2 rounded-lg bg-gold px-5 py-2.5 text-sm font-bold tracking-wide text-[#050505] transition-all hover:bg-gold-light hover:shadow-lg hover:shadow-gold/20 active:scale-[0.98]"
-              >
-                <Handshake className="h-4 w-4" />
-                合トレ申請
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard/settings")}
-                className="flex items-center gap-2 rounded-lg border border-border bg-transparent px-5 py-2.5 text-sm font-bold tracking-wide text-foreground transition-all hover:border-gold/30 hover:bg-secondary/80"
-              >
-                <Settings className="h-4 w-4" />
-                設定
-              </button>
-            </div>
-          )}
+          ) : null}
         </div>
 
         <div className="mb-4">
@@ -452,25 +433,7 @@ export default function ProfileHeader({
               {isFollowing ? "フォロー中" : "フォローする"}
             </button>
           </div>
-        ) : (
-          <div className="mt-5 flex items-center gap-2 sm:hidden">
-            <button
-              type="button"
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gold py-3 text-sm font-bold tracking-wide text-[#050505] transition-all hover:bg-gold-light active:scale-[0.98]"
-            >
-              <Handshake className="h-4 w-4" />
-              合トレ申請
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/dashboard/settings")}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-transparent py-3 text-sm font-bold tracking-wide text-foreground transition-all hover:border-gold/30"
-            >
-              <Settings className="h-4 w-4" />
-              設定
-            </button>
-          </div>
-        )}
+        ) : null}
       </div>
     </section>
   );
