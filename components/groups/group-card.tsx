@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { Users, Dumbbell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,11 @@ export interface Group {
   isJoined?: boolean;
   /** グループチャットの会話ID（参加中ならチャットへ遷移するときに使用） */
   chatRoomId?: string | null;
+}
+
+/** 合トレ募集用グループか（一覧で合トレタグを表示する） */
+export function isRecruitmentGroup(category: string): boolean {
+  return category === "合トレ募集";
 }
 
 const categoryStyles: Record<string, string> = {
@@ -32,10 +37,8 @@ const categoryStyles: Record<string, string> = {
 };
 
 export default function GroupCard({ group }: { group: Group }) {
-  const groupHref =
-    group.isJoined && group.chatRoomId
-      ? `/dashboard/messages/${group.chatRoomId}`
-      : `/dashboard/groups/${group.id}`;
+  const groupHref = `/dashboard/groups/${group.id}`;
+  const showRecruitmentTag = isRecruitmentGroup(group.category);
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/[0.04]">
@@ -50,7 +53,16 @@ export default function GroupCard({ group }: { group: Group }) {
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute bottom-3 left-3">
+        <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center gap-2">
+          {showRecruitmentTag && (
+            <Badge
+              variant="outline"
+              className="flex items-center gap-1 border-gold/40 bg-gold/20 px-2.5 py-0.5 text-[11px] font-bold text-gold"
+            >
+              <Dumbbell className="h-3 w-3" />
+              合トレ
+            </Badge>
+          )}
           <Badge
             variant="outline"
             className={cn(
@@ -84,12 +96,9 @@ export default function GroupCard({ group }: { group: Group }) {
             参加中
           </span>
         ) : (
-          <button
-            type="button"
-            className="rounded-lg border border-gold/40 bg-transparent px-3.5 py-2 text-xs font-bold text-gold transition-all duration-300 hover:border-gold hover:bg-gold hover:text-[#050505] active:scale-[0.97]"
-          >
-            参加する
-          </button>
+          <span className="rounded-lg border border-border/60 bg-secondary/50 px-3.5 py-2 text-xs font-semibold text-muted-foreground">
+            未参加
+          </span>
         )}
       </div>
     </article>

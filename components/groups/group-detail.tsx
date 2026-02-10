@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Users, Crown, Loader2, MessageCircle, Info, Pencil, MoreHorizontal, Flag } from "lucide-react";
+import { ArrowLeft, Users, Crown, Loader2, MessageCircle, Info, Pencil, MoreHorizontal, Flag, CalendarDays, MapPin, Dumbbell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ReportDialog from "@/components/report-dialog";
@@ -31,6 +31,15 @@ type MemberRow = {
   is_creator: boolean;
 };
 
+type RecruitmentSummary = {
+  id: string;
+  title: string;
+  event_date: string;
+  location: string | null;
+  description: string | null;
+  target_body_part: string | null;
+};
+
 export default function GroupDetail({ groupId }: { groupId: string }) {
   const [tab, setTab] = useState<"overview" | "chat">("overview");
   const [group, setGroup] = useState<GroupData | null>(null);
@@ -38,6 +47,8 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [joinRequestSent, setJoinRequestSent] = useState(false);
+  const [recruitment, setRecruitment] = useState<RecruitmentSummary | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -97,6 +108,23 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
     } else {
       setMembers([]);
     }
+
+    try {
+      const { data: rec } = await (supabase as any)
+        .from("recruitments")
+        .select("id, title, event_date, location, description, target_body_part")
+        .eq("group_id", groupId)
+        .eq("status", "open")
+        .maybeSingle();
+      if (rec) {
+        setRecruitment(rec as RecruitmentSummary);
+      } else {
+        setRecruitment(null);
+      }
+    } catch {
+      setRecruitment(null);
+    }
+
     setLoading(false);
   }, [groupId]);
 
@@ -150,6 +178,10 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
     } finally {
       setJoining(false);
     }
+  };
+
+  const handleJoinRequest = () => {
+    setJoinRequestSent(true);
   };
 
   const isJoined = myUserId && members.some((m) => m.user_id === myUserId);
@@ -335,16 +367,78 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
             )}
           </div>
 
-          {!isJoined && (
-            <button
-              type="button"
-              disabled={joining}
-              onClick={handleJoin}
-              className="w-full rounded-lg border border-gold/40 bg-transparent py-3.5 text-sm font-bold text-gold transition-all hover:border-gold hover:bg-gold hover:text-[#050505] disabled:opacity-60"
+          {isJoined && group.chat_room_id ? (
+            <Link
+              href={`/dashboard/messages/${group.chat_room_id}`}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-gold py-3.5 text-sm font-bold text-[#050505] transition-all hover:bg-gold-light"
             >
-              {joining ? "参加処理中..." : "参加する"}
-            </button>
-          )}
+              <MessageCircle className="h-4 w-4" />
+              グループチャットへ
+            </Link>
+          ) : !isJoined && recruitment ? (
+            <>
+              <div className="rounded-xl border border-border/60 bg-gold/5 p-5">
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-gold">
+                  <Dumbbell className="h-4 w-4" />
+                  合トレ概要
+                </h3>
+                <p className="font-bold text-foreground">{recruitment.title}</p>
+                {recruitment.event_date && (
+                  <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {new Date(recruitment.event_date).toLocaleDateString("ja-JP", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                )}
+                {recruitment.location && (
+                  <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {recruitment.location}
+                  </p>
+                )}
+                {recruitment.target_body_part && (
+                  <p className="mt-1 text-xs text-gold">{recruitment.target_body_part}</p>
+                )}
+                {recruitment.description && (
+                  <p className="mt-3 whitespace-pre-wrap text-xs text-muted-foreground">
+                    {recruitment.description}
+                  </p>
+                )}
+              </div>
+              <Link
+                href={`/dashboard/recruit?r=${recruitment.id}`}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gold py-3.5 text-sm font-bold text-[#050505] transition-all hover:bg-gold-light"
+              >
+                <Dumbbell className="h-4 w-4" />
+                合トレ申請
+              </Link>
+            </>
+          ) : !isJoined ? (
+            group.is_private ? (
+              <button
+                type="button"
+                disabled={joinRequestSent}
+                onClick={handleJoinRequest}
+                className="w-full rounded-lg border border-gold/40 bg-transparent py-3.5 text-sm font-bold text-gold transition-all hover:border-gold hover:bg-gold hover:text-[#050505] disabled:opacity-60"
+              >
+                {joinRequestSent ? "申請済み" : "参加申請する"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={joining}
+                onClick={handleJoin}
+                className="w-full rounded-lg border border-gold/40 bg-transparent py-3.5 text-sm font-bold text-gold transition-all hover:border-gold hover:bg-gold hover:text-[#050505] disabled:opacity-60"
+              >
+                {joining ? "参加処理中..." : "参加する"}
+              </button>
+            )
+          ) : null}
         </>
       )}
 

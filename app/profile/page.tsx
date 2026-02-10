@@ -30,30 +30,6 @@ function calcAge(birthday: string | null): number | null {
   return age;
 }
 
-const fallback = {
-  name: "田中 太郎",
-  bio: "IFBB Pro 目指し中",
-  email: "taku@fitpeak.app",
-  avatar_url: null as string | null,
-  header_url: null as string | null,
-  area: "東京・渋谷エリア",
-  gym: "GOLD'S GYM 原宿",
-  bench_max: 130,
-  squat_max: 180,
-  deadlift_max: 220,
-  training_years: 8,
-  goal: "BIG3合計600kgを目指す",
-  achievements: [
-    { title: "東京オープン", year: 2024, rank: "優勝" },
-    { title: "FWJ JAPAN OPEN", year: 2023, rank: "3位" },
-    { title: "関東クラシック", year: 2023, rank: "優勝" },
-  ],
-  certifications: ["NSCA-CPT", "JATI-ATI", "栄養士"],
-  followers_count: 1248,
-  following_count: 326,
-  collab_count: 89,
-};
-
 export default function ProfilePage() {
   const searchParams = useSearchParams();
   const u = searchParams.get("u");
@@ -117,51 +93,81 @@ export default function ProfilePage() {
     );
   }
 
-  const p = displayProfile ?? fallback;
-  const benchMax =
-    (displayProfile as { bench_press_max?: number } | null)?.bench_press_max ??
-    fallback.bench_max;
-  const squatMax =
-    (displayProfile as { squat_max?: number } | null)?.squat_max ?? fallback.squat_max;
-  const deadliftMax =
-    (displayProfile as { deadlift_max?: number } | null)?.deadlift_max ??
-    fallback.deadlift_max;
-  const safeAchievements = Array.isArray((p as { achievements?: unknown }).achievements)
-    ? (p as { achievements: typeof fallback.achievements }).achievements
-    : fallback.achievements;
-  const safeCertifications = Array.isArray((p as { certifications?: unknown }).certifications)
-    ? (p as { certifications: string[] }).certifications
-    : fallback.certifications;
+  if (!displayProfile) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <div className="mx-auto max-w-lg rounded-xl border border-border/40 bg-card/50 px-6 py-12 text-center">
+          <p className="text-sm font-semibold text-muted-foreground">
+            プロフィールがありません
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground/80">
+            設定からプロフィールを登録してください
+          </p>
+          <a
+            href="/dashboard/settings"
+            className="mt-4 inline-block rounded-lg bg-gold px-5 py-2.5 text-sm font-bold text-[#050505] transition-colors hover:bg-gold-light"
+          >
+            設定へ
+          </a>
+        </div>
+      </main>
+    );
+  }
+
+  const p = displayProfile;
+  const benchMax = (p as { bench_press_max?: number }).bench_press_max ?? 0;
+  const squatMax = (p as { squat_max?: number }).squat_max ?? 0;
+  const deadliftMax = (p as { deadlift_max?: number }).deadlift_max ?? 0;
+  const rawAchievements = (p as { achievements?: { title: string; year: number; rank: string }[] }).achievements;
+  const safeAchievements = Array.isArray(rawAchievements) ? rawAchievements : [];
+  const rawCertifications = (p as { certifications?: string[] }).certifications;
+  const safeCertifications = Array.isArray(rawCertifications) ? rawCertifications : [];
 
   const isPrefecturePublic = (p as { is_prefecture_public?: boolean }).is_prefecture_public !== false;
   const isHomeGymPublic = (p as { is_home_gym_public?: boolean }).is_home_gym_public !== false;
   const isAgePublic = (p as { is_age_public?: boolean }).is_age_public !== false;
-  const prefecture = (p as { prefecture?: string | null }).prefecture ?? p.area;
-  const homeGym = (p as { home_gym?: string | null }).home_gym ?? p.gym;
+  const prefecture = (p as { prefecture?: string | null }).prefecture ?? (p as { area?: string | null }).area;
+  const homeGym = (p as { home_gym?: string | null }).home_gym ?? (p as { gym?: string | null }).gym;
   const birthday = (p as { birthday?: string | null }).birthday ?? null;
 
-  const displayArea = prefecture || p.area ? (isPrefecturePublic ? (prefecture || p.area) : "非公開") : null;
-  const displayGym = homeGym || p.gym ? (isHomeGymPublic ? (homeGym || p.gym) : "非公開") : null;
+  const displayArea =
+    prefecture || (p as { area?: string | null }).area
+      ? isPrefecturePublic
+        ? prefecture || (p as { area?: string | null }).area
+        : "非公開"
+      : null;
+  const displayGym =
+    homeGym || (p as { gym?: string | null }).gym
+      ? isHomeGymPublic
+        ? homeGym || (p as { gym?: string | null }).gym
+        : "非公開"
+      : null;
   const ageNum = calcAge(birthday);
   const ageDisplay = birthday ? (isAgePublic && ageNum !== null ? `${ageNum}歳` : "非公開") : null;
+
+  const name =
+    (p as { nickname?: string | null }).nickname ||
+    (p as { username?: string | null }).username ||
+    (p as { name?: string | null }).name ??
+    "名前未設定";
 
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-lg">
         <ProfileHeader
-          name={p.name ?? "名前未設定"}
-          bio={p.bio}
-          avatarUrl={p.avatar_url}
+          name={name}
+          bio={p.bio ?? null}
+          avatarUrl={p.avatar_url ?? null}
           headerUrl={(p as { header_url?: string | null }).header_url ?? null}
-          avatarUpdatedAt={(p as { updated_at?: string }).updated_at}
+          avatarUpdatedAt={(p as { updated_at?: string }).updated_at ?? null}
           area={displayArea}
           gym={displayGym}
           ageDisplay={ageDisplay}
-          goal={p.goal}
-          trainingYears={p.training_years ?? 0}
-          followersCount={p.followers_count ?? 0}
-          followingCount={p.following_count ?? 0}
-          collabCount={p.collab_count ?? 0}
+          goal={p.goal ?? null}
+          trainingYears={(p as { training_years?: number }).training_years ?? 0}
+          followersCount={(p as { followers_count?: number }).followers_count ?? 0}
+          followingCount={(p as { following_count?: number }).following_count ?? 0}
+          collabCount={(p as { collab_count?: number }).collab_count ?? 0}
           snsLinks={{
             instagram_id: (p as { instagram_id?: string | null }).instagram_id,
             youtube_url: (p as { youtube_url?: string | null }).youtube_url,
@@ -204,8 +210,8 @@ export default function ProfilePage() {
         <ProfileDetails
           achievements={safeArray(safeAchievements)}
           certifications={safeArray(safeCertifications)}
-          trainingYears={p.training_years ?? 0}
-          goal={p.goal}
+          trainingYears={(p as { training_years?: number }).training_years ?? 0}
+          goal={p.goal ?? null}
         />
 
         <div className="mx-5 h-px bg-border/40 sm:mx-8" />
