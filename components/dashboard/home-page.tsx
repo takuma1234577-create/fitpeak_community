@@ -20,6 +20,10 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { safeArray, safeList } from "@/lib/utils";
+import type { NewArrivalUser } from "@/lib/recommendations";
+import { useFollow } from "@/hooks/use-follow";
+import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
+import { useProfileModal } from "@/contexts/profile-modal-context";
 
 function SectionHeader({
   icon: Icon,
@@ -73,6 +77,123 @@ function formatRecruitDate(eventDate: string): string {
   const day = d.getDate();
   const time = d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false });
   return `${m}/${day} (${w}) ${time}`;
+}
+
+type RecommendedUserCardProps = {
+  user: NewArrivalUser;
+  myUserId: string | null;
+  onOpenProfile: (userId: string) => void;
+};
+
+function RecommendedUserCard({ user, myUserId, onOpenProfile }: RecommendedUserCardProps) {
+  const { isFollowing, toggle, loading } = useFollow(user.id, myUserId);
+  const name = user.nickname || user.username || "ユーザー";
+  const initial = name.charAt(0);
+  const showFollow = myUserId && myUserId !== user.id;
+
+  return (
+    <div className="flex w-[160px] shrink-0 flex-col items-center gap-2 rounded-xl border border-border/40 bg-card px-4 py-4 transition-all hover:border-gold/30 hover:bg-card/80">
+      <button
+        type="button"
+        onClick={() => onOpenProfile(user.id)}
+        className="flex w-full flex-col items-center gap-2"
+      >
+        <Avatar className="h-14 w-14 shrink-0 ring-2 ring-border/60">
+          <AvatarImage src={user.avatar_url ?? undefined} alt={name} />
+          <AvatarFallback className="bg-secondary text-sm font-bold">{initial}</AvatarFallback>
+        </Avatar>
+        <p className="w-full truncate text-center text-sm font-bold text-foreground">{name}</p>
+      </button>
+      {showFollow && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            toggle();
+          }}
+          disabled={loading}
+          className={`w-full rounded-lg border px-2 py-1.5 text-[11px] font-bold transition-all disabled:opacity-60 ${
+            isFollowing
+              ? "border-gold/50 bg-gold/10 text-gold"
+              : "border-border bg-secondary text-foreground hover:border-gold/30"
+          }`}
+        >
+          {isFollowing ? "フォロー中" : "フォローする"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function RecommendedUsersSection({
+  users,
+  myUserId,
+  onOpenProfile,
+}: {
+  users: NewArrivalUser[];
+  myUserId: string | null;
+  onOpenProfile: (userId: string) => void;
+}) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const safeUsers = safeArray(users);
+  const scroll = (dir: "left" | "right") => {
+    scrollRef.current?.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" });
+  };
+
+  return (
+    <section className="flex min-h-[120px] flex-col gap-4" aria-label="おすすめユーザー">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <Users className="h-5 w-5 text-gold" />
+          <h2 className="text-lg font-extrabold tracking-wide text-foreground">
+            おすすめユーザー
+          </h2>
+        </div>
+        {safeUsers.length > 0 && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => scroll("left")}
+              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
+              aria-label="前へスクロール"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scroll("right")}
+              className="hidden h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
+              aria-label="次へスクロール"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <Link
+              href="/dashboard/search"
+              className="ml-2 flex items-center gap-1 text-xs font-semibold text-foreground transition-colors hover:text-gold"
+            >
+              検索で仲間を探す
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        )}
+      </div>
+      {safeUsers.length === 0 ? (
+        <div className="flex min-h-[100px] items-center justify-center rounded-xl border border-border/40 bg-card/50 px-4 py-8">
+          <p className="text-center text-sm text-muted-foreground">まだおすすめユーザーはいません。検索で仲間を探してみましょう。</p>
+        </div>
+      ) : (
+        <div
+          ref={scrollRef}
+          className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {safeUsers.map((user) => (
+            <RecommendedUserCard key={user.id} user={user} myUserId={myUserId} onOpenProfile={onOpenProfile} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function RecommendedRecruitmentsSection() {
@@ -418,9 +539,23 @@ function YourGroupsSection() {
   );
 }
 
-export default function HomePage() {
+type HomePageProps = {
+  recommendedUsers?: NewArrivalUser[];
+  myUserId?: string | null;
+};
+
+export default function HomePage({ recommendedUsers = [], myUserId = null }: HomePageProps) {
+  const { blockedIds } = useBlockedUserIds();
+  const { openProfileModal } = useProfileModal();
+  const filteredUsers = (recommendedUsers ?? []).filter((u) => !blockedIds.has(u.id));
+
   return (
     <div className="flex flex-col gap-8">
+      <RecommendedUsersSection
+        users={filteredUsers}
+        myUserId={myUserId}
+        onOpenProfile={openProfileModal}
+      />
       <RecommendedRecruitmentsSection />
       <MyScheduleSection />
       <YourGroupsSection />

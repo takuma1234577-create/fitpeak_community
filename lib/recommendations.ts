@@ -232,39 +232,47 @@ export async function getRecommendedUsers(
 }
 
 /**
- * 新規ユーザー: created_at の新しい順に 5〜10 名取得（自分を除く）
+ * おすすめユーザー: created_at の新しい順（新規登録順）で取得。
+ * myId が渡されていれば自分を除く。過去登録者も含め全員が対象。
+ * 1) メール確認済み＆ニックネームありを優先して新規登録順で取得。
+ * 2) 0人のときは条件を外し、全プロフィールを新規登録順で取得。
  */
 export async function getNewArrivalUsers(
   supabase: SupabaseClient,
-  myId: string,
+  myId: string | null,
   limit = 7
 ): Promise<NewArrivalUser[]> {
   try {
     const sb = supabase as any;
     const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, created_at";
-    const { data, error } = await sb
-      .from("profiles")
-      .select(fields)
-      .neq("id", myId)
-      .eq("email_confirmed", true)
-      .not("nickname", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(Math.min(limit, 10));
+    const maxLimit = Math.min(limit, 10);
+
+    const baseQuery = () =>
+      sb.from("profiles").select(fields).order("created_at", { ascending: false }).limit(maxLimit);
+
+    let query = baseQuery();
+    if (myId) query = query.neq("id", myId);
+    const { data, error } = await query.eq("email_confirmed", true).not("nickname", "is", null);
+
     if (!error && data?.length) {
       return safeList(data as Record<string, unknown>[]).map((row) => ({
         ...toRecommendedUser(row),
         created_at: (row.created_at as string) ?? "",
       })) as NewArrivalUser[];
     }
-    const { data: randomRows } = await sb.rpc("get_random_profiles", {
-      p_exclude_ids: [myId],
-      p_limit: Math.min(limit, 10),
-    });
-    const list = safeList(randomRows as Record<string, unknown>[] | null);
-    return list.map((row) => ({
-      ...toRecommendedUser(row),
-      created_at: (row.created_at as string) ?? "",
-    })) as NewArrivalUser[];
+
+    let fallbackQuery = baseQuery();
+    if (myId) fallbackQuery = fallbackQuery.neq("id", myId);
+    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+
+    if (!fallbackError && fallbackData?.length) {
+      return safeList(fallbackData as Record<string, unknown>[]).map((row) => ({
+        ...toRecommendedUser(row),
+        created_at: (row.created_at as string) ?? "",
+      })) as NewArrivalUser[];
+    }
+
+    return [];
   } catch (e) {
     console.error("getNewArrivalUsers error:", e);
     return [];
