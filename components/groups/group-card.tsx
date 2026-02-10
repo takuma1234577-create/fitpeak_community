@@ -12,6 +12,8 @@ export interface Group {
   memberCount: number;
   image: string;
   isJoined?: boolean;
+  /** グループチャットの会話ID（参加中ならチャットへ遷移するときに使用） */
+  chatRoomId?: string | null;
 }
 
 const categoryStyles: Record<string, string> = {
@@ -30,10 +32,15 @@ const categoryStyles: Record<string, string> = {
 };
 
 export default function GroupCard({ group }: { group: Group }) {
+  const groupHref =
+    group.isJoined && group.chatRoomId
+      ? `/dashboard/messages/${group.chatRoomId}`
+      : `/dashboard/groups/${group.id}`;
+
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/[0.04]">
       <Link
-        href={`/dashboard/groups/${group.id}`}
+        href={groupHref}
         className="relative block aspect-[16/9] overflow-hidden"
       >
         <Image
@@ -57,7 +64,7 @@ export default function GroupCard({ group }: { group: Group }) {
       </Link>
 
       <div className="flex flex-1 flex-col gap-3 p-5">
-        <Link href={`/dashboard/groups/${group.id}`}>
+        <Link href={groupHref}>
           <h3 className="line-clamp-2 text-balance text-sm font-bold leading-snug text-foreground transition-colors group-hover:text-gold">
             {group.name}
           </h3>

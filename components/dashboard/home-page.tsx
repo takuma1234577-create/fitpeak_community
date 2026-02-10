@@ -316,7 +316,7 @@ function NewArrivalUsersSection({
 }
 
 function YourGroupsSection() {
-  const [groups, setGroups] = useState<{ id: string; name: string; unread: number }[]>([]);
+  const [groups, setGroups] = useState<{ id: string; name: string; unread: number; chat_room_id: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -343,15 +343,22 @@ function YourGroupsSection() {
       const ids = membersList.map((m) => m.group_id);
       const { data: groupList, error } = await supabase
         .from("groups")
-        .select("id, name")
+        .select("id, name, chat_room_id")
         .in("id", ids);
-      const groupListTyped = safeList(groupList as { id: string; name: string }[] | null);
+      const groupListTyped = safeList(groupList as { id: string; name: string; chat_room_id: string | null }[] | null);
       if (!cancelled) {
         if (error) {
           console.error("groups fetch:", error);
           setGroups([]);
         } else {
-          setGroups(groupListTyped.map((g) => ({ id: g.id, name: g.name, unread: 0 })));
+          setGroups(
+            groupListTyped.map((g) => ({
+              id: g.id,
+              name: g.name,
+              unread: 0,
+              chat_room_id: g.chat_room_id ?? null,
+            }))
+          );
         }
         setLoading(false);
       }
@@ -398,7 +405,7 @@ function YourGroupsSection() {
             {safeArray(groups).map((group) => (
               <Link
                 key={group.id}
-                href={`/dashboard/groups/${group.id}`}
+                href={group.chat_room_id ? `/dashboard/messages/${group.chat_room_id}` : `/dashboard/groups/${group.id}`}
                 className="flex items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-3.5 transition-all duration-200 hover:border-gold/30 hover:bg-card/80"
               >
                 <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-border/60 bg-secondary">

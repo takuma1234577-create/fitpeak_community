@@ -21,6 +21,8 @@ interface GroupChatTabProps {
   groupName: string;
   myUserId: string;
   onEnsureParticipant?: () => Promise<void>;
+  /** true のときメッセージ画面でフル表示（高さを親に合わせる） */
+  fullHeight?: boolean;
 }
 
 export default function GroupChatTab({
@@ -28,6 +30,7 @@ export default function GroupChatTab({
   groupName,
   myUserId,
   onEnsureParticipant,
+  fullHeight = false,
 }: GroupChatTabProps) {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,15 +144,27 @@ export default function GroupChatTab({
   }
 
   return (
-    <div className="flex flex-col rounded-xl border border-border/40 bg-[#070707] min-h-[400px] max-h-[60vh]">
-      <div className="flex items-center gap-3 border-b border-border/40 px-4 py-3">
-        <MessageCircle className="h-5 w-5 text-gold" />
-        <span className="text-sm font-bold text-foreground">{groupName} チャット</span>
-      </div>
+    <div
+      className={cn(
+        "flex flex-col bg-[#070707]",
+        fullHeight
+          ? "min-h-0 flex-1 rounded-none border-0"
+          : "min-h-[400px] max-h-[60vh] rounded-xl border border-border/40"
+      )}
+    >
+      {!fullHeight && (
+        <div className="flex items-center gap-3 border-b border-border/40 px-4 py-3">
+          <MessageCircle className="h-5 w-5 text-gold" />
+          <span className="text-sm font-bold text-foreground">{groupName} チャット</span>
+        </div>
+      )}
 
       <div
         ref={scrollRef}
-        className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-4 min-h-[240px]"
+        className={cn(
+          "flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-4",
+          fullHeight ? "min-h-0" : "min-h-[240px]"
+        )}
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground/50">

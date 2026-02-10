@@ -299,6 +299,8 @@ export default function NewRecruitPage() {
                     }
                   }}
                   disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                  startMonth={new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
+                  endMonth={new Date(new Date().getFullYear() + 2, 11, 31)}
                 />
               </PopoverContent>
             </Popover>

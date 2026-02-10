@@ -98,9 +98,47 @@ export default function MessagesPage() {
       }
     }
 
+    const { data: groupsWithChat } = await supabase
+      .from("groups")
+      .select("id, name, chat_room_id")
+      .in("chat_room_id", convIds);
+    const groupByConv = new Map<string, { name: string; groupId: string }>();
+    const groupIds: string[] = [];
+    for (const g of safeList(groupsWithChat as { id: string; name: string; chat_room_id: string }[] | null)) {
+      if (g.chat_room_id) {
+        groupByConv.set(g.chat_room_id, { name: g.name, groupId: g.id });
+        groupIds.push(g.id);
+      }
+    }
+    const memberCountByGroup: Record<string, number> = {};
+    if (groupIds.length > 0) {
+      const { data: gMembers } = await supabase
+        .from("group_members")
+        .select("group_id")
+        .in("group_id", groupIds);
+      for (const m of safeList(gMembers as { group_id: string }[] | null)) {
+        memberCountByGroup[m.group_id] = (memberCountByGroup[m.group_id] ?? 0) + 1;
+      }
+    }
+
     const list: Conversation[] = convIds.map((cid) => {
       const last = lastByConv.get(cid);
+      const group = groupByConv.get(cid);
       const other = otherByConv.get(cid);
+      if (group) {
+        const count = memberCountByGroup[group.groupId] ?? 0;
+        return {
+          id: cid,
+          name: group.name,
+          avatar: "/placeholder.svg",
+          lastMessage: last?.content ?? "",
+          time: last ? formatMessageTime(last.created_at) : "",
+          unread: 0,
+          online: false,
+          isGroupChat: true,
+          participantCount: count,
+        };
+      }
       return {
         id: cid,
         otherUserId: other?.id,

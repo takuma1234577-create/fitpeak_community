@@ -3,16 +3,28 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
+import { ja } from "react-day-picker/locale";
 import { cn } from "@/lib/utils";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
-const navButtonClass = "absolute left-1 right-1 h-7 w-7 rounded-md border border-border bg-transparent p-0 opacity-70 hover:opacity-100 inline-flex items-center justify-center";
+const navBtnBase = "absolute h-7 w-7 rounded-md border border-border bg-transparent p-0 opacity-70 hover:opacity-100 inline-flex items-center justify-center";
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function Calendar({
+  className,
+  classNames,
+  showOutsideDays = true,
+  locale = ja,
+  captionLayout = "dropdown",
+  navLayout = "around",
+  ...props
+}: CalendarProps) {
   return (
     <DayPicker
+      locale={locale}
       showOutsideDays={showOutsideDays}
+      captionLayout={captionLayout}
+      navLayout={navLayout}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row gap-2",
@@ -20,8 +32,11 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         month_caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
         nav: "flex items-center gap-1",
-        button_previous: cn(navButtonClass, "left-1"),
-        button_next: cn(navButtonClass, "right-1"),
+        button_previous: cn(navBtnBase, "left-1"),
+        button_next: cn(navBtnBase, "right-1"),
+        dropdowns: "flex items-center gap-1",
+        dropdown_root: "relative",
+        dropdown: "rounded-md border border-border bg-secondary/80 px-2 py-1 text-sm font-medium text-foreground focus:border-gold/50 focus:outline-none focus:ring-1 focus:ring-gold/20",
         month_grid: "w-full border-collapse space-y-1",
         weekdays: "flex",
         weekday:

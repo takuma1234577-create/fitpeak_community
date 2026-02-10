@@ -14,6 +14,10 @@ export interface Conversation {
   time: string;
   unread: number;
   online: boolean;
+  /** グループチャットの場合 true */
+  isGroupChat?: boolean;
+  /** グループチャットの参加人数（表示用） */
+  participantCount?: number;
 }
 
 interface ConversationListProps {
@@ -94,17 +98,31 @@ export default function ConversationList({
             </div>
 
             <div className="flex flex-1 flex-col gap-0.5 overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span
-                  className={cn(
-                    "truncate text-sm",
-                    conv.unread > 0
-                      ? "font-extrabold text-foreground"
-                      : "font-semibold text-foreground/80"
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "truncate text-sm",
+                      conv.unread > 0
+                        ? "font-extrabold text-foreground"
+                        : "font-semibold text-foreground/80"
+                    )}
+                  >
+                    {conv.name}
+                  </span>
+                  {conv.isGroupChat && (
+                    <>
+                      <span className="shrink-0 rounded bg-gold/15 px-1.5 py-0.5 text-[10px] font-bold text-gold">
+                        グループ
+                      </span>
+                      {conv.participantCount != null && (
+                        <span className="shrink-0 text-[11px] font-medium text-muted-foreground/80">
+                          （{conv.participantCount}）
+                        </span>
+                      )}
+                    </>
                   )}
-                >
-                  {conv.name}
-                </span>
+                </div>
                 <span
                   className={cn(
                     "shrink-0 text-[11px]",
