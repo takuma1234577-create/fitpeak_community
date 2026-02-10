@@ -14,6 +14,7 @@ import { createClient } from "@/utils/supabase/client";
 import { followUser, unfollowUser } from "@/actions/follow";
 import { Loader2 } from "lucide-react";
 import { cn, safeArray } from "@/lib/utils";
+import { ensureArray } from "@/lib/data-sanitizer";
 
 export type FollowTab = "followers" | "following";
 
@@ -41,20 +42,20 @@ async function fetchFollowers(profileUserId: string, myUserId: string | null): P
     .from("follows")
     .select("follower_id")
     .eq("following_id", profileUserId);
-  const ids = safeArray<{ follower_id: string }>(rows).map((r) => r.follower_id);
+  const ids = ensureArray(rows).map((r: { follower_id: string }) => r.follower_id);
   if (ids.length === 0) return [];
   const { data: profiles } = await (supabase as any)
     .from("profiles")
     .select("id, nickname, username, avatar_url, bio")
     .in("id", ids);
-  const list = safeArray(profiles) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
+  const list = ensureArray(profiles) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
   if (!myUserId) return safeArray(list).map((p) => ({ ...p, isFollowing: false }));
   const { data: myFollows } = await (supabase as any)
     .from("follows")
     .select("following_id")
     .eq("follower_id", myUserId)
     .in("following_id", ids);
-  const followingSet = new Set(safeArray<{ following_id: string }>(myFollows).map((r) => r.following_id));
+  const followingSet = new Set(ensureArray(myFollows).map((r: { following_id: string }) => r.following_id));
   return safeArray(list).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
 }
 
@@ -64,20 +65,20 @@ async function fetchFollowing(profileUserId: string, myUserId: string | null): P
     .from("follows")
     .select("following_id")
     .eq("follower_id", profileUserId);
-  const ids = safeArray<{ following_id: string }>(rows).map((r) => r.following_id);
+  const ids = ensureArray(rows).map((r: { following_id: string }) => r.following_id);
   if (ids.length === 0) return [];
   const { data: profiles } = await (supabase as any)
     .from("profiles")
     .select("id, nickname, username, avatar_url, bio")
     .in("id", ids);
-  const list = safeArray(profiles) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
+  const list = ensureArray(profiles) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
   if (!myUserId) return safeArray(list).map((p) => ({ ...p, isFollowing: false }));
   const { data: myFollows } = await (supabase as any)
     .from("follows")
     .select("following_id")
     .eq("follower_id", myUserId)
     .in("following_id", ids);
-  const followingSet = new Set(safeArray<{ following_id: string }>(myFollows).map((r) => r.following_id));
+  const followingSet = new Set(ensureArray(myFollows).map((r: { following_id: string }) => r.following_id));
   return safeArray(list).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
 }
 

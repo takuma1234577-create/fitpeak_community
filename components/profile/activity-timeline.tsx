@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Clock, Dumbbell, Users, TrendingUp } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { safeArray } from "@/lib/utils";
+import { ensureArray } from "@/lib/data-sanitizer";
 
 type ActivityItem =
   | { type: "recruitment"; id: string; title: string; description: string | null; date: string; createdAt: string }
@@ -44,10 +45,8 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
           .order("joined_at", { ascending: false })
           .limit(20),
       ]).catch(() => [null, null]);
-      const recData = recResp?.data != null && Array.isArray(recResp.data) ? recResp.data : [];
-      const gmData = gmResp?.data != null && Array.isArray(gmResp.data) ? gmResp.data : [];
-      const recruitments = recData as { id: string; title: string; description: string | null; event_date: string; created_at: string }[];
-      const members = gmData as { group_id: string; joined_at: string; groups: { id: string; name: string } | null }[];
+      const recruitments = ensureArray(recResp?.data) as { id: string; title: string; description: string | null; event_date: string; created_at: string }[];
+      const members = ensureArray(gmResp?.data) as { group_id: string; joined_at: string; groups: { id: string; name: string } | null }[];
       const recItems: ActivityItem[] = safeArray(recruitments).map((r) => ({
       type: "recruitment",
       id: r.id,

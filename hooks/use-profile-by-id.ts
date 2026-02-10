@@ -4,14 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile, Achievement } from "@/types/profile";
 import { safeArray, normalizeProfile } from "@/lib/utils";
+import { ensureArray } from "@/lib/data-sanitizer";
 
 /** 取得した生データを正規化し、全ての配列プロパティを安全な配列に変換する（データ変換レイヤー） */
 function sanitizeProfile(raw: Record<string, unknown> & { bench_press_max?: number }): Profile {
   const normalized = normalizeProfile(raw) ?? raw;
   const toStrArr = (v: unknown): string[] =>
-    safeArray(v as string[] | null).map((x) => String(x));
+    ensureArray(v).map((x) => String(x));
   const toAchievements = (v: unknown): Achievement[] =>
-    safeArray(v as unknown[]).map((a) => {
+    ensureArray(v).map((a) => {
       const o = (a && typeof a === "object" ? a : {}) as Record<string, unknown>;
       return {
         title: String(o.title ?? ""),

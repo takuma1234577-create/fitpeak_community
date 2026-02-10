@@ -31,17 +31,17 @@ export function normalizeProfile(raw: Record<string, unknown> | null | undefined
   if (raw == null || typeof raw !== "object") return null;
   return {
     ...raw,
-    exercises: safeList(raw.exercises as string[] | null).map((x) => String(x)),
-    achievements: safeList(raw.achievements as unknown[]).map((a) =>
+    exercises: ensureArray(raw.exercises).map((x) => String(x)),
+    achievements: ensureArray(raw.achievements).map((a) =>
       typeof a === "object" && a != null ? a : {}
     ),
-    certifications: safeList(raw.certifications as string[] | null).map((x) => String(x)),
-    recruitments: safeList(raw.recruitments as unknown[]).map((r) => normalizeRecruitment(r as Record<string, unknown>)),
-    tags: safeList(raw.tags as unknown[]),
-    interests: safeList(raw.interests as unknown[]),
-    followers: safeList(raw.followers as unknown[]),
-    following: safeList(raw.following as unknown[]),
-    groups: safeList(raw.groups as unknown[]),
+    certifications: ensureArray(raw.certifications).map((x) => String(x)),
+    recruitments: ensureArray(raw.recruitments).map((r) => normalizeRecruitment(r as Record<string, unknown>)),
+    tags: ensureArray(raw.tags),
+    interests: ensureArray(raw.interests),
+    followers: ensureArray(raw.followers),
+    following: ensureArray(raw.following),
+    groups: ensureArray(raw.groups),
   };
 }
 
@@ -62,9 +62,9 @@ export function normalizeRecruitment(
   return {
     ...raw,
     tags,
-    images: safeList(raw.images as unknown[]),
-    participants: safeList(raw.participants as unknown[]),
-    areas: safeList(raw.areas as unknown[]),
+    images: ensureArray(raw.images),
+    participants: ensureArray(raw.participants),
+    areas: ensureArray(raw.areas),
     profiles: raw.profiles != null && typeof raw.profiles === "object" ? raw.profiles : null,
   };
 }
