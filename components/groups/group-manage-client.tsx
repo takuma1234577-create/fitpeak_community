@@ -37,7 +37,15 @@ export default function GroupManageClient({ groupId }: { groupId: string }) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [headerUploading, setHeaderUploading] = useState(false);
   const [headerError, setHeaderError] = useState<string | null>(null);
+  const [headerPreviewFile, setHeaderPreviewFile] = useState<File | null>(null);
+  const [headerPreviewUrl, setHeaderPreviewUrl] = useState<string | null>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (headerPreviewUrl) URL.revokeObjectURL(headerPreviewUrl);
+    };
+  }, [headerPreviewUrl]);
 
   const loadGroup = useCallback(async () => {
     const supabase = createClient();
@@ -169,7 +177,15 @@ export default function GroupManageClient({ groupId }: { groupId: string }) {
         </h2>
         <div className="rounded-xl border border-border bg-secondary overflow-hidden">
           <div className="relative aspect-[3/1] w-full max-h-40">
-            {group.header_url ? (
+            {headerPreviewUrl ? (
+              <Image
+                src={headerPreviewUrl}
+                alt=""
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            ) : group.header_url ? (
               <Image
                 src={group.header_url}
                 alt=""
@@ -189,38 +205,57 @@ export default function GroupManageClient({ groupId }: { groupId: string }) {
           type="file"
           accept="image/jpeg,image/png,image/webp"
           className="hidden"
-          onChange={async (e) => {
+          onChange={(e) => {
             const file = e.target.files?.[0];
-            if (!file || !group) return;
+            if (!file) return;
             e.target.value = "";
             setHeaderError(null);
-            setHeaderUploading(true);
-            try {
-              const url = await uploadGroupHeader(group.created_by, group.id, file);
-              const supabase = createClient();
-              const { error: updateErr } = await (supabase as any)
-                .from("groups")
-                .update({ header_url: url })
-                .eq("id", group.id)
-                .eq("created_by", group.created_by);
-              if (updateErr) throw new Error(updateErr.message);
-              setGroup((prev) => (prev ? { ...prev, header_url: url } : null));
-            } catch (err) {
-              setHeaderError(err instanceof Error ? err.message : "アップロードに失敗しました");
-            } finally {
-              setHeaderUploading(false);
-            }
+            if (headerPreviewUrl) URL.revokeObjectURL(headerPreviewUrl);
+            setHeaderPreviewFile(file);
+            setHeaderPreviewUrl(URL.createObjectURL(file));
           }}
         />
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => headerInputRef.current?.click()}
             disabled={headerUploading}
-            className="rounded-lg border border-gold/40 bg-transparent px-4 py-2 text-sm font-bold text-gold transition-all hover:border-gold hover:bg-gold/10 disabled:opacity-50"
+            className="rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-bold text-foreground transition-all hover:border-gold/40 hover:bg-gold/10 disabled:opacity-50"
           >
-            {headerUploading ? "アップロード中..." : "ヘッダー画像を選択"}
+            ヘッダー画像を選択
           </button>
+          {headerPreviewFile && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!headerPreviewFile || !group) return;
+                setHeaderError(null);
+                setHeaderUploading(true);
+                try {
+                  const url = await uploadGroupHeader(group.created_by, group.id, headerPreviewFile);
+                  const supabase = createClient();
+                  const { error: updateErr } = await (supabase as any)
+                    .from("groups")
+                    .update({ header_url: url })
+                    .eq("id", group.id)
+                    .eq("created_by", group.created_by);
+                  if (updateErr) throw new Error(updateErr.message);
+                  setGroup((prev) => (prev ? { ...prev, header_url: url } : null));
+                  if (headerPreviewUrl) URL.revokeObjectURL(headerPreviewUrl);
+                  setHeaderPreviewFile(null);
+                  setHeaderPreviewUrl(null);
+                } catch (err) {
+                  setHeaderError(err instanceof Error ? err.message : "アップロードに失敗しました");
+                } finally {
+                  setHeaderUploading(false);
+                }
+              }}
+              disabled={headerUploading}
+              className="rounded-lg border border-gold/40 bg-gold px-4 py-2 text-sm font-bold text-[#050505] transition-all hover:bg-gold-light disabled:opacity-50"
+            >
+              {headerUploading ? "保存中..." : "保存する"}
+            </button>
+          )}
           <span className="text-xs text-muted-foreground">3MB以下。JPEG/PNG/WebP</span>
         </div>
         {headerError && (
