@@ -159,6 +159,7 @@ export interface Database {
           created_by: string;
           is_private: boolean;
           chat_room_id: string | null;
+          header_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -170,6 +171,7 @@ export interface Database {
           created_by: string;
           is_private?: boolean;
           chat_room_id?: string | null;
+          header_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -181,6 +183,7 @@ export interface Database {
           created_by?: string;
           is_private?: boolean;
           chat_room_id?: string | null;
+          header_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };

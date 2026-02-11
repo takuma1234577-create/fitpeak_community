@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS public.groups (
   created_by uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   is_private boolean DEFAULT false,
   chat_room_id uuid,
+  header_url text,
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL
 );

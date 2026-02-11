@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Users, ImagePlus, Loader2, Pencil, Crown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import CreateGroupDialog from "@/components/groups/create-group-dialog";
 import { createClient } from "@/utils/supabase/client";
 import { ensureArray } from "@/lib/data-sanitizer";
+import { uploadGroupHeader } from "@/lib/upload-group-header";
 
 type GroupData = {
   id: string;
@@ -16,6 +18,7 @@ type GroupData = {
   category: string | null;
   is_private: boolean;
   created_by: string;
+  header_url: string | null;
 };
 
 type MemberRow = {
@@ -32,6 +35,9 @@ export default function GroupManageClient({ groupId }: { groupId: string }) {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [headerUploading, setHeaderUploading] = useState(false);
+  const [headerError, setHeaderError] = useState<string | null>(null);
+  const headerInputRef = useRef<HTMLInputElement>(null);
 
   const loadGroup = useCallback(async () => {
     const supabase = createClient();
@@ -43,7 +49,7 @@ export default function GroupManageClient({ groupId }: { groupId: string }) {
 
     const { data: g, error } = await supabase
       .from("groups")
-      .select("id, name, description, category, is_private, created_by")
+      .select("id, name, description, category, is_private, created_by, header_url")
       .eq("id", groupId)
       .single();
 
@@ -161,9 +167,67 @@ export default function GroupManageClient({ groupId }: { groupId: string }) {
           <ImagePlus className="h-5 w-5 text-gold/80" />
           ヘッダー画像
         </h2>
-        <p className="text-sm text-muted-foreground">
-          ヘッダー画像の設定は準備中です。今後追加予定です。
-        </p>
+        <div className="rounded-xl border border-border bg-secondary overflow-hidden">
+          <div className="relative aspect-[3/1] w-full max-h-40">
+            {group.header_url ? (
+              <Image
+                src={group.header_url}
+                alt=""
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-r from-gold/20 via-secondary to-gold/20 flex items-center justify-center">
+                <ImagePlus className="h-12 w-12 text-muted-foreground/40" />
+              </div>
+            )}
+          </div>
+        </div>
+        <input
+          ref={headerInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file || !group) return;
+            e.target.value = "";
+            setHeaderError(null);
+            setHeaderUploading(true);
+            try {
+              const url = await uploadGroupHeader(group.created_by, group.id, file);
+              const supabase = createClient();
+              const { error: updateErr } = await (supabase as any)
+                .from("groups")
+                .update({ header_url: url })
+                .eq("id", group.id)
+                .eq("created_by", group.created_by);
+              if (updateErr) throw new Error(updateErr.message);
+              setGroup((prev) => (prev ? { ...prev, header_url: url } : null));
+            } catch (err) {
+              setHeaderError(err instanceof Error ? err.message : "アップロードに失敗しました");
+            } finally {
+              setHeaderUploading(false);
+            }
+          }}
+        />
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => headerInputRef.current?.click()}
+            disabled={headerUploading}
+            className="rounded-lg border border-gold/40 bg-transparent px-4 py-2 text-sm font-bold text-gold transition-all hover:border-gold hover:bg-gold/10 disabled:opacity-50"
+          >
+            {headerUploading ? "アップロード中..." : "ヘッダー画像を選択"}
+          </button>
+          <span className="text-xs text-muted-foreground">3MB以下。JPEG/PNG/WebP</span>
+        </div>
+        {headerError && (
+          <p className="mt-2 text-sm text-red-400" role="alert">
+            {headerError}
+          </p>
+        )}
       </section>
 
       <section className="rounded-xl border border-border/60 bg-card p-6">
