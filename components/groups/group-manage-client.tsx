@@ -256,14 +256,22 @@ export default function GroupManageClient({ groupId, embedded, onClose, onGroupU
               try {
                 const url = await uploadGroupHeader(group.created_by, group.id, headerPreviewFile);
                 const supabase = createClient();
+                // RLS で created_by が一致する行のみ更新可のため、id のみで絞る
                 const { data: updatedRows, error: updateErr } = await (supabase as any)
                   .from("groups")
                   .update({ header_url: url })
                   .eq("id", group.id)
-                  .eq("created_by", group.created_by)
                   .select("id");
-                if (updateErr || !Array.isArray(updatedRows) || updatedRows.length === 0) {
-                  throw new Error(updateErr?.message ?? "更新に失敗しました");
+                if (updateErr) {
+                  console.error("[Group header update error]", updateErr);
+                  const msg = updateErr.details || updateErr.message || "更新に失敗しました";
+                  throw new Error(msg);
+                }
+                const updated = Array.isArray(updatedRows) ? updatedRows.length : 0;
+                if (updated === 0) {
+                  throw new Error(
+                    "更新できませんでした。Supabase で「006_groups_header_url.sql」を実行済みか、このグループの作成者でログインしているか確認してください。"
+                  );
                 }
                 setGroup((prev) => (prev ? { ...prev, header_url: url } : null));
                 setHeaderImageKey((k) => k + 1);
@@ -272,6 +280,7 @@ export default function GroupManageClient({ groupId, embedded, onClose, onGroupU
                 setHeaderPreviewUrl(null);
                 onGroupUpdated?.();
               } catch (err) {
+                console.error("[Group header save]", err);
                 setHeaderError(err instanceof Error ? err.message : "アップロードに失敗しました");
               } finally {
                 setHeaderUploading(false);
