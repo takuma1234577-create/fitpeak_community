@@ -153,15 +153,3 @@ export const PREFECTURES_MAP: PrefectureData[] = [
 export function getPrefecturesByRegion(region: RegionKey): string[] {
   return PREFECTURES_MAP.filter((p) => p.region === region).map((p) => p.name);
 }
-
-/** 地方ごとの色（ベースカラー） */
-export const REGION_COLORS: Record<RegionKey, { fill: string; hover: string }> = {
-  hokkaido: { fill: "#F0E6C8", hover: "#E5D4A1" },
-  tohoku: { fill: "#E8DFC0", hover: "#DDD0A0" },
-  kanto: { fill: "#F5E8C0", hover: "#EDDA9E" },
-  chubu: { fill: "#EDE3C5", hover: "#E2D4A5" },
-  kinki: { fill: "#F2E4B8", hover: "#E8D698" },
-  chugoku: { fill: "#ECE0C0", hover: "#E0D1A0" },
-  shikoku: { fill: "#F0DEBB", hover: "#E5CF9A" },
-  kyushu: { fill: "#EDDCB5", hover: "#E2CC95" },
-};
