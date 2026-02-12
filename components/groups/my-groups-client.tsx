@@ -56,14 +56,14 @@ export default function MyGroupsClient() {
       .from("group_members")
       .select("group_id")
       .eq("user_id", user.id);
-    const memberArr = ensureArray(memberRows) as { group_id: string }[];
+    const memberArr = ensureArray(memberRows) as unknown as { group_id: string }[];
     const joinedIds = memberArr.map((r) => r.group_id);
 
     const { data: managedRows } = await supabase
       .from("groups")
       .select("id, name, description, category, chat_room_id, created_by, header_url")
       .eq("created_by", user.id);
-    const managedList = ensureArray(managedRows) as Row[];
+    const managedList = ensureArray(managedRows) as unknown as Row[];
 
     const { data: joinedRows } =
       joinedIds.length > 0
@@ -72,7 +72,7 @@ export default function MyGroupsClient() {
             .select("id, name, description, category, chat_room_id, created_by, header_url")
             .in("id", joinedIds)
         : { data: [] };
-    const joinedList = ensureArray(joinedRows) as Row[];
+    const joinedList = ensureArray(joinedRows) as unknown as Row[];
 
     const allIds = [...new Set([...joinedList.map((g) => g.id), ...managedList.map((g) => g.id)])];
     const countByGroup: Record<string, number> = {};
@@ -81,7 +81,7 @@ export default function MyGroupsClient() {
         .from("group_members")
         .select("group_id")
         .in("group_id", allIds);
-      const countsArr = ensureArray(counts) as { group_id: string }[];
+        const countsArr = ensureArray(counts) as unknown as { group_id: string }[];
       for (const c of countsArr) {
         const gid = c.group_id;
         countByGroup[gid] = (countByGroup[gid] ?? 0) + 1;

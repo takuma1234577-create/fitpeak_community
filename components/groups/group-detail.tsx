@@ -88,7 +88,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
       .from("group_members")
       .select("user_id")
       .eq("group_id", groupId);
-    const memberList = ensureArray(memberRows) as { user_id: string }[];
+    const memberList = ensureArray(memberRows) as unknown as { user_id: string }[];
     const userIds = memberList.map((r) => r.user_id);
     if (userIds.length > 0) {
       const { data: profs } = await supabase
@@ -96,7 +96,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
         .select("id, nickname, username, avatar_url")
         .in("id", userIds);
       const creatorId = (g as GroupData).created_by;
-      const profList = ensureArray(profs) as Record<string, unknown>[];
+      const profList = ensureArray(profs) as unknown as Record<string, unknown>[];
       setMembers(
         profList.map((p) => {
           const id = (p as { id: string }).id;

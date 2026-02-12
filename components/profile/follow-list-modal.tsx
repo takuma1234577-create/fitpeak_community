@@ -88,7 +88,7 @@ async function fetchFollowers(profileUserId: string, myUserId: string | null): P
     .from("profiles")
     .select("id, nickname, username, avatar_url, bio")
     .in("id", ids);
-  const list = ensureArray(profiles) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
+  const list = ensureArray(profiles) as unknown as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
   if (!myUserId) return safeArray(list).map((p) => ({ ...p, isFollowing: false }));
   const { data: myFollows } = await (supabase as any)
     .from("follows")
@@ -111,7 +111,7 @@ async function fetchFollowing(profileUserId: string, myUserId: string | null): P
     .from("profiles")
     .select("id, nickname, username, avatar_url, bio")
     .in("id", ids);
-  const list = ensureArray(profiles) as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
+  const list = ensureArray(profiles) as unknown as { id: string; nickname: string | null; username: string | null; avatar_url: string | null; bio: string | null }[];
   if (!myUserId) return safeArray(list).map((p) => ({ ...p, isFollowing: false }));
   const { data: myFollows } = await (supabase as any)
     .from("follows")

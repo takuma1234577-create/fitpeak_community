@@ -454,7 +454,7 @@ function YourGroupsSection() {
         .from("groups")
         .select("id, name, chat_room_id")
         .in("id", ids);
-      const groupListArr = ensureArray(groupList) as { id: string; name: string; chat_room_id: string | null }[];
+      const groupListArr = ensureArray(groupList) as unknown as { id: string; name: string; chat_room_id: string | null }[];
       if (!cancelled) {
         if (error) {
           console.error("groups fetch:", error);

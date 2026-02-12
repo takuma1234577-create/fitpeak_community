@@ -45,8 +45,8 @@ export default function ActivityTimeline({ profileId }: { profileId?: string }) 
           .order("joined_at", { ascending: false })
           .limit(20),
       ]).catch(() => [null, null]);
-      const recruitments = ensureArray(recResp?.data) as { id: string; title: string; description: string | null; event_date: string; created_at: string }[];
-      const members = ensureArray(gmResp?.data) as { group_id: string; joined_at: string; groups: { id: string; name: string } | null }[];
+      const recruitments = ensureArray(recResp?.data) as unknown as { id: string; title: string; description: string | null; event_date: string; created_at: string }[];
+      const members = ensureArray(gmResp?.data) as unknown as { group_id: string; joined_at: string; groups: { id: string; name: string } | null }[];
       const recItems: ActivityItem[] = safeArray(recruitments).map((r) => ({
       type: "recruitment",
       id: r.id,

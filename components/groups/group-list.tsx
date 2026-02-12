@@ -27,7 +27,7 @@ export default function GroupList() {
       setLoading(false);
       return;
     }
-    const listArr = ensureArray(list) as { id: string; name: string; description: string | null; category: string | null; chat_room_id: string | null; header_url?: string | null }[];
+    const listArr = ensureArray(list) as unknown as { id: string; name: string; description: string | null; category: string | null; chat_room_id: string | null; header_url?: string | null }[];
     const ids = listArr.map((g) => g.id);
     if (ids.length === 0) {
       setGroups([]);
@@ -38,7 +38,7 @@ export default function GroupList() {
       .from("group_members")
       .select("group_id, user_id")
       .in("group_id", ids);
-    const membersArr = ensureArray(members) as { group_id: string; user_id: string }[];
+    const membersArr = ensureArray(members) as unknown as { group_id: string; user_id: string }[];
     const countByGroup: Record<string, number> = {};
     const myJoined = new Set<string>();
     for (const m of membersArr) {

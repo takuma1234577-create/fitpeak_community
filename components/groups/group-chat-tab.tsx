@@ -51,7 +51,7 @@ export default function GroupChatTab({
       setLoading(false);
       return;
     }
-    const rawList = ensureArray(msgData) as { id: string; sender_id: string; content: string; created_at: string }[];
+    const rawList = ensureArray(msgData) as unknown as { id: string; sender_id: string; content: string; created_at: string }[];
     const list = Array.isArray(rawList) ? rawList : [];
     const senderIds = [...new Set(list.map((m) => m.sender_id))];
     let nameMap: Record<string, { name: string; avatar: string | null }> = {};

@@ -56,10 +56,10 @@ export default function OtherProfileSections({ profileUserId }: { profileUserId:
           .eq("user_id", profileUserId),
       ]);
 
-      const openList = ensureArray(openRes?.data) as RecruitmentItem[];
+      const openList = ensureArray(openRes?.data) as unknown as RecruitmentItem[];
       setOpenRecruitments(openList);
 
-      const partRows = ensureArray(partRes?.data) as {
+      const partRows = ensureArray(partRes?.data) as unknown as {
         recruitment_id: string;
         recruitments: RecruitmentItem | null;
       }[];
@@ -69,7 +69,7 @@ export default function OtherProfileSections({ profileUserId }: { profileUserId:
       participating.sort((a, b) => a.event_date.localeCompare(b.event_date));
       setParticipatingRecruitments(participating.slice(0, 20));
 
-      const gmRows = ensureArray(gmRes?.data) as {
+      const gmRows = ensureArray(gmRes?.data) as unknown as {
         group_id: string;
         groups: { id: string; name: string; description: string | null; category: string | null } | null;
       }[];
@@ -82,7 +82,7 @@ export default function OtherProfileSections({ profileUserId }: { profileUserId:
           .select("group_id")
           .in("group_id", groupIds);
         const countByGroup: Record<string, number> = {};
-        for (const row of ensureArray(countData) as { group_id: string }[]) {
+        for (const row of ensureArray(countData) as unknown as { group_id: string }[]) {
           countByGroup[row.group_id] = (countByGroup[row.group_id] ?? 0) + 1;
         }
         const list = gmRows
