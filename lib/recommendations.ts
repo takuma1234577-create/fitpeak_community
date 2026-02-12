@@ -36,6 +36,10 @@ export type RecommendedUser = {
   prefecture: string | null;
   home_gym: string | null;
   exercises: string[] | null;
+  /** 年齢計算用。is_age_public が true のときのみ表示 */
+  birthday: string | null;
+  is_age_public: boolean;
+  gender: string | null;
 };
 
 /** 新規ユーザー（created_at で登録日表示用） */
@@ -143,6 +147,9 @@ function toRecommendedUser(row: Record<string, unknown>): RecommendedUser {
       const arr = safeList(r.exercises as string[] | null);
       return arr.length > 0 ? arr : null;
     })(),
+    birthday: (r.birthday as string | null) ?? null,
+    is_age_public: (r.is_age_public as boolean) ?? true,
+    gender: (r.gender as string | null) ?? null,
   };
 }
 
@@ -160,7 +167,7 @@ export async function getRecommendedUsers(
   try {
     const sb = supabase as any;
     const target = Math.min(limit, RECOMMENDED_USERS_TARGET);
-    const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises";
+    const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, birthday, is_age_public, gender";
 
     // Step 1: おすすめ（ジム・住まい・種目一致）で最大 target 名
     const promises: Promise<{ data: RecommendedUser[] | null }>[] = [];
@@ -244,7 +251,7 @@ export async function getNewArrivalUsers(
 ): Promise<NewArrivalUser[]> {
   try {
     const sb = supabase as any;
-    const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, created_at";
+    const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, birthday, is_age_public, gender, created_at";
     const maxLimit = Math.min(limit, 10);
 
     const baseQuery = () =>

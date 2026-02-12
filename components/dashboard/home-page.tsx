@@ -24,6 +24,7 @@ import type { NewArrivalUser } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { useProfileModal } from "@/contexts/profile-modal-context";
+import { toGenderLabel } from "@/lib/constants";
 
 function SectionHeader({
   icon: Icon,
@@ -79,6 +80,17 @@ function formatRecruitDate(eventDate: string): string {
   return `${m}/${day} (${w}) ${time}`;
 }
 
+function calcAge(birthday: string | null): number | null {
+  if (!birthday?.trim()) return null;
+  const d = new Date(birthday);
+  if (Number.isNaN(d.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - d.getFullYear();
+  const m = today.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+  return age;
+}
+
 type RecommendedUserCardProps = {
   user: NewArrivalUser;
   myUserId: string | null;
@@ -90,6 +102,9 @@ function RecommendedUserCard({ user, myUserId, onOpenProfile }: RecommendedUserC
   const name = user.nickname || user.username || "ユーザー";
   const initial = name.charAt(0);
   const showFollow = myUserId && myUserId !== user.id;
+  const age = user.is_age_public && user.birthday ? calcAge(user.birthday) : null;
+  const genderLabel = toGenderLabel(user.gender);
+  const hasSubInfo = user.prefecture || age !== null || genderLabel;
 
   return (
     <div className="flex w-[160px] shrink-0 flex-col items-center gap-2 rounded-xl border border-border/40 bg-card px-4 py-4 transition-all hover:border-gold/30 hover:bg-card/80">
@@ -103,6 +118,13 @@ function RecommendedUserCard({ user, myUserId, onOpenProfile }: RecommendedUserC
           <AvatarFallback className="bg-secondary text-sm font-bold">{initial}</AvatarFallback>
         </Avatar>
         <p className="w-full truncate text-center text-sm font-bold text-foreground">{name}</p>
+        {hasSubInfo && (
+          <div className="flex w-full flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+            {user.prefecture && <span className="truncate">{user.prefecture}</span>}
+            {age !== null && <span>{age}歳</span>}
+            {genderLabel && <span>{genderLabel}</span>}
+          </div>
+        )}
       </button>
       {showFollow && (
         <button

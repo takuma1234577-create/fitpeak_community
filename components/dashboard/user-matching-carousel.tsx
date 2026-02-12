@@ -19,6 +19,7 @@ import { createClient } from "@/utils/supabase/client";
 import { safeList } from "@/lib/utils";
 import { useFollow } from "@/hooks/use-follow";
 import { getOrCreateConversation } from "@/lib/conversations";
+import { toGenderLabel } from "@/lib/constants";
 
 type MatchUser = {
   id: string;
@@ -30,6 +31,9 @@ type MatchUser = {
   prefecture: string | null;
   home_gym: string | null;
   exercises: string[] | null;
+  birthday: string | null;
+  is_age_public: boolean;
+  gender: string | null;
 };
 
 function MatchCard({
@@ -49,6 +53,19 @@ function MatchCard({
   const initial = name.charAt(0);
   const showActions = myUserId && myUserId !== user.id;
   const tags = safeList(user.exercises as string[] | null).filter(Boolean).slice(0, 4);
+  const age =
+    user.is_age_public && user.birthday?.trim()
+      ? (() => {
+          const d = new Date(user.birthday);
+          if (Number.isNaN(d.getTime())) return null;
+          const today = new Date();
+          let a = today.getFullYear() - d.getFullYear();
+          const m = today.getMonth() - d.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < d.getDate())) a--;
+          return a;
+        })()
+      : null;
+  const genderLabel = toGenderLabel(user.gender);
 
   const handleMessage = useCallback(async () => {
     if (!myUserId || !user.id || myUserId === user.id) return;
@@ -105,14 +122,16 @@ function MatchCard({
           className="mt-2 flex flex-col items-center gap-1 text-center"
         >
           <h3 className="max-w-[220px] truncate text-sm font-bold text-foreground">{name}</h3>
-          {(user.prefecture || user.home_gym) && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          {(user.prefecture || age !== null || genderLabel || user.home_gym) && (
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
               {user.prefecture && (
                 <span className="flex items-center gap-0.5">
                   <MapPin className="h-3 w-3 text-gold/70" />
                   {user.prefecture}
                 </span>
               )}
+              {age !== null && <span>{age}歳</span>}
+              {genderLabel && <span>{genderLabel}</span>}
               {user.home_gym && (
                 <span className="flex items-center gap-0.5">
                   <Dumbbell className="h-3 w-3 text-gold/70" />
@@ -207,7 +226,7 @@ export default function UserMatchingCarousel({
       const supabase = createClient();
       const sb = supabase as any;
       const fields =
-        "id, nickname, username, bio, avatar_url, header_url, prefecture, home_gym, exercises";
+        "id, nickname, username, bio, avatar_url, header_url, prefecture, home_gym, exercises, birthday, is_age_public, gender";
       const blocked = blockedIds instanceof Set ? blockedIds : new Set<string>();
 
       let query = sb
