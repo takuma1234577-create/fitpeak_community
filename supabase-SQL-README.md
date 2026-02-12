@@ -115,4 +115,13 @@ SQL を流したあと、**Supabase の画面上でも次の設定を確認**す
 - **Project Settings** → **API** の Project URL と anon key は、`.env.local` の `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` と一致しているか確認。
 - RLS は SQL で有効化しているので、**Database** → **Tables** → 各テーブルで **RLS enabled** がオンになっていれば問題ありません。
 
+### 6. 「Could not find the 'xxx' column in the schema cache」が出る場合
+
+カラム追加などのマイグレーション後、PostgREST のスキーマキャッシュが古いとこのエラーになります。
+
+1. **カラムが未追加なら** 該当マイグレーションを実行（例: `recruitments.deadline_at` → `schema-migrations/007_recruitments_deadline_at.sql`）。
+2. **SQL Editor** で次を実行してキャッシュを更新:  
+   `NOTIFY pgrst, 'reload schema';`  
+   反映まで数秒かかることがあります。
+
 **まとめ:** SQL でスキーマとポリシーを揃えたうえで、**Realtime の対象テーブル** と **Storage のバケット・認証のリダイレクトURL** をダッシュボードで確認・変更すると、クラッシュや権限まわりが安定しやすくなります。

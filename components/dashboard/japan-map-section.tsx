@@ -13,8 +13,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { createClient } from "@/utils/supabase/client";
-import { safeList } from "@/lib/utils";
 import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { useProfileModal } from "@/contexts/profile-modal-context";
@@ -26,7 +24,6 @@ import {
   REGION_ORDER,
   PREFECTURE_REGION_MAP,
   getPrefecturesByRegion,
-  getPrefectureMatchValues,
   type RegionKey,
 } from "@/lib/japan-map-paths";
 
@@ -169,50 +166,20 @@ function PrefectureUsersPanel({
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const supabase = createClient();
-      const sb = supabase as any;
-      const fields =
-        "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, created_at";
-      const matchValues = getPrefectureMatchValues(prefecture);
-      const [byPrefecture, byArea] = await Promise.all([
-        sb
-          .from("profiles")
-          .select(fields)
-          .eq("email_confirmed", true)
-          .in("prefecture", matchValues)
-          .order("created_at", { ascending: false })
-          .limit(50),
-        sb
-          .from("profiles")
-          .select(fields)
-          .eq("email_confirmed", true)
-          .in("area", matchValues)
-          .order("created_at", { ascending: false })
-          .limit(50),
-      ]);
-
-      if (cancelled) return;
-      const seen = new Set<string>();
-      const merged: PrefectureUser[] = [];
-      for (const row of safeList((byPrefecture.data ?? []) as PrefectureUser[])) {
-        if (row?.id && !seen.has(row.id)) {
-          seen.add(row.id);
-          merged.push(row);
-        }
+      try {
+        const res = await fetch(
+          `/api/prefecture-users?prefecture=${encodeURIComponent(prefecture)}`
+        );
+        const body = await res.json().catch(() => ({ users: [] }));
+        const list = Array.isArray(body.users)
+          ? (body.users as PrefectureUser[]).filter((row): row is PrefectureUser => !!row?.id)
+          : [];
+        if (!cancelled) setUsers(list);
+      } catch {
+        if (!cancelled) setUsers([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      for (const row of safeList((byArea.data ?? []) as PrefectureUser[])) {
-        if (row?.id && !seen.has(row.id)) {
-          seen.add(row.id);
-          merged.push(row);
-        }
-      }
-      merged.sort((a, b) => {
-        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return tb - ta;
-      });
-      setUsers(merged.slice(0, 50));
-      setLoading(false);
     })();
     return () => {
       cancelled = true;

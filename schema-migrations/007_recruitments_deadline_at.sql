@@ -13,3 +13,6 @@ SET status = 'closed'
 WHERE status = 'open' AND deadline_at < now();
 
 COMMENT ON COLUMN public.recruitments.deadline_at IS '募集期限。この日時を過ぎると募集終了（closed）扱い';
+
+-- PostgREST のスキーマキャッシュを更新（deadline_at を即反映）
+NOTIFY pgrst, 'reload schema';
