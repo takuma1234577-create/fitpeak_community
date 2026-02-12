@@ -171,6 +171,22 @@ export default function OnboardingPage() {
       setSaveError("ニックネームを入力してください。");
       return;
     }
+    if (!avatarUrl) {
+      setSaveError("プロフィール画像を設定してください。");
+      return;
+    }
+    if (!bio.trim()) {
+      setSaveError("自己紹介文を入力してください。");
+      return;
+    }
+    if (!prefecture) {
+      setSaveError("住まい（都道府県）を選択してください。");
+      return;
+    }
+    if (exercises.length === 0) {
+      setSaveError("やってる種目を1つ以上選んでください。");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const supabase = createClient();
@@ -267,7 +283,9 @@ export default function OnboardingPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             {/* アバター */}
             <div className="flex flex-col gap-2.5">
-              <label className={labelClass}>プロフィール画像</label>
+              <label className={labelClass}>
+                プロフィール画像 <span className="text-red-400">*</span>
+              </label>
               <div className="flex items-center gap-5">
                 <button
                   type="button"
@@ -393,7 +411,11 @@ export default function OnboardingPage() {
               id="bio"
               placeholder="パワーリフティング中心。ベンチ100kg目標！今は週4でエニタイムに行ってます。"
               icon={FileText}
-              label={<label htmlFor="bio" className={labelClass}>自己紹介</label>}
+              label={
+                <label htmlFor="bio" className={labelClass}>
+                  自己紹介文 <span className="text-red-400">*</span>
+                </label>
+              }
               value={bio}
               onChange={setBio}
               as="textarea"
@@ -402,7 +424,7 @@ export default function OnboardingPage() {
             {/* 住まい（都道府県） + 非公開 */}
             <div className="flex flex-col gap-2.5">
               <label htmlFor="prefecture" className={labelClass}>
-                住まい（都道府県）
+                住まい（都道府県） <span className="text-red-400">*</span>
               </label>
               <div className="relative">
                 <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
@@ -468,7 +490,9 @@ export default function OnboardingPage() {
 
             {/* エクササイズ（複数選択） */}
             <div className="flex flex-col gap-2.5">
-              <span className={labelClass}>やってる種目（複数選択可）</span>
+              <span className={labelClass}>
+                やってる種目（1個以上選択） <span className="text-red-400">*</span>
+              </span>
               <div className="flex flex-wrap gap-2">
                 {EXERCISE_OPTIONS.map((opt) => (
                   <button

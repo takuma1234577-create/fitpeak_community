@@ -30,7 +30,10 @@ export default function EditRecruitPage() {
   const [level, setLevel] = useState("all");
   const [eventDate, setEventDate] = useState<string>("");
   const [eventTime, setEventTime] = useState("12:00");
+  const [deadlineDate, setDeadlineDate] = useState<string>("");
+  const [deadlineTime, setDeadlineTime] = useState("12:00");
   const [dateOpen, setDateOpen] = useState(false);
+  const [deadlineOpen, setDeadlineOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(!!id);
@@ -45,7 +48,7 @@ export default function EditRecruitPage() {
       if (!user || cancelled) return;
       const { data, error: fetchError } = await (supabase as any)
         .from("recruitments")
-        .select("id, user_id, title, description, target_body_part, event_date, location, status")
+        .select("id, user_id, title, description, target_body_part, event_date, deadline_at, location, status")
         .eq("id", id)
         .maybeSingle();
       // level は DB にカラムがある場合のみ。ここでは select に含めない
@@ -66,10 +69,17 @@ export default function EditRecruitPage() {
       setLevel("all");
       setDescription(data.description ?? "");
       const d = data.event_date ? new Date(data.event_date) : null;
+      const deadline = data.deadline_at ? new Date(data.deadline_at) : d;
       if (d) {
         setEventDate(d.toISOString().slice(0, 10));
         setEventTime(
           `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+        );
+      }
+      if (deadline) {
+        setDeadlineDate(deadline.toISOString().slice(0, 10));
+        setDeadlineTime(
+          `${String(deadline.getHours()).padStart(2, "0")}:${String(deadline.getMinutes()).padStart(2, "0")}`
         );
       }
     })().finally(() => {
@@ -87,7 +97,11 @@ export default function EditRecruitPage() {
       return;
     }
     if (!eventDate.trim()) {
-      setError("日付を選択してください");
+      setError("合トレ日時を選択してください");
+      return;
+    }
+    if (!deadlineDate.trim()) {
+      setError("募集期限を選択してください");
       return;
     }
     setSubmitting(true);
@@ -101,11 +115,13 @@ export default function EditRecruitPage() {
       }
       const dateTime = `${eventDate}T${eventTime}:00`;
       const eventDateTime = new Date(dateTime).toISOString();
+      const deadlineAt = `${deadlineDate}T${deadlineTime}:00`;
       const row: Record<string, unknown> = {
         title: title.trim(),
         description: description.trim() || null,
         target_body_part: bodyPart === "all" ? null : bodyPart,
         event_date: eventDateTime,
+        deadline_at: new Date(deadlineAt).toISOString(),
         location: area.trim() || null,
       };
       if (level !== "all") (row as Record<string, string>).level = level;
@@ -231,53 +247,108 @@ export default function EditRecruitPage() {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="mb-1.5 block text-sm font-bold text-foreground">日付</label>
-            <Popover open={dateOpen} onOpenChange={setDateOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20",
-                    !eventDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="h-4 w-4 shrink-0 text-gold/70" />
-                  {eventDate
-                    ? new Date(eventDate + "T12:00:00").toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })
-                    : "日付を選択"}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={eventDate ? new Date(eventDate + "T12:00:00") : undefined}
-                  onSelect={(d) => {
-                    if (d) {
-                      setEventDate(d.toISOString().slice(0, 10));
-                      setDateOpen(false);
-                    }
-                  }}
-                  disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
-                  startMonth={new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
-                  endMonth={new Date(new Date().getFullYear() + 2, 11, 31)}
-                />
-              </PopoverContent>
-            </Popover>
+        <div>
+          <span className="mb-1.5 block text-sm font-bold text-foreground">合トレ日時</span>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20",
+                      !eventDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="h-4 w-4 shrink-0 text-gold/70" />
+                    {eventDate
+                      ? new Date(eventDate + "T12:00:00").toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })
+                      : "日付を選択"}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={eventDate ? new Date(eventDate + "T12:00:00") : undefined}
+                    onSelect={(d) => {
+                      if (d) {
+                        setEventDate(d.toISOString().slice(0, 10));
+                        setDateOpen(false);
+                      }
+                    }}
+                    disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                    startMonth={new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
+                    endMonth={new Date(new Date().getFullYear() + 2, 11, 31)}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <label htmlFor="eventTime" className="sr-only">時間</label>
+              <select
+                id="eventTime"
+                value={eventTime}
+                onChange={(e) => setEventTime(e.target.value)}
+                className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
+              >
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label htmlFor="eventTime" className="mb-1.5 block text-sm font-bold text-foreground">時間</label>
-            <select
-              id="eventTime"
-              value={eventTime}
-              onChange={(e) => setEventTime(e.target.value)}
-              className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
-            >
-              {TIME_OPTIONS.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+        </div>
+
+        <div>
+          <span className="mb-1.5 block text-sm font-bold text-foreground">募集期限</span>
+          <p className="mb-2 text-xs text-muted-foreground">期限を過ぎると募集終了になります</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20",
+                      !deadlineDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="h-4 w-4 shrink-0 text-gold/70" />
+                    {deadlineDate
+                      ? new Date(deadlineDate + "T12:00:00").toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })
+                      : "日付を選択"}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={deadlineDate ? new Date(deadlineDate + "T12:00:00") : undefined}
+                    onSelect={(d) => {
+                      if (d) {
+                        setDeadlineDate(d.toISOString().slice(0, 10));
+                        setDeadlineOpen(false);
+                      }
+                    }}
+                    disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                    startMonth={new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
+                    endMonth={new Date(new Date().getFullYear() + 2, 11, 31)}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <label htmlFor="deadlineTime" className="sr-only">時間</label>
+              <select
+                id="deadlineTime"
+                value={deadlineTime}
+                onChange={(e) => setDeadlineTime(e.target.value)}
+                className="w-full rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm text-foreground focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
+              >
+                {TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

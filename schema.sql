@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS public.recruitments (
   description text,
   target_body_part text,
   event_date timestamptz NOT NULL,
+  deadline_at timestamptz,
   location text,
   status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
   created_at timestamptz DEFAULT now() NOT NULL,
@@ -73,6 +74,7 @@ CREATE INDEX IF NOT EXISTS idx_recruitments_status ON public.recruitments(status
 CREATE INDEX IF NOT EXISTS idx_recruitments_target_body_part ON public.recruitments(target_body_part);
 
 COMMENT ON COLUMN public.recruitments.target_body_part IS '部位: 胸, 背中, 脚 等';
+COMMENT ON COLUMN public.recruitments.deadline_at IS '募集期限。この日時を過ぎると募集終了（closed）扱い';
 
 -- ============================================
 -- 3. groups (コミュニティグループ)

@@ -34,11 +34,24 @@ type RecruitmentRow = {
   description: string | null;
   target_body_part: string | null;
   event_date: string;
+  deadline_at: string | null;
   location: string | null;
   status: string;
   created_at: string;
   max_participants?: number | null;
 };
+
+function isRecruitmentEnded(r: { status: string; deadline_at?: string | null }): boolean {
+  if (r.status === "closed") return true;
+  if (r.deadline_at) {
+    try {
+      if (new Date(r.deadline_at).getTime() <= Date.now()) return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
 
 type ParticipantRow = {
   recruitment_id: string;
@@ -50,10 +63,9 @@ type ParticipantRow = {
   profiles: { nickname: string | null; username: string | null; avatar_url: string | null } | null;
 };
 
-const statusLabel: Record<string, string> = {
-  open: "募集中",
-  closed: "終了",
-};
+function getRecruitmentStatusLabel(r: RecruitmentRow): string {
+  return isRecruitmentEnded(r) ? "募集終了" : "募集中";
+}
 const participantStatusLabel: Record<string, string> = {
   pending: "申請中",
   approved: "承認済み",
@@ -82,7 +94,7 @@ export default function RecruitManagePage() {
     const supabase = createClient();
     const { data, error } = await (supabase as any)
       .from("recruitments")
-      .select("id, user_id, title, description, target_body_part, event_date, location, status, created_at")
+      .select("id, user_id, title, description, target_body_part, event_date, deadline_at, location, status, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) {
@@ -102,7 +114,7 @@ export default function RecruitManagePage() {
     const recIds = [...new Set((partData as { recruitment_id: string }[]).map((p) => p.recruitment_id))];
     const { data: recData, error: recError } = await (supabase as any)
       .from("recruitments")
-      .select("id, user_id, title, description, target_body_part, event_date, location, status, created_at")
+      .select("id, user_id, title, description, target_body_part, event_date, deadline_at, location, status, created_at")
       .in("id", recIds);
     if (recError || !recData?.length) return [];
     const recMap = new Map((recData as RecruitmentRow[]).map((r) => [r.id, r]));
@@ -351,12 +363,12 @@ export default function RecruitManagePage() {
                           <div className="flex shrink-0 items-center gap-1">
                             <span
                               className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                r.status === "open"
+                                !isRecruitmentEnded(r)
                                   ? "bg-gold/15 text-gold"
                                   : "bg-secondary text-muted-foreground"
                               }`}
                             >
-                              {statusLabel[r.status] ?? r.status}
+                              {getRecruitmentStatusLabel(r)}
                             </span>
                             <Popover>
                               <PopoverTrigger asChild>
@@ -376,14 +388,16 @@ export default function RecruitManagePage() {
                                   <Pencil className="h-4 w-4" />
                                   編集
                                 </Link>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCloseRecruitment(r.id)}
-                                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-secondary"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  削除（募集終了）
-                                </button>
+                                {!isRecruitmentEnded(r) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCloseRecruitment(r.id)}
+                                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-secondary"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    募集を終了する
+                                  </button>
+                                )}
                                 <Link
                                   href={`/dashboard/recruit/new?copy=${r.id}`}
                                   className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-secondary"

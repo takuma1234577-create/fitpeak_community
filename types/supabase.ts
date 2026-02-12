@@ -120,6 +120,7 @@ export interface Database {
           description: string | null;
           target_body_part: string | null;
           event_date: string;
+          deadline_at: string | null;
           location: string | null;
           status: "open" | "closed";
           created_at: string;
@@ -132,6 +133,7 @@ export interface Database {
           description?: string | null;
           target_body_part?: string | null;
           event_date: string;
+          deadline_at?: string | null;
           location?: string | null;
           status?: "open" | "closed";
           created_at?: string;
@@ -144,6 +146,7 @@ export interface Database {
           description?: string | null;
           target_body_part?: string | null;
           event_date?: string;
+          deadline_at?: string | null;
           location?: string | null;
           status?: "open" | "closed";
           created_at?: string;

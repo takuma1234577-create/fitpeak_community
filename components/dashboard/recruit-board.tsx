@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Loader2, CalendarDays, MapPin, User, Users, ChevronRight, ArrowUpDown } from "lucide-react";
+import { Plus, Loader2, CalendarDays, MapPin, User, Users, ChevronRight, ArrowUpDown, Clock } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { safeList } from "@/lib/utils";
@@ -48,6 +48,7 @@ type RecruitmentRow = {
   description: string | null;
   target_body_part: string | null;
   event_date: string;
+  deadline_at: string | null;
   location: string | null;
   status: string;
   user_id: string;
@@ -57,6 +58,19 @@ type RecruitmentRow = {
   approvedCount?: number;
   profiles: { nickname: string | null; username: string | null; avatar_url: string | null } | null;
 };
+
+/** 募集が実質終了か（status=closed または 募集期限経過） */
+function isRecruitmentEnded(r: { status: string; deadline_at?: string | null }): boolean {
+  if (r.status === "closed") return true;
+  if (r.deadline_at) {
+    try {
+      if (new Date(r.deadline_at).getTime() <= Date.now()) return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
 
 type RecruitmentDetail = RecruitmentRow;
 
@@ -84,9 +98,9 @@ export default function RecruitBoard() {
     try {
       const supabase = createClient();
       const selectWithMax =
-        "id, title, description, target_body_part, event_date, location, status, user_id, created_at, max_participants, profiles(nickname, username, avatar_url)";
+        "id, title, description, target_body_part, event_date, deadline_at, location, status, user_id, created_at, max_participants, profiles(nickname, username, avatar_url)";
       const selectWithoutMax =
-        "id, title, description, target_body_part, event_date, location, status, user_id, created_at, profiles(nickname, username, avatar_url)";
+        "id, title, description, target_body_part, event_date, deadline_at, location, status, user_id, created_at, profiles(nickname, username, avatar_url)";
       let q = (supabase as any)
         .from("recruitments")
         .select(selectWithMax)
@@ -117,7 +131,9 @@ export default function RecruitBoard() {
         setLoading(false);
         return;
       }
-      const rows = safeList(data as (RecruitmentRow & { created_at?: string; max_participants?: number | null })[] | null);
+      const rawRows = safeList(data as (RecruitmentRow & { created_at?: string; max_participants?: number | null })[] | null);
+      // 募集期限を過ぎたものは一覧に表示しない（募集終了扱い）
+      const rows = rawRows.filter((r) => !isRecruitmentEnded(r));
 
       const ids = rows.map((r) => r.id);
       const approvedByRec: Record<string, number> = {};
@@ -204,7 +220,7 @@ export default function RecruitBoard() {
         const supabase = createClient();
         const { data: recData, error: recError } = await (supabase as any)
           .from("recruitments")
-          .select("id, title, description, target_body_part, event_date, location, status, user_id")
+          .select("id, title, description, target_body_part, event_date, deadline_at, location, status, user_id")
           .eq("id", detailId)
           .maybeSingle();
         if (cancelled) return;
@@ -537,6 +553,12 @@ export default function RecruitBoard() {
                   <CalendarDays className="h-4 w-4 shrink-0 text-gold/70" />
                   {formatDetailDate(detail.event_date)}
                 </p>
+                {detail.deadline_at && (
+                  <p className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 shrink-0 text-gold/70" />
+                    募集期限: {formatDetailDate(detail.deadline_at)}
+                  </p>
+                )}
                 {detail.location && (
                   <p className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 shrink-0 text-gold/70" />
@@ -556,7 +578,11 @@ export default function RecruitBoard() {
                 </div>
               )}
               <div className="pt-2">
-                {currentUserId && detail.user_id === currentUserId ? (
+                {isRecruitmentEnded(detail) ? (
+                  <p className="text-center rounded-lg bg-muted/60 py-3 text-sm font-bold text-muted-foreground">
+                    募集終了
+                  </p>
+                ) : currentUserId && detail.user_id === currentUserId ? (
                   <p className="text-center text-sm text-muted-foreground">自分の募集です</p>
                 ) : participantStatus === "pending" ? (
                   <p className="text-center text-sm font-semibold text-foreground">申請中です</p>

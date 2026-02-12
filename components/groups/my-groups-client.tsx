@@ -128,7 +128,7 @@ export default function MyGroupsClient() {
               <GroupCard
                 key={group.id}
                 group={group}
-                onSelect={(id) => router.push(`/dashboard/groups/${id}`)}
+                onSelect={(id) => id && router.push(`/dashboard/groups/${id}`)}
               />
             ))}
           </div>
