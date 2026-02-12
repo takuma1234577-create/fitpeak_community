@@ -425,7 +425,7 @@ function MyScheduleSection() {
 }
 
 function YourGroupsSection() {
-  const [groups, setGroups] = useState<{ id: string; name: string; unread: number; chat_room_id: string | null }[]>([]);
+  const [groups, setGroups] = useState<{ id: string; name: string; unread: number; chat_room_id: string | null; header_url: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -452,9 +452,9 @@ function YourGroupsSection() {
       const ids = membersList.map((m) => m.group_id);
       const { data: groupList, error } = await supabase
         .from("groups")
-        .select("id, name, chat_room_id")
+        .select("id, name, chat_room_id, header_url")
         .in("id", ids);
-      const groupListArr = ensureArray(groupList) as unknown as { id: string; name: string; chat_room_id: string | null }[];
+      const groupListArr = ensureArray(groupList) as unknown as { id: string; name: string; chat_room_id: string | null; header_url: string | null }[];
       if (!cancelled) {
         if (error) {
           console.error("groups fetch:", error);
@@ -466,6 +466,7 @@ function YourGroupsSection() {
               name: g.name,
               unread: 0,
               chat_room_id: g.chat_room_id ?? null,
+              header_url: g.header_url ?? null,
             }))
           );
         }
@@ -519,11 +520,12 @@ function YourGroupsSection() {
               >
                 <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-border/60 bg-secondary">
                   <Image
-                    src="/placeholder.svg"
+                    src={group.header_url || "/placeholder.svg"}
                     alt={group.name}
                     width={44}
                     height={44}
                     className="h-full w-full object-cover"
+                    unoptimized={!!group.header_url}
                   />
                 </div>
                 <div className="min-w-0 flex-1 flex flex-col gap-0.5">

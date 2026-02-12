@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Users, Dumbbell } from "lucide-react";
+import { Users, Dumbbell, ImagePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,12 @@ export default function GroupCard({
 }) {
   const showRecruitmentTag = isRecruitmentGroup(group.category);
   const handleClick = () => onSelect?.(group.id);
+  const hasHeaderUrl = Boolean(group.image?.startsWith("http"));
+  const [imageError, setImageError] = useState(false);
+  useEffect(() => {
+    setImageError(false);
+  }, [group.image]);
+  const showHeaderImage = hasHeaderUrl && !imageError;
 
   return (
     <article
@@ -65,15 +72,23 @@ export default function GroupCard({
         onSelect && "cursor-pointer"
       )}
     >
-      <div className="relative block aspect-[16/9] overflow-hidden">
-        <Image
-          src={group.image || "/placeholder.svg"}
-          alt={group.name}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          unoptimized={group.image?.startsWith("http") ?? false}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+      <div className="relative block aspect-[16/9] overflow-hidden bg-secondary">
+        {showHeaderImage ? (
+          <Image
+            key={group.image}
+            src={group.image}
+            alt={group.name}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            unoptimized
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gold/15 via-secondary to-gold/10">
+            <ImagePlus className="h-12 w-12 text-muted-foreground/40" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent pointer-events-none" />
         <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center gap-2">
           {showRecruitmentTag && (
             <Badge
