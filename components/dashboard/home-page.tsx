@@ -25,6 +25,7 @@ import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { useProfileModal } from "@/contexts/profile-modal-context";
 import { toGenderLabel } from "@/lib/constants";
+import JapanMapSection from "@/components/dashboard/japan-map-section";
 
 function SectionHeader({
   icon: Icon,
@@ -564,15 +565,20 @@ function YourGroupsSection() {
 type HomePageProps = {
   recommendedUsers?: NewArrivalUser[];
   myUserId?: string | null;
+  prefectureCounts?: Record<string, number>;
 };
 
-export default function HomePage({ recommendedUsers = [], myUserId = null }: HomePageProps) {
+export default function HomePage({ recommendedUsers = [], myUserId = null, prefectureCounts = {} }: HomePageProps) {
   const { blockedIds } = useBlockedUserIds();
   const { openProfileModal } = useProfileModal();
   const filteredUsers = (recommendedUsers ?? []).filter((u) => !blockedIds.has(u.id));
 
   return (
     <div className="flex min-w-0 flex-col gap-8">
+      <JapanMapSection
+        prefectureCounts={prefectureCounts}
+        myUserId={myUserId ?? null}
+      />
       <RecommendedUsersSection
         users={filteredUsers}
         myUserId={myUserId}

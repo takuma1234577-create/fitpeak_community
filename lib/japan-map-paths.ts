@@ -1,0 +1,167 @@
+/**
+ * 47都道府県の SVG path データ + 地方マッピング
+ * viewBox: 0 0 1000 1200 (簡略化した日本地図)
+ */
+
+export type RegionKey =
+  | "hokkaido"
+  | "tohoku"
+  | "kanto"
+  | "chubu"
+  | "kinki"
+  | "chugoku"
+  | "shikoku"
+  | "kyushu";
+
+export const REGION_LABELS: Record<RegionKey, string> = {
+  hokkaido: "北海道",
+  tohoku: "東北",
+  kanto: "関東",
+  chubu: "中部",
+  kinki: "近畿",
+  chugoku: "中国",
+  shikoku: "四国",
+  kyushu: "九州・沖縄",
+};
+
+export const REGION_ORDER: RegionKey[] = [
+  "hokkaido",
+  "tohoku",
+  "kanto",
+  "chubu",
+  "kinki",
+  "chugoku",
+  "shikoku",
+  "kyushu",
+];
+
+export type PrefectureData = {
+  name: string;
+  region: RegionKey;
+  path: string;
+  labelX: number;
+  labelY: number;
+};
+
+/** 都道府県 → 地方 マッピング (constants.ts の PREFECTURES と整合) */
+export const PREFECTURE_REGION_MAP: Record<string, RegionKey> = {
+  北海道: "hokkaido",
+  青森県: "tohoku",
+  岩手県: "tohoku",
+  宮城県: "tohoku",
+  秋田県: "tohoku",
+  山形県: "tohoku",
+  福島県: "tohoku",
+  茨城県: "kanto",
+  栃木県: "kanto",
+  群馬県: "kanto",
+  埼玉県: "kanto",
+  千葉県: "kanto",
+  東京都: "kanto",
+  神奈川県: "kanto",
+  新潟県: "chubu",
+  富山県: "chubu",
+  石川県: "chubu",
+  福井県: "chubu",
+  山梨県: "chubu",
+  長野県: "chubu",
+  岐阜県: "chubu",
+  静岡県: "chubu",
+  愛知県: "chubu",
+  三重県: "kinki",
+  滋賀県: "kinki",
+  京都府: "kinki",
+  大阪府: "kinki",
+  兵庫県: "kinki",
+  奈良県: "kinki",
+  和歌山県: "kinki",
+  鳥取県: "chugoku",
+  島根県: "chugoku",
+  岡山県: "chugoku",
+  広島県: "chugoku",
+  山口県: "chugoku",
+  徳島県: "shikoku",
+  香川県: "shikoku",
+  愛媛県: "shikoku",
+  高知県: "shikoku",
+  福岡県: "kyushu",
+  佐賀県: "kyushu",
+  長崎県: "kyushu",
+  熊本県: "kyushu",
+  大分県: "kyushu",
+  宮崎県: "kyushu",
+  鹿児島県: "kyushu",
+  沖縄県: "kyushu",
+};
+
+/**
+ * 日本地図 SVG パスデータ
+ * viewBox="0 0 1000 1200"
+ * 各都道府県は地理的位置を反映した簡略化ポリゴン
+ */
+export const PREFECTURES_MAP: PrefectureData[] = [
+  { name: "北海道", region: "hokkaido", path: "M680,40 L750,30 L820,50 L860,90 L880,140 L860,190 L820,220 L790,230 L760,220 L720,200 L690,180 L670,200 L640,190 L630,160 L640,130 L660,100 L670,70 Z", labelX: 760, labelY: 130 },
+  { name: "青森県", region: "tohoku", path: "M670,260 L720,250 L760,260 L780,280 L770,310 L740,320 L710,310 L680,300 L660,280 Z", labelX: 720, labelY: 285 },
+  { name: "岩手県", region: "tohoku", path: "M710,310 L740,320 L770,310 L780,340 L770,380 L740,400 L710,390 L700,360 L700,330 Z", labelX: 738, labelY: 355 },
+  { name: "秋田県", region: "tohoku", path: "M660,310 L680,300 L710,310 L700,330 L700,360 L690,390 L670,380 L650,360 L650,330 Z", labelX: 678, labelY: 345 },
+  { name: "宮城県", region: "tohoku", path: "M700,390 L710,390 L740,400 L750,420 L740,440 L710,440 L690,430 L690,410 Z", labelX: 718, labelY: 418 },
+  { name: "山形県", region: "tohoku", path: "M650,380 L670,380 L690,390 L690,410 L690,430 L680,450 L660,440 L640,420 L640,400 Z", labelX: 665, labelY: 415 },
+  { name: "福島県", region: "tohoku", path: "M640,440 L660,440 L680,450 L690,430 L710,440 L740,440 L740,480 L710,490 L670,490 L640,480 Z", labelX: 690, labelY: 465 },
+  { name: "茨城県", region: "kanto", path: "M710,490 L740,480 L750,500 L750,530 L730,540 L710,530 L700,510 Z", labelX: 726, labelY: 512 },
+  { name: "栃木県", region: "kanto", path: "M670,490 L710,490 L700,510 L710,530 L690,540 L670,530 L660,510 Z", labelX: 685, labelY: 515 },
+  { name: "群馬県", region: "kanto", path: "M630,490 L670,490 L660,510 L670,530 L650,550 L630,540 L620,520 Z", labelX: 645, labelY: 522 },
+  { name: "埼玉県", region: "kanto", path: "M650,550 L670,530 L690,540 L700,560 L690,575 L660,575 L640,565 Z", labelX: 670, labelY: 558 },
+  { name: "千葉県", region: "kanto", path: "M710,560 L730,540 L750,560 L750,590 L740,610 L720,610 L710,590 L700,580 Z", labelX: 730, labelY: 580 },
+  { name: "東京都", region: "kanto", path: "M660,575 L690,575 L700,560 L710,560 L700,580 L710,590 L690,600 L670,595 L660,585 Z", labelX: 685, labelY: 585 },
+  { name: "神奈川県", region: "kanto", path: "M660,585 L670,595 L690,600 L700,615 L680,625 L660,620 L650,605 Z", labelX: 675, labelY: 607 },
+  { name: "新潟県", region: "chubu", path: "M600,440 L640,440 L640,480 L670,490 L630,490 L600,500 L580,490 L570,470 L580,450 Z", labelX: 610, labelY: 470 },
+  { name: "富山県", region: "chubu", path: "M560,490 L580,490 L600,500 L600,520 L580,530 L560,520 L555,505 Z", labelX: 578, labelY: 510 },
+  { name: "石川県", region: "chubu", path: "M540,470 L555,460 L570,470 L560,490 L555,505 L540,510 L530,495 L535,480 Z", labelX: 548, labelY: 488 },
+  { name: "福井県", region: "chubu", path: "M510,510 L530,495 L540,510 L555,505 L560,520 L550,540 L530,545 L510,535 Z", labelX: 535, labelY: 522 },
+  { name: "山梨県", region: "chubu", path: "M630,555 L650,550 L640,565 L660,575 L660,585 L640,590 L625,580 L620,565 Z", labelX: 640, labelY: 572 },
+  { name: "長野県", region: "chubu", path: "M600,500 L630,490 L620,520 L630,540 L630,555 L620,565 L600,560 L585,545 L580,530 L600,520 Z", labelX: 608, labelY: 535 },
+  { name: "岐阜県", region: "chubu", path: "M550,540 L560,520 L580,530 L585,545 L600,560 L590,575 L570,575 L550,565 Z", labelX: 572, labelY: 555 },
+  { name: "静岡県", region: "chubu", path: "M600,580 L620,565 L625,580 L640,590 L660,585 L660,620 L650,635 L620,630 L600,610 Z", labelX: 630, labelY: 607 },
+  { name: "愛知県", region: "chubu", path: "M560,580 L570,575 L590,575 L600,580 L600,610 L590,620 L570,615 L555,600 Z", labelX: 578, labelY: 598 },
+  { name: "三重県", region: "kinki", path: "M540,580 L555,600 L570,615 L570,640 L560,660 L545,655 L530,635 L530,600 Z", labelX: 550, labelY: 625 },
+  { name: "滋賀県", region: "kinki", path: "M520,555 L540,550 L550,565 L540,580 L530,580 L515,570 Z", labelX: 533, labelY: 567 },
+  { name: "京都府", region: "kinki", path: "M490,530 L510,535 L520,555 L515,570 L530,580 L520,595 L500,590 L485,575 L480,555 Z", labelX: 505, labelY: 565 },
+  { name: "大阪府", region: "kinki", path: "M500,595 L520,595 L530,600 L530,620 L520,635 L505,630 L495,615 Z", labelX: 514, labelY: 615 },
+  { name: "兵庫県", region: "kinki", path: "M460,545 L480,555 L485,575 L500,590 L495,615 L480,620 L460,610 L450,585 L450,560 Z", labelX: 472, labelY: 582 },
+  { name: "奈良県", region: "kinki", path: "M520,620 L530,620 L530,635 L545,655 L535,670 L520,665 L510,645 L510,630 Z", labelX: 526, labelY: 645 },
+  { name: "和歌山県", region: "kinki", path: "M495,630 L505,630 L520,635 L520,665 L535,670 L530,695 L510,700 L490,685 L485,660 Z", labelX: 510, labelY: 670 },
+  { name: "鳥取県", region: "chugoku", path: "M430,540 L460,545 L450,560 L450,575 L430,570 L420,555 Z", labelX: 440, labelY: 558 },
+  { name: "島根県", region: "chugoku", path: "M380,540 L400,535 L430,540 L420,555 L430,570 L410,580 L385,575 L370,560 Z", labelX: 402, labelY: 558 },
+  { name: "岡山県", region: "chugoku", path: "M430,575 L450,575 L450,585 L460,610 L445,620 L425,615 L420,595 Z", labelX: 438, labelY: 598 },
+  { name: "広島県", region: "chugoku", path: "M385,575 L410,580 L430,575 L420,595 L425,615 L405,625 L385,615 L375,595 Z", labelX: 403, labelY: 600 },
+  { name: "山口県", region: "chugoku", path: "M350,570 L370,560 L385,575 L375,595 L385,615 L370,625 L350,615 L340,595 L340,580 Z", labelX: 362, labelY: 595 },
+  { name: "徳島県", region: "shikoku", path: "M460,635 L480,630 L490,645 L485,665 L465,665 L455,650 Z", labelX: 472, labelY: 650 },
+  { name: "香川県", region: "shikoku", path: "M440,625 L460,620 L460,635 L455,650 L440,645 L435,635 Z", labelX: 448, labelY: 636 },
+  { name: "愛媛県", region: "shikoku", path: "M400,635 L420,630 L435,635 L440,645 L455,650 L465,665 L450,685 L425,685 L405,670 L395,650 Z", labelX: 430, labelY: 662 },
+  { name: "高知県", region: "shikoku", path: "M415,685 L450,685 L465,665 L485,665 L490,680 L480,710 L455,720 L425,715 L410,700 Z", labelX: 450, labelY: 698 },
+  { name: "福岡県", region: "kyushu", path: "M320,610 L340,600 L350,615 L355,635 L340,645 L320,640 L310,625 Z", labelX: 333, labelY: 625 },
+  { name: "佐賀県", region: "kyushu", path: "M295,625 L310,625 L320,640 L310,655 L290,650 L285,640 Z", labelX: 303, labelY: 640 },
+  { name: "長崎県", region: "kyushu", path: "M265,640 L285,640 L290,650 L285,670 L275,685 L260,680 L250,665 L255,650 Z", labelX: 270, labelY: 662 },
+  { name: "熊本県", region: "kyushu", path: "M310,655 L320,640 L340,645 L345,665 L340,690 L320,695 L305,685 L300,670 Z", labelX: 322, labelY: 672 },
+  { name: "大分県", region: "kyushu", path: "M340,645 L355,635 L370,625 L375,645 L370,665 L355,670 L345,665 Z", labelX: 357, labelY: 650 },
+  { name: "宮崎県", region: "kyushu", path: "M340,690 L345,665 L355,670 L370,665 L375,690 L370,720 L350,730 L335,720 Z", labelX: 355, labelY: 700 },
+  { name: "鹿児島県", region: "kyushu", path: "M300,700 L320,695 L340,690 L335,720 L350,730 L340,755 L315,760 L295,745 L285,725 Z", labelX: 318, labelY: 730 },
+  { name: "沖縄県", region: "kyushu", path: "M220,870 L250,860 L270,870 L275,890 L260,910 L240,915 L220,905 L210,890 Z", labelX: 245, labelY: 888 },
+];
+
+/** 地方 → 所属都道府県名の配列 */
+export function getPrefecturesByRegion(region: RegionKey): string[] {
+  return PREFECTURES_MAP.filter((p) => p.region === region).map((p) => p.name);
+}
+
+/** 地方ごとの色（ベースカラー） */
+export const REGION_COLORS: Record<RegionKey, { fill: string; hover: string }> = {
+  hokkaido: { fill: "#F0E6C8", hover: "#E5D4A1" },
+  tohoku: { fill: "#E8DFC0", hover: "#DDD0A0" },
+  kanto: { fill: "#F5E8C0", hover: "#EDDA9E" },
+  chubu: { fill: "#EDE3C5", hover: "#E2D4A5" },
+  kinki: { fill: "#F2E4B8", hover: "#E8D698" },
+  chugoku: { fill: "#ECE0C0", hover: "#E0D1A0" },
+  shikoku: { fill: "#F0DEBB", hover: "#E5CF9A" },
+  kyushu: { fill: "#EDDCB5", hover: "#E2CC95" },
+};
