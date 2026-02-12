@@ -4,6 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import GroupCard, { type Group } from "@/components/groups/group-card";
+import GroupManageClient from "@/components/groups/group-manage-client";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { Loader2, ArrowLeft, Users, Crown } from "lucide-react";
 
@@ -34,6 +40,7 @@ export default function MyGroupsClient() {
   const [joinedGroups, setJoinedGroups] = useState<Group[]>([]);
   const [managedGroups, setManagedGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [manageModalGroupId, setManageModalGroupId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -150,12 +157,30 @@ export default function MyGroupsClient() {
               <GroupCard
                 key={group.id}
                 group={group}
-                onSelect={(id) => router.push(`/dashboard/groups/${id}/manage`)}
+                onSelect={(id) => id && setManageModalGroupId(id)}
               />
             ))}
           </div>
         )}
       </section>
+
+      <Dialog open={!!manageModalGroupId} onOpenChange={(open) => !open && setManageModalGroupId(null)}>
+        <DialogContent
+          className="max-h-[90vh] w-full max-w-2xl overflow-y-auto p-0 gap-0 border-border/60 bg-card"
+          aria-describedby={undefined}
+        >
+          <DialogTitle className="sr-only">グループを編集</DialogTitle>
+          {manageModalGroupId && (
+            <div className="p-5 sm:p-6">
+              <GroupManageClient
+                groupId={manageModalGroupId}
+                embedded
+                onClose={() => setManageModalGroupId(null)}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

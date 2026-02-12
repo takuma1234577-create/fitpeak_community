@@ -30,7 +30,14 @@ type MemberRow = {
   is_creator: boolean;
 };
 
-export default function GroupManageClient({ groupId }: { groupId: string }) {
+type GroupManageClientProps = {
+  groupId: string;
+  /** モーダル内で表示するとき true。閉じるボタンと onClose を使う */
+  embedded?: boolean;
+  onClose?: () => void;
+};
+
+export default function GroupManageClient({ groupId, embedded, onClose }: GroupManageClientProps) {
   const router = useRouter();
   const [group, setGroup] = useState<GroupData | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -131,13 +138,24 @@ export default function GroupManageClient({ groupId }: { groupId: string }) {
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-black tracking-tight text-foreground">グループ管理</h1>
-        <Link
-          href={`/dashboard/groups/${groupId}`}
-          className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-bold text-foreground transition-all hover:border-gold/40 hover:bg-gold/10"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          グループ詳細へ
-        </Link>
+        {embedded && onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-bold text-foreground transition-all hover:border-gold/40 hover:bg-gold/10"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            閉じる
+          </button>
+        ) : (
+          <Link
+            href={`/dashboard/groups/${groupId}`}
+            className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-bold text-foreground transition-all hover:border-gold/40 hover:bg-gold/10"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            グループ詳細へ
+          </Link>
+        )}
       </div>
 
       <section className="rounded-xl border border-border/60 bg-card p-6">
