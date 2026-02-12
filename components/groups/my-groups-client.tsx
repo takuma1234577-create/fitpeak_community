@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import GroupCard, { type Group } from "@/components/groups/group-card";
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
+import { ensureArray } from "@/lib/data-sanitizer";
 import { Loader2, ArrowLeft, Users, Crown } from "lucide-react";
 
 type Row = {
@@ -43,62 +44,66 @@ export default function MyGroupsClient() {
   const [loading, setLoading] = useState(true);
   const [manageModalGroupId, setManageModalGroupId] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+  const loadGroups = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-      const { data: memberRows } = await supabase
+    const { data: memberRows } = await supabase
+      .from("group_members")
+      .select("group_id")
+      .eq("user_id", user.id);
+    const memberArr = ensureArray(memberRows) as { group_id: string }[];
+    const joinedIds = memberArr.map((r) => r.group_id);
+
+    const { data: managedRows } = await supabase
+      .from("groups")
+      .select("id, name, description, category, chat_room_id, created_by, header_url")
+      .eq("created_by", user.id);
+    const managedList = ensureArray(managedRows) as Row[];
+
+    const { data: joinedRows } =
+      joinedIds.length > 0
+        ? await supabase
+            .from("groups")
+            .select("id, name, description, category, chat_room_id, created_by, header_url")
+            .in("id", joinedIds)
+        : { data: [] };
+    const joinedList = ensureArray(joinedRows) as Row[];
+
+    const allIds = [...new Set([...joinedList.map((g) => g.id), ...managedList.map((g) => g.id)])];
+    const countByGroup: Record<string, number> = {};
+    if (allIds.length > 0) {
+      const { data: counts } = await supabase
         .from("group_members")
         .select("group_id")
-        .eq("user_id", user.id);
-      const joinedIds = (memberRows ?? []).map((r) => (r as { group_id: string }).group_id);
-
-      const { data: managedRows } = await supabase
-        .from("groups")
-        .select("id, name, description, category, chat_room_id, created_by, header_url")
-        .eq("created_by", user.id);
-      const managedList = (managedRows ?? []) as Row[];
-
-      const { data: joinedRows } =
-        joinedIds.length > 0
-          ? await supabase
-              .from("groups")
-              .select("id, name, description, category, chat_room_id, created_by, header_url")
-              .in("id", joinedIds)
-          : { data: [] };
-      const joinedList = (joinedRows ?? []) as Row[];
-
-      const allIds = [...new Set([...joinedList.map((g) => g.id), ...managedList.map((g) => g.id)])];
-      const countByGroup: Record<string, number> = {};
-      if (allIds.length > 0) {
-        const { data: counts } = await supabase
-          .from("group_members")
-          .select("group_id")
-          .in("group_id", allIds);
-        for (const c of counts ?? []) {
-          const gid = (c as { group_id: string }).group_id;
-          countByGroup[gid] = (countByGroup[gid] ?? 0) + 1;
-        }
+        .in("group_id", allIds);
+      const countsArr = ensureArray(counts) as { group_id: string }[];
+      for (const c of countsArr) {
+        const gid = c.group_id;
+        countByGroup[gid] = (countByGroup[gid] ?? 0) + 1;
       }
+    }
 
-      setJoinedGroups(
-        joinedList.map((row) =>
-          toGroup(row, countByGroup[row.id] ?? 0, true)
-        )
-      );
-      setManagedGroups(
-        managedList.map((row) =>
-          toGroup(row, countByGroup[row.id] ?? 0, true)
-        )
-      );
-      setLoading(false);
-    })();
+    setJoinedGroups(
+      joinedList.map((row) =>
+        toGroup(row, countByGroup[row.id] ?? 0, true)
+      )
+    );
+    setManagedGroups(
+      managedList.map((row) =>
+        toGroup(row, countByGroup[row.id] ?? 0, true)
+      )
+    );
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
 
   if (loading) {
     return (
@@ -165,7 +170,15 @@ export default function MyGroupsClient() {
         )}
       </section>
 
-      <Dialog open={!!manageModalGroupId} onOpenChange={(open) => !open && setManageModalGroupId(null)}>
+      <Dialog
+        open={!!manageModalGroupId}
+        onOpenChange={(open) => {
+          if (!open) {
+            loadGroups();
+            setManageModalGroupId(null);
+          }
+        }}
+      >
         <DialogContent
           className="max-h-[90vh] w-full max-w-2xl overflow-y-auto p-0 gap-0 border-border/60 bg-card"
           aria-describedby={undefined}
@@ -177,6 +190,7 @@ export default function MyGroupsClient() {
                 groupId={manageModalGroupId}
                 embedded
                 onClose={() => setManageModalGroupId(null)}
+                onGroupUpdated={loadGroups}
               />
             </div>
           )}

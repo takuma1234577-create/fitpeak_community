@@ -35,9 +35,11 @@ type GroupManageClientProps = {
   /** モーダル内で表示するとき true。閉じるボタンと onClose を使う */
   embedded?: boolean;
   onClose?: () => void;
+  /** グループ情報更新時（ヘッダー保存など）に親が一覧を再取得する用 */
+  onGroupUpdated?: () => void;
 };
 
-export default function GroupManageClient({ groupId, embedded, onClose }: GroupManageClientProps) {
+export default function GroupManageClient({ groupId, embedded, onClose, onGroupUpdated }: GroupManageClientProps) {
   const router = useRouter();
   const [group, setGroup] = useState<GroupData | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -47,6 +49,7 @@ export default function GroupManageClient({ groupId, embedded, onClose }: GroupM
   const [headerError, setHeaderError] = useState<string | null>(null);
   const [headerPreviewFile, setHeaderPreviewFile] = useState<File | null>(null);
   const [headerPreviewUrl, setHeaderPreviewUrl] = useState<string | null>(null);
+  const [headerImageKey, setHeaderImageKey] = useState(0);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -206,6 +209,7 @@ export default function GroupManageClient({ groupId, embedded, onClose }: GroupM
               />
             ) : group.header_url ? (
               <Image
+                key={`header-${group.id}-${headerImageKey}`}
                 src={group.header_url}
                 alt=""
                 fill
@@ -259,9 +263,11 @@ export default function GroupManageClient({ groupId, embedded, onClose }: GroupM
                   .eq("created_by", group.created_by);
                 if (updateErr) throw new Error(updateErr.message);
                 setGroup((prev) => (prev ? { ...prev, header_url: url } : null));
+                setHeaderImageKey((k) => k + 1);
                 if (headerPreviewUrl) URL.revokeObjectURL(headerPreviewUrl);
                 setHeaderPreviewFile(null);
                 setHeaderPreviewUrl(null);
+                onGroupUpdated?.();
               } catch (err) {
                 setHeaderError(err instanceof Error ? err.message : "アップロードに失敗しました");
               } finally {

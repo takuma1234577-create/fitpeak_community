@@ -6,6 +6,7 @@ import CreateGroupDialog from "@/components/groups/create-group-dialog";
 import GroupCard, { type Group } from "@/components/groups/group-card";
 import GroupDetailModal from "@/components/groups/group-detail-modal";
 import { createClient } from "@/utils/supabase/client";
+import { ensureArray } from "@/lib/data-sanitizer";
 import { Loader2, UserCircle } from "lucide-react";
 
 export default function GroupList() {
@@ -26,7 +27,8 @@ export default function GroupList() {
       setLoading(false);
       return;
     }
-    const ids = (list ?? []).map((g) => (g as { id: string }).id);
+    const listArr = ensureArray(list) as { id: string; name: string; description: string | null; category: string | null; chat_room_id: string | null; header_url?: string | null }[];
+    const ids = listArr.map((g) => g.id);
     if (ids.length === 0) {
       setGroups([]);
       setLoading(false);
@@ -36,23 +38,24 @@ export default function GroupList() {
       .from("group_members")
       .select("group_id, user_id")
       .in("group_id", ids);
+    const membersArr = ensureArray(members) as { group_id: string; user_id: string }[];
     const countByGroup: Record<string, number> = {};
     const myJoined = new Set<string>();
-    for (const m of members ?? []) {
-      const gid = (m as { group_id: string }).group_id;
+    for (const m of membersArr) {
+      const gid = m.group_id;
       countByGroup[gid] = (countByGroup[gid] ?? 0) + 1;
-      if (user && (m as { user_id: string }).user_id === user.id) myJoined.add(gid);
+      if (user && m.user_id === user.id) myJoined.add(gid);
     }
     setGroups(
-      (list ?? []).map((g) => ({
-        id: (g as { id: string }).id,
-        name: (g as { name: string }).name,
-        description: (g as { description: string | null }).description ?? "",
-        category: (g as { category: string | null }).category ?? "その他",
-        memberCount: countByGroup[(g as { id: string }).id] ?? 0,
-        image: (g as { header_url?: string | null }).header_url ?? "/placeholder.svg",
-        isJoined: myJoined.has((g as { id: string }).id),
-        chatRoomId: (g as { chat_room_id?: string | null }).chat_room_id ?? null,
+      listArr.map((g) => ({
+        id: g.id,
+        name: g.name,
+        description: g.description ?? "",
+        category: g.category ?? "その他",
+        memberCount: countByGroup[g.id] ?? 0,
+        image: g.header_url ?? "/placeholder.svg",
+        isJoined: myJoined.has(g.id),
+        chatRoomId: g.chat_room_id ?? null,
       }))
     );
     setLoading(false);

@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { safeArray, safeList } from "@/lib/utils";
+import { ensureArray } from "@/lib/data-sanitizer";
 import type { NewArrivalUser } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
@@ -453,14 +454,14 @@ function YourGroupsSection() {
         .from("groups")
         .select("id, name, chat_room_id")
         .in("id", ids);
-      const groupListTyped = safeList(groupList as { id: string; name: string; chat_room_id: string | null }[] | null);
+      const groupListArr = ensureArray(groupList) as { id: string; name: string; chat_room_id: string | null }[];
       if (!cancelled) {
         if (error) {
           console.error("groups fetch:", error);
           setGroups([]);
         } else {
           setGroups(
-            groupListTyped.map((g) => ({
+            groupListArr.map((g) => ({
               id: g.id,
               name: g.name,
               unread: 0,
