@@ -141,16 +141,16 @@ function RecommendedUsersSection({
   };
 
   return (
-    <section className="flex min-h-[120px] flex-col gap-4" aria-label="おすすめユーザー">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <Users className="h-5 w-5 text-gold" />
-          <h2 className="text-lg font-extrabold tracking-wide text-foreground">
+    <section className="flex min-h-[120px] w-full min-w-0 flex-col gap-4" aria-label="おすすめユーザー">
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Users className="h-5 w-5 shrink-0 text-gold" />
+          <h2 className="text-lg font-extrabold tracking-wide text-foreground truncate">
             おすすめユーザー
           </h2>
         </div>
         {safeUsers.length > 0 && (
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
               onClick={() => scroll("left")}
@@ -169,22 +169,22 @@ function RecommendedUsersSection({
             </button>
             <Link
               href="/dashboard/search"
-              className="ml-2 flex items-center gap-1 text-xs font-semibold text-foreground transition-colors hover:text-gold"
+              className="ml-2 flex items-center gap-1 text-xs font-semibold text-foreground transition-colors hover:text-gold whitespace-nowrap"
             >
               検索で仲間を探す
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
             </Link>
           </div>
         )}
       </div>
       {safeUsers.length === 0 ? (
-        <div className="flex min-h-[100px] items-center justify-center rounded-xl border border-border/40 bg-card/50 px-4 py-8">
+        <div className="flex min-h-[100px] w-full items-center justify-center rounded-xl border border-border/40 bg-card/50 px-4 py-8">
           <p className="text-center text-sm text-muted-foreground">まだおすすめユーザーはいません。検索で仲間を探してみましょう。</p>
         </div>
       ) : (
         <div
           ref={scrollRef}
-          className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0"
+          className="w-full min-w-0 -mx-4 flex gap-4 overflow-x-auto px-4 pb-2 lg:-mx-0 lg:px-0 scrollbar-hide"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {safeUsers.map((user) => (
@@ -550,7 +550,7 @@ export default function HomePage({ recommendedUsers = [], myUserId = null }: Hom
   const filteredUsers = (recommendedUsers ?? []).filter((u) => !blockedIds.has(u.id));
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex min-w-0 flex-col gap-8">
       <RecommendedUsersSection
         users={filteredUsers}
         myUserId={myUserId}

@@ -50,7 +50,7 @@ export default function DashboardLayoutClient({
       <DashboardHeader />
       <div className="flex flex-1">
         <DashboardSidebar />
-        <main className="flex-1 overflow-y-auto">
+        <main className="min-w-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-5xl px-4 py-6 pb-24 lg:px-8 lg:py-8 lg:pb-8">
             {children}
           </div>
