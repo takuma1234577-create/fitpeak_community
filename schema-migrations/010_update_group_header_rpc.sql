@@ -33,8 +33,7 @@ BEGIN
   END IF;
 
   UPDATE public.groups
-  SET header_url = p_header_url,
-      updated_at = now()
+  SET header_url = p_header_url
   WHERE id = p_group_id;
 
   RETURN p_group_id;
