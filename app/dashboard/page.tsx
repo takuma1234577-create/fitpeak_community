@@ -1,7 +1,7 @@
 import HomePage from "@/components/dashboard/home-page";
 import { createClient } from "@/utils/supabase/server";
 import { getNewArrivalUsers } from "@/lib/recommendations";
-import { normalizePrefectureToCanonical } from "@/lib/japan-map-paths";
+import { getPrefectureCounts } from "@/lib/prefecture-counts";
 
 export const dynamic = "force-dynamic";
 
@@ -14,27 +14,12 @@ export default async function DashboardPage() {
   let prefectureCounts: Record<string, number> = {};
 
   try {
-    const sb = supabase as any;
-    const [usersResult, countsResult] = await Promise.all([
+    const [usersResult, counts] = await Promise.all([
       getNewArrivalUsers(supabase, myUserId, 10),
-      sb.from("profiles").select("prefecture, area").eq("email_confirmed", true),
+      getPrefectureCounts(supabase as Parameters<typeof getPrefectureCounts>[0]),
     ]);
-
     recommendedUsers = usersResult;
-
-    if (countsResult.error) {
-      console.error("Dashboard prefecture counts error:", countsResult.error);
-    }
-    if (countsResult.data && Array.isArray(countsResult.data)) {
-      for (const row of countsResult.data) {
-        const r = row as { prefecture: string | null; area: string | null };
-        const pref = (r.prefecture && String(r.prefecture).trim()) || (r.area && String(r.area).trim()) || null;
-        if (pref) {
-          const canonical = normalizePrefectureToCanonical(pref);
-          prefectureCounts[canonical] = (prefectureCounts[canonical] || 0) + 1;
-        }
-      }
-    }
+    prefectureCounts = counts;
   } catch (e) {
     console.error("Dashboard fetch error:", e);
   }

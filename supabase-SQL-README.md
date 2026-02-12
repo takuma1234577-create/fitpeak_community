@@ -57,7 +57,9 @@
 8. `supabase-notifications.sql`
 9. `supabase-blocks-reports.sql`（またはブロックのみなら `supabase-blocks-list.sql`）
 10. `supabase-recruitment-participants.sql`（および `supabase-recruitment-participants-withdrawn.sql` など関連）
-11. その他 `supabase-*.sql`（storage / messages など）
+11. `schema-migrations/008_profiles_realtime.sql`（都道府県マップの Realtime 反映）
+12. `schema-migrations/009_get_prefecture_counts_rpc.sql`（都道府県マップ用の集計 RPC。SQL で集計→アプリで正規化の導線）
+13. その他 `supabase-*.sql`（storage / messages など）
 
 既に本番で動いている DB には、**変更したマイグレーション（004 や notifications など）を「もう一度」実行しても、今回の修正で安全に通るようになっています。**
 
