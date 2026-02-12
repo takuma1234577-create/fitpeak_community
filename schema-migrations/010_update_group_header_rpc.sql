@@ -1,7 +1,11 @@
 -- ============================================
 -- 010: グループヘッダー画像URLを更新する RPC（作成者のみ）
 -- RLS で 0 件になる場合があるため、SECURITY DEFINER で作成者チェックしてから更新
--- 使い方: Supabase ダッシュボード → SQL Editor → このファイルを実行
+--
+-- 使い方: Supabase ダッシュボード → SQL Editor → このファイル全体を貼り付けて Run
+-- 「Could not find the function in the schema cache」が出た場合:
+--   1) 上記でこのファイルを実行したあと、末尾の NOTIFY でキャッシュが更新されます。
+--   2) まだ出る場合は、SQL Editor で「NOTIFY pgrst, 'reload schema';」だけ実行してください。
 -- ============================================
 
 CREATE OR REPLACE FUNCTION public.update_group_header_url(
@@ -42,3 +46,6 @@ COMMENT ON FUNCTION public.update_group_header_url(uuid, text) IS
 
 GRANT EXECUTE ON FUNCTION public.update_group_header_url(uuid, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_group_header_url(uuid, text) TO service_role;
+
+-- PostgREST（API）のスキーマキャッシュを更新し、新しい RPC を認識させる
+NOTIFY pgrst, 'reload schema';
