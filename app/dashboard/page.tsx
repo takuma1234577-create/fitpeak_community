@@ -1,6 +1,7 @@
 import HomePage from "@/components/dashboard/home-page";
 import { createClient } from "@/utils/supabase/server";
 import { getNewArrivalUsers } from "@/lib/recommendations";
+import { normalizePrefectureToCanonical } from "@/lib/japan-map-paths";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,8 @@ export default async function DashboardPage() {
         const r = row as { prefecture: string | null; area: string | null };
         const pref = (r.prefecture && String(r.prefecture).trim()) || (r.area && String(r.area).trim()) || null;
         if (pref) {
-          prefectureCounts[pref] = (prefectureCounts[pref] || 0) + 1;
+          const canonical = normalizePrefectureToCanonical(pref);
+          prefectureCounts[canonical] = (prefectureCounts[canonical] || 0) + 1;
         }
       }
     }

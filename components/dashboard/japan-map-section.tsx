@@ -26,6 +26,7 @@ import {
   REGION_ORDER,
   PREFECTURE_REGION_MAP,
   getPrefecturesByRegion,
+  getPrefectureMatchValues,
   type RegionKey,
 } from "@/lib/japan-map-paths";
 
@@ -172,19 +173,20 @@ function PrefectureUsersPanel({
       const sb = supabase as any;
       const fields =
         "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, created_at";
+      const matchValues = getPrefectureMatchValues(prefecture);
       const [byPrefecture, byArea] = await Promise.all([
         sb
           .from("profiles")
           .select(fields)
           .eq("email_confirmed", true)
-          .eq("prefecture", prefecture)
+          .in("prefecture", matchValues)
           .order("created_at", { ascending: false })
           .limit(50),
         sb
           .from("profiles")
           .select(fields)
           .eq("email_confirmed", true)
-          .eq("area", prefecture)
+          .in("area", matchValues)
           .order("created_at", { ascending: false })
           .limit(50),
       ]);

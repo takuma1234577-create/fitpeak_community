@@ -156,3 +156,36 @@ export const GRID_ROWS = 14;
 export function getPrefecturesByRegion(region: RegionKey): string[] {
   return TILE_PREFECTURES.filter((p) => p.region === region).map((p) => p.name);
 }
+
+/**
+ * 都道府県の正式名から、DBに保存されうる値のリストを返す。
+ * 例: "東京都" → ["東京都", "東京"]（過去に略称で保存されたユーザーもヒットさせる）
+ */
+export function getPrefectureMatchValues(canonicalName: string): string[] {
+  const uniq = (arr: string[]) => [...new Set(arr)];
+  if (canonicalName === "北海道") return ["北海道"];
+  if (canonicalName === "東京都") return uniq(["東京都", "東京"]);
+  if (canonicalName === "大阪府") return uniq(["大阪府", "大阪"]);
+  if (canonicalName === "京都府") return uniq(["京都府", "京都"]);
+  if (canonicalName.endsWith("県"))
+    return uniq([canonicalName, canonicalName.slice(0, -1)]);
+  if (canonicalName.endsWith("府") || canonicalName.endsWith("都"))
+    return uniq([canonicalName, canonicalName.slice(0, -1)]);
+  return [canonicalName];
+}
+
+/** 保存値（"東京"など）をマップ用の正式名（"東京都"）に正規化するためのマップ */
+let _normalizeMap: Record<string, string> | null = null;
+
+export function normalizePrefectureToCanonical(stored: string): string {
+  if (!_normalizeMap) {
+    _normalizeMap = {} as Record<string, string>;
+    for (const tile of TILE_PREFECTURES) {
+      for (const v of getPrefectureMatchValues(tile.name)) {
+        _normalizeMap[v] = tile.name;
+      }
+    }
+  }
+  const trimmed = stored.trim();
+  return trimmed ? _normalizeMap[trimmed] ?? trimmed : trimmed;
+}
