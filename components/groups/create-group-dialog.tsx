@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Dumbbell, Lock, Globe } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
+import { Dumbbell, Lock, Globe, ImagePlus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,8 @@ import {
 } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
 import { GROUP_CATEGORIES } from "@/lib/group-constants";
+import { uploadGroupHeader } from "@/lib/upload-group-header";
+import HeaderCropModal from "@/components/settings/header-crop-modal";
 import { useRouter } from "next/navigation";
 
 export default function CreateGroupDialog({
@@ -46,8 +49,45 @@ export default function CreateGroupDialog({
   const [isPrivate, setIsPrivate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [headerBlob, setHeaderBlob] = useState<Blob | null>(null);
+  const [headerPreviewUrl, setHeaderPreviewUrl] = useState<string | null>(null);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const headerInputRef = useRef<HTMLInputElement>(null);
 
   const isEdit = Boolean(editGroupId);
+
+  useEffect(() => {
+    return () => {
+      if (headerPreviewUrl) URL.revokeObjectURL(headerPreviewUrl);
+      if (cropImageSrc) URL.revokeObjectURL(cropImageSrc);
+    };
+  }, [headerPreviewUrl, cropImageSrc]);
+
+  const handleHeaderCropConfirm = useCallback((blob: Blob) => {
+    if (headerPreviewUrl) URL.revokeObjectURL(headerPreviewUrl);
+    setHeaderBlob(blob);
+    setHeaderPreviewUrl(URL.createObjectURL(blob));
+    setCropImageSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setCropModalOpen(false);
+  }, [headerPreviewUrl]);
+
+  useEffect(() => {
+    if (open) return;
+    setHeaderBlob(null);
+    setHeaderPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setCropModalOpen(false);
+    setCropImageSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!open || !editGroupId) return;
@@ -75,6 +115,10 @@ export default function CreateGroupDialog({
     setError(null);
     if (!groupName.trim()) {
       setError("グループ名を入力してください。");
+      return;
+    }
+    if (!isEdit && !headerBlob) {
+      setError("ヘッダー画像をアップロードしてください。画像を選択し、切り抜き範囲を調整して決定してください。");
       return;
     }
     setSubmitting(true);
@@ -167,6 +211,18 @@ export default function CreateGroupDialog({
         return;
       }
 
+      if (headerBlob && group) {
+        try {
+          const headerUrl = await uploadGroupHeader(user.id, group.id, headerBlob);
+          await sb.from("groups").update({ header_url: headerUrl }).eq("id", group.id).eq("created_by", user.id);
+        } catch (uploadErr) {
+          console.error("Header upload:", uploadErr);
+          setError("グループは作成されましたが、ヘッダー画像の保存に失敗しました。グループ編集から再度設定してください。");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       await sb.from("group_members").insert({
         group_id: group.id,
         user_id: user.id,
@@ -183,6 +239,9 @@ export default function CreateGroupDialog({
       setDescription("");
       setCategory("");
       setIsPrivate(false);
+      if (headerPreviewUrl) URL.revokeObjectURL(headerPreviewUrl);
+      setHeaderBlob(null);
+      setHeaderPreviewUrl(null);
       onCreated?.();
       router.refresh();
     } catch (err) {
@@ -246,6 +305,62 @@ export default function CreateGroupDialog({
               className={`${inputClass} resize-none`}
             />
           </div>
+
+          {!isEdit && (
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                ヘッダー画像（必須）
+              </label>
+              <input
+                ref={headerInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  e.target.value = "";
+                  setCropImageSrc((prev) => {
+                    if (prev) URL.revokeObjectURL(prev);
+                    return URL.createObjectURL(file);
+                  });
+                  setCropModalOpen(true);
+                }}
+              />
+              <div className="rounded-xl border border-border bg-secondary overflow-hidden">
+                <div className="relative aspect-[3/1] w-full max-h-32">
+                  {headerPreviewUrl ? (
+                    <Image
+                      src={headerPreviewUrl}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => headerInputRef.current?.click()}
+                      className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground transition-colors hover:bg-secondary/80 hover:text-foreground"
+                    >
+                      <ImagePlus className="h-10 w-10" />
+                      <span className="text-xs font-bold">画像を選択して切り抜き</span>
+                      <span className="text-[10px]">3MB以下・JPEG/PNG/WebP</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+              {headerPreviewUrl && (
+                <button
+                  type="button"
+                  onClick={() => headerInputRef.current?.click()}
+                  className="text-xs font-bold text-gold hover:underline"
+                >
+                  画像を変更する
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -318,6 +433,20 @@ export default function CreateGroupDialog({
           </button>
         </form>
       </DialogContent>
+      {!isEdit && cropImageSrc && (
+        <HeaderCropModal
+          open={cropModalOpen}
+          onOpenChange={(open) => {
+            setCropModalOpen(open);
+            if (!open && cropImageSrc) {
+              URL.revokeObjectURL(cropImageSrc);
+              setCropImageSrc(null);
+            }
+          }}
+          imageSrc={cropImageSrc}
+          onConfirm={handleHeaderCropConfirm}
+        />
+      )}
     </Dialog>
     {controlledOnOpenChange && children}
     </>

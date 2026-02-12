@@ -18,7 +18,7 @@ export default function GroupList() {
     const { data: { user } } = await supabase.auth.getUser();
     const { data: list, error } = await supabase
       .from("groups")
-      .select("id, name, description, category, chat_room_id")
+      .select("id, name, description, category, chat_room_id, header_url")
       .order("created_at", { ascending: false });
     if (error) {
       console.error("groups fetch:", error);
@@ -50,7 +50,7 @@ export default function GroupList() {
         description: (g as { description: string | null }).description ?? "",
         category: (g as { category: string | null }).category ?? "その他",
         memberCount: countByGroup[(g as { id: string }).id] ?? 0,
-        image: "/placeholder.svg",
+        image: (g as { header_url?: string | null }).header_url ?? "/placeholder.svg",
         isJoined: myJoined.has((g as { id: string }).id),
         chatRoomId: (g as { chat_room_id?: string | null }).chat_room_id ?? null,
       }))

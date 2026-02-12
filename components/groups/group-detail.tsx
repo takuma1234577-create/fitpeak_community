@@ -22,6 +22,7 @@ type GroupData = {
   is_private: boolean;
   chat_room_id: string | null;
   created_by: string;
+  header_url: string | null;
 };
 
 type MemberRow = {
@@ -64,7 +65,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
     setMyUserId(user.id);
     const { data: g, error } = await supabase
       .from("groups")
-      .select("id, name, description, category, is_private, chat_room_id, created_by")
+      .select("id, name, description, category, is_private, chat_room_id, created_by, header_url")
       .eq("id", groupId)
       .single();
     if (error || !g) {
@@ -80,6 +81,7 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
       is_private: (g as GroupData).is_private ?? false,
       chat_room_id: (g as GroupData).chat_room_id,
       created_by: (g as GroupData).created_by,
+      header_url: (g as GroupData).header_url ?? null,
     });
 
     const { data: memberRows } = await supabase
@@ -311,10 +313,11 @@ export default function GroupDetail({ groupId }: { groupId: string }) {
         <>
           <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-border/60 bg-card">
             <Image
-              src="/placeholder.svg"
+              src={group.header_url || "/placeholder.svg"}
               alt={group.name}
               fill
               className="object-cover"
+              unoptimized={!!group.header_url}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
             <div className="absolute bottom-3 left-3 right-3">

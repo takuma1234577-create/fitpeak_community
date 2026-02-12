@@ -23,6 +23,7 @@ type GroupData = {
   is_private: boolean;
   chat_room_id: string | null;
   created_by: string;
+  header_url: string | null;
 };
 
 type MemberRow = {
@@ -72,7 +73,7 @@ export default function GroupDetailModal({
     setMyUserId(user.id);
     const { data: g, error } = await supabase
       .from("groups")
-      .select("id, name, description, category, is_private, chat_room_id, created_by")
+      .select("id, name, description, category, is_private, chat_room_id, created_by, header_url")
       .eq("id", groupId)
       .single();
     if (error || !g) {
@@ -192,7 +193,13 @@ export default function GroupDetailModal({
             </h2>
 
             <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-border/60 bg-card">
-              <Image src="/placeholder.svg" alt="" fill className="object-cover" />
+              <Image
+                src={group.header_url || "/placeholder.svg"}
+                alt=""
+                fill
+                className="object-cover"
+                unoptimized={!!group.header_url}
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
               <div className="absolute bottom-3 left-3 right-3">
                 {group.description && (

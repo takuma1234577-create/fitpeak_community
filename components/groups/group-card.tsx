@@ -71,6 +71,7 @@ export default function GroupCard({
           alt={group.name}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
+          unoptimized={group.image?.startsWith("http") ?? false}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center gap-2">

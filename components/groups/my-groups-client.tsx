@@ -20,6 +20,7 @@ type Row = {
   category: string | null;
   chat_room_id: string | null;
   created_by: string;
+  header_url?: string | null;
 };
 
 function toGroup(row: Row, memberCount: number, isJoined: boolean): Group {
@@ -29,7 +30,7 @@ function toGroup(row: Row, memberCount: number, isJoined: boolean): Group {
     description: row.description ?? "",
     category: row.category ?? "その他",
     memberCount,
-    image: "/placeholder.svg",
+    image: row.header_url ?? "/placeholder.svg",
     isJoined,
     chatRoomId: row.chat_room_id ?? null,
   };
@@ -59,7 +60,7 @@ export default function MyGroupsClient() {
 
       const { data: managedRows } = await supabase
         .from("groups")
-        .select("id, name, description, category, chat_room_id, created_by")
+        .select("id, name, description, category, chat_room_id, created_by, header_url")
         .eq("created_by", user.id);
       const managedList = (managedRows ?? []) as Row[];
 
@@ -67,7 +68,7 @@ export default function MyGroupsClient() {
         joinedIds.length > 0
           ? await supabase
               .from("groups")
-              .select("id, name, description, category, chat_room_id, created_by")
+              .select("id, name, description, category, chat_room_id, created_by, header_url")
               .in("id", joinedIds)
           : { data: [] };
       const joinedList = (joinedRows ?? []) as Row[];
