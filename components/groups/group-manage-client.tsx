@@ -256,12 +256,14 @@ export default function GroupManageClient({ groupId, embedded, onClose, onGroupU
               try {
                 const url = await uploadGroupHeader(group.created_by, group.id, headerPreviewFile);
                 const supabase = createClient();
-                const { error: updateErr } = await (supabase as any)
+                const { data: updated, error: updateErr } = await (supabase as any)
                   .from("groups")
                   .update({ header_url: url })
                   .eq("id", group.id)
-                  .eq("created_by", group.created_by);
-                if (updateErr) throw new Error(updateErr.message);
+                  .eq("created_by", group.created_by)
+                  .select("id")
+                  .single();
+                if (updateErr || !updated) throw new Error(updateErr?.message ?? "更新に失敗しました");
                 setGroup((prev) => (prev ? { ...prev, header_url: url } : null));
                 setHeaderImageKey((k) => k + 1);
                 if (headerPreviewUrl) URL.revokeObjectURL(headerPreviewUrl);

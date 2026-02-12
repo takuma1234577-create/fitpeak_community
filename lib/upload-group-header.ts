@@ -25,5 +25,7 @@ export async function uploadGroupHeader(
   const {
     data: { publicUrl },
   } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
-  return publicUrl;
+  // キャッシュ回避: 同じURLで上書きしてもブラウザが新しい画像を取得するようにクエリを付与
+  const separator = publicUrl.includes("?") ? "&" : "?";
+  return `${publicUrl}${separator}v=${Date.now()}`;
 }
