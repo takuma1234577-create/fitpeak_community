@@ -38,7 +38,7 @@ export default function DashboardMessageChatPage() {
 
   if (group === undefined || (group && !myUserId)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#060606]">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-gold" />
       </div>
     );

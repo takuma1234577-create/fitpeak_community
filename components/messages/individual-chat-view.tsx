@@ -350,7 +350,7 @@ export default function IndividualChatView({
 
   if (loading) {
     return (
-      <div className={cn("flex items-center justify-center bg-[#060606]", embedded ? "h-[100dvh]" : "min-h-screen")}>
+      <div className={cn("flex items-center justify-center bg-white", embedded ? "h-[100dvh]" : "min-h-screen")}>
         <Loader2 className="h-8 w-8 animate-spin text-gold" />
       </div>
     );
