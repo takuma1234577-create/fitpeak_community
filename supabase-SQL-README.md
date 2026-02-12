@@ -92,6 +92,7 @@ SQL を流したあと、**Supabase の画面上でも次の設定を確認**す
 - **supabase_realtime** に次のテーブルが含まれているか確認し、無ければ追加する：
   - **messages**（チャットメッセージの即時表示）
   - **conversation_participants**（既読のリアルタイム更新）
+  - **profiles**（都道府県マップの人数をリアルタイム反映。`schema-migrations/008_profiles_realtime.sql` で追加）
 - 通知をリアルタイムで受け取りたい場合は **notifications** も追加してよい（アプリは現状ポーリングでも動作します）。
 
 ### 3. Storage（画像アップロード）

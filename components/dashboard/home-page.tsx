@@ -25,6 +25,7 @@ import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { useProfileModal } from "@/contexts/profile-modal-context";
 import { toGenderLabel } from "@/lib/constants";
+import { normalizePrefectureToCanonical } from "@/lib/japan-map-paths";
 import JapanMapSection from "@/components/dashboard/japan-map-section";
 
 function SectionHeader({
@@ -562,15 +563,95 @@ function YourGroupsSection() {
   );
 }
 
+type ProfileRow = {
+  prefecture?: string | null;
+  area?: string | null;
+  email_confirmed?: boolean | null;
+};
+
+function getCanonicalFromRow(row: ProfileRow | null | undefined): string | null {
+  if (!row || !row.email_confirmed) return null;
+  const pref =
+    (row.prefecture && String(row.prefecture).trim()) ||
+    (row.area && String(row.area).trim()) ||
+    null;
+  if (!pref) return null;
+  const canonical = normalizePrefectureToCanonical(pref);
+  return canonical || null;
+}
+
 type HomePageProps = {
   recommendedUsers?: NewArrivalUser[];
   myUserId?: string | null;
   prefectureCounts?: Record<string, number>;
 };
 
-export default function HomePage({ recommendedUsers = [], myUserId = null, prefectureCounts = {} }: HomePageProps) {
+export default function HomePage({ recommendedUsers = [], myUserId = null, prefectureCounts: initialPrefectureCounts = {} }: HomePageProps) {
   const { blockedIds } = useBlockedUserIds();
   const { openProfileModal } = useProfileModal();
+  const [prefectureCounts, setPrefectureCounts] = useState<Record<string, number>>(initialPrefectureCounts);
+
+  // 初期値（SSR）が変わったときに state を同期（例: ダッシュボード再訪問）
+  useEffect(() => {
+    setPrefectureCounts(initialPrefectureCounts);
+  }, [initialPrefectureCounts]);
+
+  // 都道府県マップ: profiles の変更を Realtime で購読
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("profiles-prefecture-counts")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "profiles" },
+        (payload) => {
+          const canonical = getCanonicalFromRow(payload.new as ProfileRow);
+          if (!canonical) return;
+          setPrefectureCounts((prev) => ({
+            ...prev,
+            [canonical]: (prev[canonical] ?? 0) + 1,
+          }));
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles" },
+        (payload) => {
+          const oldRow = payload.old as ProfileRow | undefined;
+          const newRow = payload.new as ProfileRow;
+          const oldCanonical = getCanonicalFromRow(oldRow);
+          const newCanonical = getCanonicalFromRow(newRow);
+          setPrefectureCounts((prev) => {
+            const next = { ...prev };
+            if (oldCanonical) {
+              const v = (next[oldCanonical] ?? 0) - 1;
+              next[oldCanonical] = Math.max(0, v);
+            }
+            if (newCanonical) {
+              next[newCanonical] = (next[newCanonical] ?? 0) + 1;
+            }
+            return next;
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "profiles" },
+        (payload) => {
+          const canonical = getCanonicalFromRow(payload.old as ProfileRow);
+          if (!canonical) return;
+          setPrefectureCounts((prev) => {
+            const v = (prev[canonical] ?? 0) - 1;
+            return { ...prev, [canonical]: Math.max(0, v) };
+          });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const filteredUsers = (recommendedUsers ?? []).filter((u) => !blockedIds.has(u.id));
 
   return (
