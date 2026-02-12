@@ -328,7 +328,7 @@ function RecommendedRecruitmentsSection() {
       ) : (
         <div className="scrollbar-hide -mx-4 snap-x snap-mandatory overflow-x-auto overflow-y-hidden px-4 pb-2">
           <div className="flex gap-3">
-            {list.map((r) => {
+            {safeArray(list).map((r) => {
               const organizer = r.profiles?.nickname || r.profiles?.username || "ユーザー";
               const organizerInitial = organizer.charAt(0);
               const avatarUrl = r.profiles?.avatar_url ?? null;
@@ -611,7 +611,7 @@ export default function HomePage({ recommendedUsers = [], myUserId = null, prefe
     };
   }, []);
 
-  const filteredUsers = (recommendedUsers ?? []).filter((u) => !blockedIds.has(u.id));
+  const filteredUsers = safeArray(recommendedUsers).filter((u) => !blockedIds.has(u.id));
 
   return (
     <div className="flex min-w-0 flex-col gap-8">

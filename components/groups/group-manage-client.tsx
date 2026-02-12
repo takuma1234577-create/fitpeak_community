@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import CreateGroupDialog from "@/components/groups/create-group-dialog";
 import { createClient } from "@/utils/supabase/client";
 import { ensureArray } from "@/lib/data-sanitizer";
+import { safeArray } from "@/lib/utils";
 import { uploadGroupHeader } from "@/lib/upload-group-header";
 
 type GroupData = {
@@ -271,7 +272,7 @@ export default function GroupManageClient({ groupId }: { groupId: string }) {
           メンバー（{members.length}名）
         </h2>
         <ul className="grid gap-3 sm:grid-cols-2">
-          {members.map((m) => (
+          {safeArray(members).map((m) => (
             <li
               key={m.user_id}
               className="flex items-center gap-3 rounded-lg border border-border/40 bg-secondary/30 px-4 py-3"

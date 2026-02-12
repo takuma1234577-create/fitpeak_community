@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Loader2, CalendarDays, MapPin, User, Users, ChevronRight, ArrowUpDown, Clock } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { safeList } from "@/lib/utils";
+import { safeArray, safeList } from "@/lib/utils";
 import RecruitFilterBar, {
   DEFAULT_FILTERS,
   type RecruitFilters,
@@ -163,7 +163,8 @@ export default function RecruitBoard() {
   }, [filters.area, filters.bodyPart, filters.level]);
 
   const sortedList = useMemo(() => {
-    return [...list].sort((a, b) => {
+    const arr = Array.isArray(list) ? list : [];
+    return [...arr].sort((a, b) => {
       switch (sortKey) {
         case "date_near": {
           const tA = a.event_date ? new Date(a.event_date).getTime() : 0;
@@ -448,7 +449,7 @@ export default function RecruitBoard() {
         </div>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
-          {sortedList.map((r) => {
+          {safeArray(sortedList).map((r) => {
             const organizer = r.profiles?.nickname || r.profiles?.username || "ユーザー";
             const organizerInitial = organizer.charAt(0);
             const avatarUrl = r.profiles?.avatar_url ?? null;

@@ -16,6 +16,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useFollow } from "@/hooks/use-follow";
 import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { useProfileModal } from "@/contexts/profile-modal-context";
+import { safeArray } from "@/lib/utils";
 import { getOrCreateConversation } from "@/lib/conversations";
 import {
   TILE_PREFECTURES,
@@ -194,7 +195,7 @@ function PrefectureUsersPanel({
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  const filteredUsers = users.filter((u) => !blockedIds.has(u.id));
+  const filteredUsers = safeArray(users).filter((u) => !blockedIds.has(u.id));
 
   return (
     <>
