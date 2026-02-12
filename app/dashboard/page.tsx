@@ -2,6 +2,8 @@ import HomePage from "@/components/dashboard/home-page";
 import { createClient } from "@/utils/supabase/server";
 import { getNewArrivalUsers } from "@/lib/recommendations";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -11,21 +13,21 @@ export default async function DashboardPage() {
   let prefectureCounts: Record<string, number> = {};
 
   try {
+    const sb = supabase as any;
     const [usersResult, countsResult] = await Promise.all([
       getNewArrivalUsers(supabase, myUserId, 10),
-      (supabase as any)
-        .from("profiles")
-        .select("prefecture, area")
-        .eq("email_confirmed", true)
-        .or("prefecture.not.is.null,area.not.is.null"),
+      sb.from("profiles").select("prefecture, area").eq("email_confirmed", true),
     ]);
 
     recommendedUsers = usersResult;
 
+    if (countsResult.error) {
+      console.error("Dashboard prefecture counts error:", countsResult.error);
+    }
     if (countsResult.data && Array.isArray(countsResult.data)) {
       for (const row of countsResult.data) {
         const r = row as { prefecture: string | null; area: string | null };
-        const pref = (r.prefecture && r.prefecture.trim()) || (r.area && r.area.trim()) || null;
+        const pref = (r.prefecture && String(r.prefecture).trim()) || (r.area && String(r.area).trim()) || null;
         if (pref) {
           prefectureCounts[pref] = (prefectureCounts[pref] || 0) + 1;
         }
