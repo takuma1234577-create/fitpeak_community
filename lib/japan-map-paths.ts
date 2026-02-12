@@ -1,6 +1,6 @@
 /**
- * 47都道府県の SVG path データ + 地方マッピング
- * viewBox: 0 0 1000 1200 (簡略化した日本地図)
+ * 47 prefectures SVG path data + region mapping
+ * viewBox: 0 0 1000 1200
  */
 
 export type RegionKey =
@@ -43,7 +43,6 @@ export type PrefectureData = {
   labelY: number;
 };
 
-/** 都道府県 → 地方 マッピング (constants.ts の PREFECTURES と整合) */
 export const PREFECTURE_REGION_MAP: Record<string, RegionKey> = {
   北海道: "hokkaido",
   青森県: "tohoku",
@@ -94,13 +93,7 @@ export const PREFECTURE_REGION_MAP: Record<string, RegionKey> = {
   沖縄県: "kyushu",
 };
 
-/**
- * 日本地図 SVG パスデータ
- * viewBox="0 0 1000 1200"
- * 各都道府県は地理的位置を反映した簡略化ポリゴン
- */
 export const PREFECTURES_MAP: PrefectureData[] = [
-  // === 北海道 ===
   {
     name: "北海道",
     region: "hokkaido",
@@ -108,7 +101,6 @@ export const PREFECTURES_MAP: PrefectureData[] = [
     labelX: 760,
     labelY: 130,
   },
-  // === 東北 ===
   {
     name: "青森県",
     region: "tohoku",
@@ -151,7 +143,6 @@ export const PREFECTURES_MAP: PrefectureData[] = [
     labelX: 690,
     labelY: 465,
   },
-  // === 関東 ===
   {
     name: "茨城県",
     region: "kanto",
@@ -201,7 +192,6 @@ export const PREFECTURES_MAP: PrefectureData[] = [
     labelX: 675,
     labelY: 607,
   },
-  // === 中部 ===
   {
     name: "新潟県",
     region: "chubu",
@@ -265,7 +255,6 @@ export const PREFECTURES_MAP: PrefectureData[] = [
     labelX: 578,
     labelY: 598,
   },
-  // === 近畿 ===
   {
     name: "三重県",
     region: "kinki",
@@ -315,7 +304,6 @@ export const PREFECTURES_MAP: PrefectureData[] = [
     labelX: 510,
     labelY: 670,
   },
-  // === 中国 ===
   {
     name: "鳥取県",
     region: "chugoku",
@@ -351,7 +339,6 @@ export const PREFECTURES_MAP: PrefectureData[] = [
     labelX: 362,
     labelY: 595,
   },
-  // === 四国 ===
   {
     name: "徳島県",
     region: "shikoku",
@@ -380,7 +367,6 @@ export const PREFECTURES_MAP: PrefectureData[] = [
     labelX: 450,
     labelY: 698,
   },
-  // === 九州・沖縄 ===
   {
     name: "福岡県",
     region: "kyushu",
@@ -439,19 +425,6 @@ export const PREFECTURES_MAP: PrefectureData[] = [
   },
 ];
 
-/** 地方 → 所属都道府県名の配列 */
 export function getPrefecturesByRegion(region: RegionKey): string[] {
   return PREFECTURES_MAP.filter((p) => p.region === region).map((p) => p.name);
 }
-
-/** 地方ごとの色（ベースカラー） */
-export const REGION_COLORS: Record<RegionKey, { fill: string; hover: string }> = {
-  hokkaido: { fill: "#F0E6C8", hover: "#E5D4A1" },
-  tohoku: { fill: "#E8DFC0", hover: "#DDD0A0" },
-  kanto: { fill: "#F5E8C0", hover: "#EDDA9E" },
-  chubu: { fill: "#EDE3C5", hover: "#E2D4A5" },
-  kinki: { fill: "#F2E4B8", hover: "#E8D698" },
-  chugoku: { fill: "#ECE0C0", hover: "#E0D1A0" },
-  shikoku: { fill: "#F0DEBB", hover: "#E5CF9A" },
-  kyushu: { fill: "#EDDCB5", hover: "#E2CC95" },
-};

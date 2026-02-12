@@ -7,9 +7,10 @@ import {
   Users,
   MessageCircle,
   X,
-  ChevronDown,
   Loader2,
   Dumbbell,
+  UserPlus,
+  ChevronRight,
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
@@ -22,7 +23,6 @@ import {
   PREFECTURES_MAP,
   REGION_LABELS,
   REGION_ORDER,
-  REGION_COLORS,
   PREFECTURE_REGION_MAP,
   getPrefecturesByRegion,
   type RegionKey,
@@ -80,36 +80,35 @@ function PrefectureUserCard({
   }, [myUserId, user.id, router]);
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border/40 bg-card px-4 py-3 transition-all hover:border-gold/30">
-      {/* Avatar + info */}
+    <div className="group flex items-center gap-3 rounded-xl border border-[#1a1a1a] bg-[#0d0d0d] p-3 transition-all duration-200 hover:border-gold/30 hover:bg-[#111]">
       <button
         type="button"
         onClick={() => openProfileModal(user.id)}
         className="flex min-w-0 flex-1 items-center gap-3"
       >
-        <Avatar className="h-11 w-11 shrink-0 ring-2 ring-border/60">
+        <Avatar className="h-10 w-10 shrink-0 ring-1 ring-[#222]">
           <AvatarImage src={user.avatar_url ?? undefined} alt={name} />
-          <AvatarFallback className="bg-secondary text-sm font-bold">
+          <AvatarFallback className="bg-[#1a1a1a] text-xs font-bold text-[#999]">
             {initial}
           </AvatarFallback>
         </Avatar>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <p className="truncate text-sm font-bold text-foreground">{name}</p>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <p className="truncate text-sm font-semibold text-[#e5e5e5]">{name}</p>
           {user.bio && (
-            <p className="line-clamp-1 text-xs text-muted-foreground">
+            <p className="line-clamp-1 text-[11px] text-[#666] leading-relaxed">
               {user.bio}
             </p>
           )}
-          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {user.prefecture && (
-              <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground">
-                <MapPin className="h-3 w-3" />
+              <span className="flex items-center gap-0.5 text-[10px] text-[#555]">
+                <MapPin className="h-2.5 w-2.5" />
                 {user.prefecture}
               </span>
             )}
             {user.home_gym && (
-              <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground">
-                <Dumbbell className="h-3 w-3" />
+              <span className="flex items-center gap-0.5 text-[10px] text-[#555]">
+                <Dumbbell className="h-2.5 w-2.5" />
                 {user.home_gym}
               </span>
             )}
@@ -117,32 +116,32 @@ function PrefectureUserCard({
         </div>
       </button>
 
-      {/* Action buttons */}
       {showActions && (
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={toggle}
             disabled={followLoading}
-            className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition-all disabled:opacity-60 ${
+            className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-200 disabled:opacity-40 ${
               isFollowing
-                ? "border-gold/50 bg-gold/10 text-gold"
-                : "border-border bg-secondary text-foreground hover:border-gold/30"
+                ? "bg-gold/15 text-gold"
+                : "bg-[#1a1a1a] text-[#888] hover:bg-gold/10 hover:text-gold"
             }`}
           >
-            {isFollowing ? "フォロー中" : "フォロー"}
+            <UserPlus className="h-3 w-3" />
+            {isFollowing ? "済" : "フォロー"}
           </button>
           <button
             type="button"
             onClick={handleChat}
             disabled={chatLoading}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground transition-all hover:border-gold/30 hover:text-gold disabled:opacity-60"
+            className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1a1a1a] text-[#888] transition-all duration-200 hover:bg-gold/10 hover:text-gold disabled:opacity-40"
             aria-label="チャットする"
           >
             {chatLoading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
-              <MessageCircle className="h-3.5 w-3.5" />
+              <MessageCircle className="h-3 w-3" />
             )}
           </button>
         </div>
@@ -151,7 +150,7 @@ function PrefectureUserCard({
   );
 }
 
-// ─── Prefecture Users Panel (Bottom Sheet) ──────────
+// ─── Bottom Sheet Panel ──────────────────────────────
 
 function PrefectureUsersPanel({
   prefecture,
@@ -167,7 +166,6 @@ function PrefectureUsersPanel({
   const [users, setUsers] = useState<PrefectureUser[]>([]);
   const [loading, setLoading] = useState(true);
   const { blockedIds } = useBlockedUserIds();
-  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -176,9 +174,7 @@ function PrefectureUsersPanel({
       const supabase = createClient();
       const { data, error } = await (supabase as any)
         .from("profiles")
-        .select(
-          "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises"
-        )
+        .select("id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises")
         .eq("prefecture", prefecture)
         .eq("email_confirmed", true)
         .order("created_at", { ascending: false })
@@ -194,12 +190,9 @@ function PrefectureUsersPanel({
         setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [prefecture]);
 
-  // Close on Escape key
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -214,32 +207,33 @@ function PrefectureUsersPanel({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-foreground/20"
+        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Panel */}
       <div
-        ref={panelRef}
         role="dialog"
         aria-label={`${prefecture}のユーザー一覧`}
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[75vh] flex-col rounded-t-2xl border-t border-border/60 bg-background shadow-lg animate-in slide-in-from-bottom duration-300"
+        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col rounded-t-2xl border-t border-[#1a1a1a] bg-[#0a0a0a] shadow-2xl animate-in slide-in-from-bottom duration-300"
       >
         {/* Handle */}
-        <div className="flex justify-center py-2">
-          <div className="h-1 w-10 rounded-full bg-border" />
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1 w-8 rounded-full bg-[#333]" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/40 px-5 pb-3">
-          <div className="flex items-center gap-2.5">
-            <MapPin className="h-5 w-5 text-gold" />
+        <div className="flex items-center justify-between px-5 pb-3 pt-1">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/10">
+              <MapPin className="h-4 w-4 text-gold" />
+            </div>
             <div>
-              <h3 className="text-base font-extrabold text-foreground">
+              <h3 className="text-base font-bold text-[#e5e5e5] tracking-tight">
                 {prefecture}
               </h3>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] text-[#666] font-medium">
                 {userCount}人のトレーニー
               </p>
             </div>
@@ -247,34 +241,33 @@ function PrefectureUsersPanel({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1a1a1a] text-[#666] transition-colors hover:text-[#999]"
             aria-label="閉じる"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
+        {/* Divider */}
+        <div className="mx-5 h-px bg-[#1a1a1a]" />
+
         {/* User list */}
-        <div className="flex-1 overflow-y-auto px-4 py-3">
+        <div className="flex-1 overflow-y-auto px-4 py-3 scrollbar-hide">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-7 w-7 animate-spin text-gold/60" />
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-5 w-5 animate-spin text-gold/40" />
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Users className="h-10 w-10 text-muted-foreground/30" />
-              <p className="mt-2 text-sm text-muted-foreground">
+            <div className="flex flex-col items-center justify-center py-16">
+              <Users className="h-8 w-8 text-[#333]" />
+              <p className="mt-3 text-xs text-[#555]">
                 この地域にはまだユーザーがいません
               </p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
               {filteredUsers.map((user) => (
-                <PrefectureUserCard
-                  key={user.id}
-                  user={user}
-                  myUserId={myUserId}
-                />
+                <PrefectureUserCard key={user.id} user={user} myUserId={myUserId} />
               ))}
             </div>
           )}
@@ -290,40 +283,28 @@ export default function JapanMapSection({
   prefectureCounts,
   myUserId,
 }: JapanMapSectionProps) {
-  const [selectedPrefecture, setSelectedPrefecture] = useState<string | null>(
-    null
-  );
-  const [hoveredPrefecture, setHoveredPrefecture] = useState<string | null>(
-    null
-  );
+  const [selectedPrefecture, setSelectedPrefecture] = useState<string | null>(null);
+  const [hoveredPrefecture, setHoveredPrefecture] = useState<string | null>(null);
   const [expandedRegion, setExpandedRegion] = useState<RegionKey | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
-  // Compute region counts
   const regionCounts: Record<RegionKey, number> = {
-    hokkaido: 0,
-    tohoku: 0,
-    kanto: 0,
-    chubu: 0,
-    kinki: 0,
-    chugoku: 0,
-    shikoku: 0,
-    kyushu: 0,
+    hokkaido: 0, tohoku: 0, kanto: 0, chubu: 0,
+    kinki: 0, chugoku: 0, shikoku: 0, kyushu: 0,
   };
 
   for (const [pref, count] of Object.entries(prefectureCounts)) {
     const region = PREFECTURE_REGION_MAP[pref];
-    if (region) {
-      regionCounts[region] += count;
-    }
+    if (region) regionCounts[region] += count;
   }
 
-  const totalUsers = Object.values(prefectureCounts).reduce(
-    (a, b) => a + b,
-    0
-  );
+  const totalUsers = Object.values(prefectureCounts).reduce((a, b) => a + b, 0);
 
   const handlePrefectureClick = useCallback((name: string) => {
     setSelectedPrefecture(name);
+    setHoveredPrefecture(null);
+    setTooltipPos(null);
   }, []);
 
   const handleRegionToggle = useCallback((region: RegionKey) => {
@@ -334,108 +315,211 @@ export default function JapanMapSection({
     setSelectedPrefecture(null);
   }, []);
 
+  const handleMouseEnter = useCallback((name: string, e: React.MouseEvent<SVGPathElement>) => {
+    setHoveredPrefecture(name);
+    if (svgRef.current) {
+      const svgRect = svgRef.current.getBoundingClientRect();
+      const pathRect = (e.target as SVGPathElement).getBoundingClientRect();
+      const x = pathRect.left + pathRect.width / 2 - svgRect.left;
+      const y = pathRect.top - svgRect.top - 8;
+      setTooltipPos({ x, y });
+    }
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredPrefecture(null);
+    setTooltipPos(null);
+  }, []);
+
   return (
-    <section
-      className="flex w-full min-w-0 flex-col gap-4"
-      aria-label="地域マップ"
-    >
-      {/* Section header */}
-      <div className="flex items-center gap-2.5">
-        <MapPin className="h-5 w-5 text-gold" />
-        <h2 className="text-lg font-extrabold tracking-wide text-foreground">
-          エリアで仲間を探す
-        </h2>
+    <section className="flex w-full min-w-0 flex-col gap-5" aria-label="地域マップ">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10">
+            <MapPin className="h-4 w-4 text-gold" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold tracking-tight text-foreground">
+              エリアで仲間を探す
+            </h2>
+            <p className="text-[11px] text-muted-foreground font-medium">
+              都道府県をタップして近くのトレーニーを見つけよう
+            </p>
+          </div>
+        </div>
         {totalUsers > 0 && (
-          <span className="ml-auto rounded-full bg-gold/10 px-2.5 py-0.5 text-[11px] font-bold text-gold">
-            全国 {totalUsers}人
-          </span>
-        )}
-      </div>
-
-      {/* SVG Japan Map */}
-      <div className="relative w-full overflow-hidden rounded-2xl border border-border/40 bg-card">
-        <svg
-          viewBox="180 0 740 960"
-          className="h-auto w-full"
-          role="img"
-          aria-label="日本地図"
-        >
-          {/* Prefecture paths */}
-          {PREFECTURES_MAP.map((pref) => {
-            const isHovered = hoveredPrefecture === pref.name;
-            const isSelected = selectedPrefecture === pref.name;
-            const regionColor = REGION_COLORS[pref.region];
-            const count = prefectureCounts[pref.name] || 0;
-
-            let fillColor = regionColor.fill;
-            if (isSelected) fillColor = "#D4AF37";
-            else if (isHovered) fillColor = regionColor.hover;
-
-            return (
-              <g key={pref.name}>
-                <path
-                  d={pref.path}
-                  fill={fillColor}
-                  stroke={isSelected ? "#B8952F" : "#C8C0A8"}
-                  strokeWidth={isSelected ? 2 : 1}
-                  className="cursor-pointer transition-colors duration-150"
-                  onMouseEnter={() => setHoveredPrefecture(pref.name)}
-                  onMouseLeave={() => setHoveredPrefecture(null)}
-                  onClick={() => handlePrefectureClick(pref.name)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${pref.name} ${count}人`}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handlePrefectureClick(pref.name);
-                    }
-                  }}
-                />
-                {/* Show count badge for prefectures with users */}
-                {count > 0 && (
-                  <g
-                    className="pointer-events-none"
-                    transform={`translate(${pref.labelX}, ${pref.labelY})`}
-                  >
-                    <circle
-                      r="12"
-                      fill="#D4AF37"
-                      opacity="0.9"
-                    />
-                    <text
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fill="#050505"
-                      fontSize="10"
-                      fontWeight="700"
-                    >
-                      {count}
-                    </text>
-                  </g>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Hover tooltip */}
-        {hoveredPrefecture && !selectedPrefecture && (
-          <div className="pointer-events-none absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-lg bg-foreground/90 px-3 py-1.5 text-xs font-bold text-background shadow-lg">
-            {hoveredPrefecture}{" "}
-            <span className="text-gold">
-              {prefectureCounts[hoveredPrefecture] || 0}人
+          <div className="flex items-center gap-1.5 rounded-full bg-gold/10 px-3 py-1">
+            <Users className="h-3 w-3 text-gold" />
+            <span className="text-[11px] font-bold text-gold tabular-nums">
+              {totalUsers.toLocaleString()}
             </span>
           </div>
         )}
       </div>
 
-      {/* Region chips (mobile-friendly alternative to map clicking) */}
-      <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold text-muted-foreground">
+      {/* Map Container - Dark futuristic card */}
+      <div className="relative overflow-hidden rounded-2xl bg-[#0a0a0a] border border-[#1a1a1a]">
+        {/* Subtle radial glow behind the map */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: "radial-gradient(ellipse 60% 50% at 60% 50%, rgba(212,175,55,0.04) 0%, transparent 70%)",
+          }}
+        />
+
+        {/* Grid overlay for sci-fi feel */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(212,175,55,1) 1px, transparent 1px), linear-gradient(90deg, rgba(212,175,55,1) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+
+        <div className="relative p-4">
+          <svg
+            ref={svgRef}
+            viewBox="180 0 740 960"
+            className="h-auto w-full"
+            role="img"
+            aria-label="日本地図"
+          >
+            <defs>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                <feMerge>
+                  <feMergeNode in="coloredBlur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter id="glow-strong">
+                <feGaussianBlur stdDeviation="6" result="coloredBlur" />
+                <feMerge>
+                  <feMergeNode in="coloredBlur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {PREFECTURES_MAP.map((pref) => {
+              const isHovered = hoveredPrefecture === pref.name;
+              const isSelected = selectedPrefecture === pref.name;
+              const count = prefectureCounts[pref.name] || 0;
+              const hasUsers = count > 0;
+
+              let fillColor = hasUsers ? "rgba(212,175,55,0.12)" : "rgba(255,255,255,0.03)";
+              let strokeColor = hasUsers ? "rgba(212,175,55,0.3)" : "rgba(255,255,255,0.08)";
+              let strokeWidth = 0.8;
+
+              if (isSelected) {
+                fillColor = "rgba(212,175,55,0.25)";
+                strokeColor = "rgba(212,175,55,0.7)";
+                strokeWidth = 1.5;
+              } else if (isHovered) {
+                fillColor = hasUsers ? "rgba(212,175,55,0.2)" : "rgba(255,255,255,0.06)";
+                strokeColor = hasUsers ? "rgba(212,175,55,0.5)" : "rgba(255,255,255,0.15)";
+                strokeWidth = 1.2;
+              }
+
+              return (
+                <g key={pref.name}>
+                  <path
+                    d={pref.path}
+                    fill={fillColor}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    strokeLinejoin="round"
+                    className="cursor-pointer"
+                    style={{
+                      transition: "fill 0.2s ease, stroke 0.2s ease, stroke-width 0.15s ease",
+                      filter: (isHovered || isSelected) && hasUsers ? "url(#glow)" : "none",
+                    }}
+                    onMouseEnter={(e) => handleMouseEnter(pref.name, e)}
+                    onMouseLeave={handleMouseLeave}
+                    onClick={() => handlePrefectureClick(pref.name)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${pref.name} ${count}人`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handlePrefectureClick(pref.name);
+                      }
+                    }}
+                  />
+                  {/* Pulsing dot for prefectures with users */}
+                  {hasUsers && (
+                    <g transform={`translate(${pref.labelX}, ${pref.labelY})`}>
+                      {/* Outer pulse ring */}
+                      <circle r="8" fill="none" stroke="rgba(212,175,55,0.2)" strokeWidth="1">
+                        <animate
+                          attributeName="r"
+                          values="8;14;8"
+                          dur="3s"
+                          repeatCount="indefinite"
+                        />
+                        <animate
+                          attributeName="opacity"
+                          values="0.4;0;0.4"
+                          dur="3s"
+                          repeatCount="indefinite"
+                        />
+                      </circle>
+                      {/* Core dot */}
+                      <circle
+                        r="4"
+                        fill="#D4AF37"
+                        opacity="0.85"
+                        filter="url(#glow)"
+                      />
+                      {/* Count text */}
+                      <text
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fill="#0a0a0a"
+                        fontSize="5.5"
+                        fontWeight="800"
+                        style={{ letterSpacing: "-0.02em" }}
+                      >
+                        {count > 99 ? "99+" : count}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* Floating tooltip */}
+          {hoveredPrefecture && tooltipPos && !selectedPrefecture && (
+            <div
+              className="pointer-events-none absolute z-10 flex items-center gap-2 rounded-lg border border-[#222] bg-[#111] px-3 py-1.5 shadow-xl"
+              style={{
+                left: tooltipPos.x,
+                top: tooltipPos.y,
+                transform: "translate(-50%, -100%)",
+              }}
+            >
+              <span className="text-xs font-semibold text-[#ccc]">
+                {hoveredPrefecture}
+              </span>
+              <span className="h-3 w-px bg-[#333]" />
+              <span className="text-xs font-bold text-gold tabular-nums">
+                {prefectureCounts[hoveredPrefecture] || 0}人
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Region selector */}
+      <div className="flex flex-col gap-3">
+        <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
           地方から探す
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-4 gap-1.5">
           {REGION_ORDER.map((region) => {
             const isExpanded = expandedRegion === region;
             const count = regionCounts[region];
@@ -445,37 +529,36 @@ export default function JapanMapSection({
                 key={region}
                 type="button"
                 onClick={() => handleRegionToggle(region)}
-                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition-all ${
+                className={`relative flex flex-col items-center gap-0.5 rounded-xl px-2 py-2.5 text-center transition-all duration-200 ${
                   isExpanded
-                    ? "border-gold/50 bg-gold/10 text-gold"
-                    : "border-border/60 bg-card text-foreground hover:border-gold/30"
+                    ? "bg-gold/10 ring-1 ring-gold/30"
+                    : "bg-card hover:bg-secondary"
                 }`}
               >
-                {REGION_LABELS[region]}
+                <span
+                  className={`text-[11px] font-bold tracking-tight ${
+                    isExpanded ? "text-gold" : "text-foreground"
+                  }`}
+                >
+                  {REGION_LABELS[region]}
+                </span>
                 {count > 0 && (
                   <span
-                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                      isExpanded
-                        ? "bg-gold/20 text-gold"
-                        : "bg-secondary text-muted-foreground"
+                    className={`text-[10px] font-semibold tabular-nums ${
+                      isExpanded ? "text-gold/70" : "text-muted-foreground"
                     }`}
                   >
-                    {count}
+                    {count}人
                   </span>
                 )}
-                <ChevronDown
-                  className={`h-3 w-3 transition-transform ${
-                    isExpanded ? "rotate-180" : ""
-                  }`}
-                />
               </button>
             );
           })}
         </div>
 
-        {/* Expanded region prefecture list */}
+        {/* Expanded prefecture list */}
         {expandedRegion && (
-          <div className="flex flex-wrap gap-1.5 rounded-xl border border-border/40 bg-card/50 p-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex flex-col gap-1 rounded-xl border border-border/40 bg-card p-2 animate-in fade-in slide-in-from-top-2 duration-200">
             {getPrefecturesByRegion(expandedRegion).map((name) => {
               const count = prefectureCounts[name] || 0;
               return (
@@ -483,14 +566,17 @@ export default function JapanMapSection({
                   key={name}
                   type="button"
                   onClick={() => handlePrefectureClick(name)}
-                  className="flex items-center gap-1 rounded-lg border border-border/40 bg-background px-2.5 py-1.5 text-[11px] font-semibold text-foreground transition-all hover:border-gold/30 hover:bg-gold/5"
+                  className="flex items-center justify-between rounded-lg px-3 py-2 text-left transition-all duration-150 hover:bg-secondary"
                 >
-                  {name}
-                  {count > 0 && (
-                    <span className="ml-0.5 text-[10px] font-bold text-gold">
-                      {count}
-                    </span>
-                  )}
+                  <span className="text-xs font-semibold text-foreground">{name}</span>
+                  <div className="flex items-center gap-1.5">
+                    {count > 0 && (
+                      <span className="text-[11px] font-bold text-gold tabular-nums">
+                        {count}人
+                      </span>
+                    )}
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  </div>
                 </button>
               );
             })}
@@ -498,7 +584,7 @@ export default function JapanMapSection({
         )}
       </div>
 
-      {/* Bottom sheet panel for selected prefecture */}
+      {/* Bottom sheet */}
       {selectedPrefecture && (
         <PrefectureUsersPanel
           prefecture={selectedPrefecture}
