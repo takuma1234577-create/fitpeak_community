@@ -15,16 +15,17 @@ export default async function DashboardPage() {
       getNewArrivalUsers(supabase, myUserId, 10),
       (supabase as any)
         .from("profiles")
-        .select("prefecture")
+        .select("prefecture, area")
         .eq("email_confirmed", true)
-        .not("prefecture", "is", null),
+        .or("prefecture.not.is.null,area.not.is.null"),
     ]);
 
     recommendedUsers = usersResult;
 
     if (countsResult.data && Array.isArray(countsResult.data)) {
       for (const row of countsResult.data) {
-        const pref = (row as { prefecture: string | null }).prefecture;
+        const r = row as { prefecture: string | null; area: string | null };
+        const pref = (r.prefecture && r.prefecture.trim()) || (r.area && r.area.trim()) || null;
         if (pref) {
           prefectureCounts[pref] = (prefectureCounts[pref] || 0) + 1;
         }

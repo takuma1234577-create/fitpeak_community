@@ -39,6 +39,7 @@ type PrefectureUser = {
   prefecture: string | null;
   home_gym: string | null;
   exercises: string[] | null;
+  created_at?: string;
 };
 
 type JapanMapSectionProps = {
@@ -167,25 +168,36 @@ function PrefectureUsersPanel({
     (async () => {
       setLoading(true);
       const supabase = createClient();
-      // プロフィールの「住まい」(prefecture) が選択都道府県と一致するユーザーのみ取得
-      const { data, error } = await (supabase as any)
-        .from("profiles")
-        .select("id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises")
-        .eq("prefecture", prefecture)
-        .eq("email_confirmed", true)
-        .not("nickname", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(30);
+      const sb = supabase as any;
+      // プロフィールの「住まい」(prefecture または area) が選択都道府県と一致するユーザーを全員取得
+      const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, created_at";
+      const [byPrefecture, byArea] = await Promise.all([
+        sb.from("profiles").select(fields).eq("email_confirmed", true).eq("prefecture", prefecture).order("created_at", { ascending: false }).limit(50),
+        sb.from("profiles").select(fields).eq("email_confirmed", true).eq("area", prefecture).order("created_at", { ascending: false }).limit(50),
+      ]);
 
-      if (!cancelled) {
-        if (error) {
-          console.error("prefecture users fetch:", error);
-          setUsers([]);
-        } else {
-          setUsers(safeList(data as PrefectureUser[]));
+      if (cancelled) return;
+      const seen = new Set<string>();
+      const merged: PrefectureUser[] = [];
+      for (const row of safeList((byPrefecture.data ?? []) as PrefectureUser[])) {
+        if (row?.id && !seen.has(row.id)) {
+          seen.add(row.id);
+          merged.push(row);
         }
-        setLoading(false);
       }
+      for (const row of safeList((byArea.data ?? []) as PrefectureUser[])) {
+        if (row?.id && !seen.has(row.id)) {
+          seen.add(row.id);
+          merged.push(row);
+        }
+      }
+      merged.sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return tb - ta;
+      });
+      setUsers(merged.slice(0, 50));
+      setLoading(false);
     })();
     return () => {
       cancelled = true;
