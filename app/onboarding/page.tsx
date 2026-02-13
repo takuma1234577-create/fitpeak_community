@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -533,16 +532,6 @@ export default function OnboardingPage() {
               )}
             </button>
           </form>
-
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            あとで
-            <Link
-              href="/dashboard"
-              className="ml-1 font-bold text-gold transition-colors hover:text-gold-light"
-            >
-              スキップ
-            </Link>
-          </p>
         </div>
       </div>
     </main>

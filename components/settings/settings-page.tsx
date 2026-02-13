@@ -270,6 +270,8 @@ export default function SettingsPage() {
     }
   }
 
+  const avatarSectionDisabled = !profile || avatarUploading
+
   function handleHeaderFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !profile) return
@@ -445,19 +447,31 @@ export default function SettingsPage() {
           <h3 className="text-sm font-bold text-foreground mb-4">
             プロフィール写真
           </h3>
-          <div className="flex items-center gap-5">
-            <button
-              type="button"
-              disabled={avatarUploading || !profile}
-              onClick={() => !avatarUploading && profile && avatarInputRef.current?.click()}
-              className="relative group h-24 w-24 shrink-0 rounded-full border-2 border-border bg-secondary overflow-hidden flex items-center justify-center disabled:opacity-60 disabled:pointer-events-none"
+          <div className={cn("flex items-center gap-5", avatarSectionDisabled && "pointer-events-none opacity-60")}>
+            <input
+              id="avatar-file-input"
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+            <label
+              htmlFor="avatar-file-input"
+              className="relative group cursor-pointer h-24 w-24 shrink-0 rounded-full border-2 border-border bg-secondary overflow-hidden flex items-center justify-center"
             >
               {!profile ? (
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               ) : avatarUploading ? (
                 <Loader2 className="h-8 w-8 animate-spin text-gold" />
               ) : avatarPreviewUrl ? (
-                <Image src={avatarPreviewUrl} alt="" fill className="object-cover" unoptimized />
+                <Image
+                  src={`${avatarPreviewUrl}${avatarPreviewUrl.includes("?") ? "&" : "?"}v=${(profile as { updated_at?: string })?.updated_at ?? Date.now()}`}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
               ) : (
                 <span className="text-3xl font-black text-gold">{displayName.charAt(0) || "?"}</span>
               )}
@@ -466,21 +480,11 @@ export default function SettingsPage() {
                   <Camera className="h-5 w-5 text-foreground" />
                 </span>
               )}
-            </button>
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleAvatarUpload}
-              disabled={avatarUploading || !profile}
-            />
+            </label>
             <div className="flex flex-col gap-1.5">
-              <button
-                type="button"
-                disabled={avatarUploading || !profile}
-                onClick={() => !avatarUploading && profile && avatarInputRef.current?.click()}
-                className="text-left text-sm font-semibold text-gold hover:text-gold-light transition-colors disabled:opacity-60 disabled:pointer-events-none"
+              <label
+                htmlFor="avatar-file-input"
+                className="cursor-pointer text-left text-sm font-semibold text-gold hover:text-gold-light transition-colors"
               >
                 {!profile
                   ? isLoading
@@ -489,7 +493,7 @@ export default function SettingsPage() {
                   : avatarUploading
                     ? "アップロード中…"
                     : "写真をアップロード"}
-              </button>
+              </label>
               <p className="text-xs text-muted-foreground">
                 JPG, PNG, WebP。2MB以下
               </p>
