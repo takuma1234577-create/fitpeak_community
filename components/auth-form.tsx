@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Mail,
   Lock,
@@ -110,7 +111,15 @@ function LineIcon() {
   );
 }
 
+const LINE_ERROR_MESSAGES: Record<string, string> = {
+  line_login_failed: "LINEログインに失敗しました。もう一度お試しください。",
+  line_state_mismatch: "LINEの認証が期限切れか無効です。もう一度「LINEでログイン」からやり直してください。",
+  line_email_required: "LINEでメールアドレスを取得できませんでした。LINEの設定でメールを公開してください。",
+  line_config_missing: "LINEログインの設定がありません。",
+};
+
 export default function AuthForm() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -120,6 +129,14 @@ export default function AuthForm() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState(false);
+
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err && LINE_ERROR_MESSAGES[err]) {
+      setAuthError(LINE_ERROR_MESSAGES[err]);
+      setActiveTab("login");
+    }
+  }, [searchParams]);
 
   const CONFIRM_EMAIL_MESSAGE = "確認メールを送信しました。メール内のリンクから認証を完了してください。迷惑メールフォルダもご確認ください。";
 

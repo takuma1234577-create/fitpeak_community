@@ -43,7 +43,26 @@ export async function GET(request: NextRequest) {
   const authUrl = `${LINE_AUTH_URL}?${params.toString()}`;
   const response = NextResponse.redirect(authUrl);
 
-  // 既存のSupabaseセッションを必ず破棄（別アカウントの残りセッションで誤ログインしないようにする）
+  const cookieOpts = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+  };
+
+  // state を先に設定（signOut の前で確実にセット）
+  response.cookies.set(STATE_COOKIE_NAME, state, {
+    ...cookieOpts,
+    maxAge: 60 * 10, // 10分
+  });
+  if (nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
+    response.cookies.set(LINE_AUTH_NEXT_COOKIE, nextPath, {
+      ...cookieOpts,
+      maxAge: 60 * 10,
+    });
+  }
+
+  // 既存のSupabaseセッションを破棄（state は上で設定済み。signOut が Cookie を上書きしないよう注意）
   if (supabaseUrl && supabaseAnonKey) {
     const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
       cookies: {
@@ -60,18 +79,11 @@ export async function GET(request: NextRequest) {
     await supabase.auth.signOut();
   }
 
-  const cookieOpts = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-  };
-
+  // signOut の setAll のあとでも state を再設定して確実に残す
   response.cookies.set(STATE_COOKIE_NAME, state, {
     ...cookieOpts,
-    maxAge: 60 * 10, // 10分
+    maxAge: 60 * 10,
   });
-
   if (nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
     response.cookies.set(LINE_AUTH_NEXT_COOKIE, nextPath, {
       ...cookieOpts,

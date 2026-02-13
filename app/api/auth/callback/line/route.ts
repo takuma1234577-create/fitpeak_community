@@ -49,7 +49,11 @@ export async function GET(request: NextRequest) {
 
   const savedState = cookieStore.get(STATE_COOKIE_NAME)?.value;
   if (!savedState || savedState !== state) {
-    return NextResponse.redirect(settingsFailUrl);
+    const stateFailUrl =
+      nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
+        ? `${baseUrl}${nextPath}?error=line_link_failed`
+        : `${baseUrl}/?error=line_state_mismatch`;
+    return NextResponse.redirect(stateFailUrl);
   }
 
   // state 使用済みなので Cookie を削除
