@@ -146,7 +146,21 @@ export default function OnboardingPage() {
       }
     }
 
-    checkUserAndProfile();
+    (async () => {
+      // マジックリンクで /onboarding?code=... に飛ばされた場合にセッションを確立する
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get("code");
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (!cancelled && !exchangeError) {
+            const cleanUrl = window.location.pathname + (window.location.hash || "");
+            window.history.replaceState(null, "", cleanUrl);
+          }
+        }
+      }
+      checkUserAndProfile();
+    })();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (cancelled) return;
       if (event === "INITIAL_SESSION") {

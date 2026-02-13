@@ -187,7 +187,8 @@ export async function GET(request: NextRequest) {
       { onConflict: "id", ignoreDuplicates: true }
     );
 
-  let redirectTo: string;
+  // マジックリンク後に /auth/callback で code をセッションに交換してから next へ飛ばす（直接 /onboarding だとセッション未設定で「ログイン情報が取得できませんでした」になる）
+  let nextPathAfterAuth: string;
   {
     const { data: profileRow } = await admin
       .from("profiles")
@@ -196,13 +197,14 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
     const completed = isProfileCompleted(profileRow);
     if (completed && nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
-      redirectTo = `${appBase}${nextPath}`;
+      nextPathAfterAuth = nextPath;
     } else if (completed) {
-      redirectTo = `${appBase}/dashboard`;
+      nextPathAfterAuth = "/dashboard";
     } else {
-      redirectTo = `${appBase}/onboarding`;
+      nextPathAfterAuth = "/onboarding";
     }
   }
+  const redirectTo = `${appBase}/auth/callback?next=${encodeURIComponent(nextPathAfterAuth)}`;
   if (nextPath) {
     cookieStore.delete(LINE_AUTH_NEXT_COOKIE);
   }
