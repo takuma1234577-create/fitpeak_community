@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { isProfileCompleted } from "@/lib/profile-completed";
 
 const LINE_TOKEN_URL = "https://api.line.me/oauth2/v2.1/token";
 const STATE_COOKIE_NAME = "line_oauth_state";
@@ -169,12 +170,27 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 4. マジックリンク発行してその URL へリダイレクト
+  // ログイン後の遷移先: プロフィール未完了なら必ずオンボーディングへ（nextPath は完了時のみ使用）
   const appBase = appUrl.replace(/\/$/, "");
-  const redirectTo =
-    nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
-      ? `${appBase}${nextPath}`
-      : `${appBase}/dashboard`;
+  const targetUser = await findUserByEmail(1);
+  let redirectTo: string;
+  if (targetUser) {
+    const { data: profileRow } = await admin
+      .from("profiles")
+      .select("avatar_url, nickname, username, bio, prefecture, exercises")
+      .eq("id", targetUser.id)
+      .maybeSingle();
+    const completed = isProfileCompleted(profileRow);
+    if (completed && nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
+      redirectTo = `${appBase}${nextPath}`;
+    } else if (completed) {
+      redirectTo = `${appBase}/dashboard`;
+    } else {
+      redirectTo = `${appBase}/onboarding`;
+    }
+  } else {
+    redirectTo = `${appBase}/onboarding`;
+  }
   if (nextPath) {
     cookieStore.delete(LINE_AUTH_NEXT_COOKIE);
   }

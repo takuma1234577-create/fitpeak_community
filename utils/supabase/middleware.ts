@@ -1,10 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "../../types/supabase";
+import { isProfileCompleted } from "../../lib/profile-completed";
 
 /**
  * ミドルウェア用: リクエストの Cookie を読み、セッション更新後にレスポンスに Cookie を書き戻す。
- * ルートの middleware.ts から呼び出して使用する。
+ * プロフィール未完了のログインユーザーは / および /dashboard から /onboarding へリダイレクトする。
  */
 export async function updateSession(request: NextRequest) {
   const response = NextResponse.next({
@@ -36,8 +37,24 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // セッションを検証・更新（トークンリフレッシュ）
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+  const isTopOrDashboard = pathname === "/" || pathname.startsWith("/dashboard");
+
+  if (user && isTopOrDashboard) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("avatar_url, nickname, username, bio, prefecture, exercises")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!isProfileCompleted(profile)) {
+      const onboardingUrl = new URL("/onboarding", request.url);
+      return NextResponse.redirect(onboardingUrl);
+    }
+  }
 
   return response;
 }

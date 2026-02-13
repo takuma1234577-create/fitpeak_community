@@ -73,28 +73,33 @@ export function useProfile() {
       setIsLoading(false);
     }
 
-    // 初回: セッションがまだ復元されていない場合があるので、まず1回試す
-    fetchProfile().then((p) => {
-      if (cancelled) return;
-      setProfile(p);
-      if (p !== null) setIsLoading(false);
-    });
+    // 先にセッションをサーバーから復元してからプロフィール取得（Cookie だけでは遅れることがある）
+    supabase.auth
+      .refreshSession()
+      .then(() => (cancelled ? undefined : fetchProfile()))
+      .then((p) => {
+        if (cancelled) return;
+        done(p ?? null);
+      })
+      .catch(() => done(null));
 
-    // 認証の初期セッションが確定してからもう一度取得（Cookie 復元後にプロフィールを表示するため）
+    // 認証状態が変わったとき（例: 別タブでログイン）も再取得
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
       if (cancelled) return;
-      if (event === "INITIAL_SESSION") {
-        fetchProfile().then(done);
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        fetchProfile().then((p) => {
+          if (!cancelled) setProfile(p ?? null);
+        });
       }
     });
 
-    // セッション復元が遅い場合のフォールバック（INITIAL_SESSION が来ない環境でも loading を終了する）
+    // 通信が遅い・失敗した場合でも loading を終了する
     const fallback = setTimeout(() => {
       if (cancelled) return;
       setIsLoading(false);
-    }, 3000);
+    }, 5000);
 
     return () => {
       cancelled = true;
