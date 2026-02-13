@@ -134,6 +134,7 @@ export default function SettingsPage() {
   /* Load profile data into form */
   useEffect(() => {
     if (profile) {
+      setAvatarError(null)
       const nick = (profile as { nickname?: string | null }).nickname ?? profile.name ?? ""
       setName(nick)
       setNickname(nick)
@@ -423,18 +424,20 @@ export default function SettingsPage() {
           <div className="flex items-center gap-5">
             <button
               type="button"
-              disabled={avatarUploading}
-              onClick={() => !avatarUploading && avatarInputRef.current?.click()}
+              disabled={avatarUploading || !profile}
+              onClick={() => !avatarUploading && profile && avatarInputRef.current?.click()}
               className="relative group h-24 w-24 shrink-0 rounded-full border-2 border-border bg-secondary overflow-hidden flex items-center justify-center disabled:opacity-60 disabled:pointer-events-none"
             >
-              {avatarUploading ? (
+              {!profile ? (
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              ) : avatarUploading ? (
                 <Loader2 className="h-8 w-8 animate-spin text-gold" />
               ) : avatarPreviewUrl ? (
                 <Image src={avatarPreviewUrl} alt="" fill className="object-cover" unoptimized />
               ) : (
                 <span className="text-3xl font-black text-gold">{displayName.charAt(0) || "?"}</span>
               )}
-              {!avatarUploading && (
+              {profile && !avatarUploading && (
                 <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Camera className="h-5 w-5 text-foreground" />
                 </span>
@@ -446,16 +449,22 @@ export default function SettingsPage() {
               accept="image/jpeg,image/png,image/webp"
               className="hidden"
               onChange={handleAvatarUpload}
-              disabled={avatarUploading}
+              disabled={avatarUploading || !profile}
             />
             <div className="flex flex-col gap-1.5">
               <button
                 type="button"
-                disabled={avatarUploading}
-                onClick={() => !avatarUploading && avatarInputRef.current?.click()}
+                disabled={avatarUploading || !profile}
+                onClick={() => !avatarUploading && profile && avatarInputRef.current?.click()}
                 className="text-left text-sm font-semibold text-gold hover:text-gold-light transition-colors disabled:opacity-60 disabled:pointer-events-none"
               >
-                {avatarUploading ? "アップロード中…" : "写真をアップロード"}
+                {!profile
+                  ? isLoading
+                    ? "読み込み中…"
+                    : "プロフィールを取得できませんでした"
+                  : avatarUploading
+                    ? "アップロード中…"
+                    : "写真をアップロード"}
               </button>
               <p className="text-xs text-muted-foreground">
                 JPG, PNG, WebP。2MB以下
