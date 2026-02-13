@@ -38,12 +38,13 @@ export default async function LineConfirmPage() {
           別のアカウントの場合は「キャンセル」して、正しいLINEアカウントで再度お試しください。
         </p>
         <div className="mt-6 flex flex-col gap-3">
-          <Link
+          {/* 通常の <a> でフルページ遷移にすること。Link だと fetch になり 302 リダイレクトが CORS でブロックされる */}
+          <a
             href="/api/auth/line-confirm-continue"
             className="flex w-full items-center justify-center rounded-xl bg-[#06C755] py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
           >
             続ける
-          </Link>
+          </a>
           <Link
             href="/"
             className="block w-full rounded-xl border border-border py-3 text-center text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
