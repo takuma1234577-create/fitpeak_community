@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 const LINE_AUTH_URL = "https://access.line.me/oauth2/v2.1/authorize";
 const LINE_SCOPE = "openid email profile";
 const STATE_COOKIE_NAME = "line_oauth_state";
+const LINE_AUTH_NEXT_COOKIE = "line_auth_next";
 
 function generateState(): string {
   const array = new Uint8Array(24);
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const nextPath = request.nextUrl.searchParams.get("next");
   const state = generateState();
   const redirectUri = `${appUrl.replace(/\/$/, "")}/api/auth/callback/line`;
   const params = new URLSearchParams({
@@ -45,6 +47,16 @@ export async function GET(request: NextRequest) {
     maxAge: 60 * 10, // 10分
     path: "/",
   });
+
+  if (nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
+    cookieStore.set(LINE_AUTH_NEXT_COOKIE, nextPath, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 10,
+      path: "/",
+    });
+  }
 
   return NextResponse.redirect(authUrl);
 }

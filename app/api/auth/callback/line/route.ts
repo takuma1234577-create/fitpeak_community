@@ -5,6 +5,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 
 const LINE_TOKEN_URL = "https://api.line.me/oauth2/v2.1/token";
 const STATE_COOKIE_NAME = "line_oauth_state";
+const LINE_AUTH_NEXT_COOKIE = "line_auth_next";
 
 type LineIdTokenPayload = {
   iss: string;
@@ -132,7 +133,15 @@ export async function GET(request: NextRequest) {
   }
 
   // 4. マジックリンク発行してその URL へリダイレクト
-  const redirectTo = `${appUrl.replace(/\/$/, "")}/dashboard`;
+  const nextPath = cookieStore.get(LINE_AUTH_NEXT_COOKIE)?.value;
+  const baseUrl = appUrl.replace(/\/$/, "");
+  const redirectTo =
+    nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
+      ? `${baseUrl}${nextPath}`
+      : `${baseUrl}/dashboard`;
+  if (nextPath) {
+    cookieStore.delete(LINE_AUTH_NEXT_COOKIE);
+  }
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email,
