@@ -104,6 +104,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarVersion, setAvatarVersion] = useState(0);
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<string>("");
   const [birthday, setBirthday] = useState("");
@@ -148,6 +149,7 @@ export default function OnboardingPage() {
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
     setSaveError(null);
     try {
@@ -156,6 +158,7 @@ export default function OnboardingPage() {
       if (!user) return;
       const url = await uploadAvatar(user.id, file);
       setAvatarUrl(url);
+      setAvatarVersion((v) => v + 1);
     } catch (err) {
       console.error(err);
       setSaveError(
@@ -294,7 +297,7 @@ export default function OnboardingPage() {
                 >
                   {avatarUrl ? (
                     <Image
-                      src={avatarUrl}
+                      src={`${avatarUrl}${avatarUrl.includes("?") ? "&" : "?"}v=${avatarVersion}`}
                       alt="アバター"
                       fill
                       className="object-cover"
