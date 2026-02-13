@@ -16,6 +16,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/utils/supabase/client";
+import { isProfileCompleted } from "@/lib/profile-completed";
 import { safeList } from "@/lib/utils";
 import { useFollow } from "@/hooks/use-follow";
 import { getOrCreateConversation } from "@/lib/conversations";
@@ -234,6 +235,10 @@ export default function UserMatchingCarousel({
         .select(fields)
         .eq("email_confirmed", true)
         .not("nickname", "is", null)
+        .not("avatar_url", "is", null)
+        .not("bio", "is", null)
+        .not("prefecture", "is", null)
+        .not("exercises", "is", null)
         .order("created_at", { ascending: false })
         .limit(40);
 
@@ -250,7 +255,8 @@ export default function UserMatchingCarousel({
         return;
       }
 
-      let list = safeList((data ?? []) as MatchUser[]).filter((u) => !blocked.has(u.id));
+      let list = safeList((data ?? []) as MatchUser[])
+        .filter((u) => isProfileCompleted(u) && !blocked.has(u.id));
 
       if (list.length < MIN_USERS) {
         const excludeIds = [...new Set([...(myUserId ? [myUserId] : []), ...list.map((u) => u.id)])];
@@ -262,7 +268,7 @@ export default function UserMatchingCarousel({
         const supplementList = safeList((supplementRows ?? []) as MatchUser[]);
         const seen = new Set(list.map((u) => u.id));
         for (const row of supplementList) {
-          if (row?.id && !seen.has(row.id) && !blocked.has(row.id)) {
+          if (row?.id && isProfileCompleted(row) && !seen.has(row.id) && !blocked.has(row.id)) {
             seen.add(row.id);
             list.push(row as MatchUser);
             if (list.length >= MIN_USERS) break;
@@ -275,7 +281,9 @@ export default function UserMatchingCarousel({
           p_exclude_ids: myUserId ? [myUserId] : [],
           p_limit: MIN_USERS,
         });
-        const fallbackList = safeList((fallbackRows ?? []) as MatchUser[]).filter((u) => !blocked.has(u.id));
+        const fallbackList = safeList((fallbackRows ?? []) as MatchUser[]).filter(
+          (u) => isProfileCompleted(u) && !blocked.has(u.id)
+        );
         if (fallbackList.length > 0) list = fallbackList;
       }
 

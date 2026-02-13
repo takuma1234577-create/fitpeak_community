@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { uploadAvatar } from "@/lib/upload-avatar";
+import { isProfileCompleted } from "@/lib/profile-completed";
 import { PREFECTURES, EXERCISE_OPTIONS, GENDER_OPTIONS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -129,11 +130,11 @@ export default function OnboardingPage() {
         setCheckingProfile(false);
         return;
       }
-      const { data } = await supabase.from("profiles").select("nickname, username").eq("id", user.id).maybeSingle();
+      const { data } = await supabase.from("profiles").select("avatar_url, nickname, username, bio, prefecture, exercises").eq("id", user.id).maybeSingle();
       if (cancelled) return;
       setCheckingProfile(false);
-      const row = data as { nickname: string | null; username: string | null } | null;
-      if (row && (row.nickname?.trim() || row.username?.trim())) {
+      const row = data as { avatar_url: string | null; nickname: string | null; username: string | null; bio: string | null; prefecture: string | null; exercises: string[] | null } | null;
+      if (row && isProfileCompleted(row)) {
         router.replace("/dashboard");
       }
     })();

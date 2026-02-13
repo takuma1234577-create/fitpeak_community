@@ -89,6 +89,8 @@ export default function SettingsPage() {
   const [isHomeGymPublic, setIsHomeGymPublic] = useState(true)
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
   const [headerPreviewUrl, setHeaderPreviewUrl] = useState<string | null>(null)
   const [headerCropOpen, setHeaderCropOpen] = useState(false)
   const [headerCropImageSrc, setHeaderCropImageSrc] = useState<string>("")
@@ -220,7 +222,14 @@ export default function SettingsPage() {
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file || !profile) return
+    e.target.value = ""
+    if (!file) return
+    if (!profile) {
+      setAvatarError("プロフィールを読み込み中です。しばらく待ってからお試しください。")
+      return
+    }
+    setAvatarError(null)
+    setAvatarUploading(true)
     try {
       const url = await uploadAvatar(profile.id, file)
       setAvatarPreviewUrl(url)
@@ -228,9 +237,12 @@ export default function SettingsPage() {
       router.refresh()
       window.location.reload()
     } catch (err) {
+      const message = err instanceof Error ? err.message : "写真のアップロードに失敗しました。"
+      setAvatarError(message)
       console.error("Avatar upload failed:", err)
+    } finally {
+      setAvatarUploading(false)
     }
-    e.target.value = ""
   }
 
   function handleHeaderFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -411,17 +423,22 @@ export default function SettingsPage() {
           <div className="flex items-center gap-5">
             <button
               type="button"
-              onClick={() => avatarInputRef.current?.click()}
-              className="relative group h-24 w-24 shrink-0 rounded-full border-2 border-border bg-secondary overflow-hidden flex items-center justify-center"
+              disabled={avatarUploading}
+              onClick={() => !avatarUploading && avatarInputRef.current?.click()}
+              className="relative group h-24 w-24 shrink-0 rounded-full border-2 border-border bg-secondary overflow-hidden flex items-center justify-center disabled:opacity-60 disabled:pointer-events-none"
             >
-              {avatarPreviewUrl ? (
+              {avatarUploading ? (
+                <Loader2 className="h-8 w-8 animate-spin text-gold" />
+              ) : avatarPreviewUrl ? (
                 <Image src={avatarPreviewUrl} alt="" fill className="object-cover" unoptimized />
               ) : (
                 <span className="text-3xl font-black text-gold">{displayName.charAt(0) || "?"}</span>
               )}
-              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Camera className="h-5 w-5 text-foreground" />
-              </span>
+              {!avatarUploading && (
+                <span className="absolute inset-0 flex items-center justify-center rounded-full bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="h-5 w-5 text-foreground" />
+                </span>
+              )}
             </button>
             <input
               ref={avatarInputRef}
@@ -429,18 +446,23 @@ export default function SettingsPage() {
               accept="image/jpeg,image/png,image/webp"
               className="hidden"
               onChange={handleAvatarUpload}
+              disabled={avatarUploading}
             />
             <div className="flex flex-col gap-1.5">
               <button
                 type="button"
-                onClick={() => avatarInputRef.current?.click()}
-                className="text-left text-sm font-semibold text-gold hover:text-gold-light transition-colors"
+                disabled={avatarUploading}
+                onClick={() => !avatarUploading && avatarInputRef.current?.click()}
+                className="text-left text-sm font-semibold text-gold hover:text-gold-light transition-colors disabled:opacity-60 disabled:pointer-events-none"
               >
-                写真をアップロード
+                {avatarUploading ? "アップロード中…" : "写真をアップロード"}
               </button>
               <p className="text-xs text-muted-foreground">
                 JPG, PNG, WebP。2MB以下
               </p>
+              {avatarError && (
+                <p className="text-xs text-red-400 whitespace-pre-wrap">{avatarError}</p>
+              )}
             </div>
           </div>
         </div>

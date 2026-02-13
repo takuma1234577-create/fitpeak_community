@@ -14,17 +14,17 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { syncEmailConfirmed } from "@/lib/sync-email-confirmed";
+import { isProfileCompleted } from "@/lib/profile-completed";
 
-/** プロフィール作成済みか（nickname または username が入っていれば作成済みとみなす） */
-async function checkProfileCreated(supabase: SupabaseClient, userId: string): Promise<boolean> {
+/** プロフィール完了済みか（オンボーディング必須項目が揃っているか） */
+async function checkProfileCompleted(supabase: SupabaseClient, userId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("nickname, username")
+    .select("avatar_url, nickname, username, bio, prefecture, exercises")
     .eq("id", userId)
     .maybeSingle();
   if (error || !data) return false;
-  const row = data as { nickname: string | null; username: string | null };
-  return !!(row.nickname?.trim() || row.username?.trim());
+  return isProfileCompleted(data as { avatar_url: string | null; nickname: string | null; username: string | null; bio: string | null; prefecture: string | null; exercises: string[] | null });
 }
 
 function GoldInput({
@@ -179,7 +179,7 @@ export default function AuthForm() {
           await syncEmailConfirmed(supabase, authData.user);
         }
         const hasProfile = authData.user
-          ? await checkProfileCreated(supabase, authData.user.id)
+          ? await checkProfileCompleted(supabase, authData.user.id)
           : false;
         window.location.href = hasProfile ? "/dashboard" : "/onboarding";
       } catch (e) {
@@ -218,7 +218,7 @@ export default function AuthForm() {
         }
         if (data.session && data.user) {
           await syncEmailConfirmed(supabase, data.user);
-          const hasProfile = await checkProfileCreated(supabase, data.user.id);
+          const hasProfile = await checkProfileCompleted(supabase, data.user.id);
           window.location.href = hasProfile ? "/dashboard" : "/onboarding";
         } else {
           setAuthSuccess(CONFIRM_EMAIL_MESSAGE);

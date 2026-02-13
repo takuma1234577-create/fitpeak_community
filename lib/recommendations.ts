@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { safeList, normalizeRecruitment, normalizeProfile } from "@/lib/data-sanitizer";
+import { isProfileCompleted } from "@/lib/profile-completed";
 
 export type MyProfile = {
   id: string;
@@ -173,7 +174,16 @@ export async function getRecommendedUsers(
     const promises: Promise<{ data: RecommendedUser[] | null }>[] = [];
 
     const visibleFilter = () =>
-      sb.from("profiles").select(fields).neq("id", myId).eq("email_confirmed", true).not("nickname", "is", null);
+      sb
+        .from("profiles")
+        .select(fields)
+        .neq("id", myId)
+        .eq("email_confirmed", true)
+        .not("nickname", "is", null)
+        .not("avatar_url", "is", null)
+        .not("bio", "is", null)
+        .not("prefecture", "is", null)
+        .not("exercises", "is", null);
     if (myProfile?.home_gym?.trim()) {
       const pattern = `%${myProfile.home_gym.trim()}%`;
       promises.push(visibleFilter().ilike("home_gym", pattern).limit(target));
@@ -196,11 +206,13 @@ export async function getRecommendedUsers(
     if (promises.length > 0) {
       const results = await Promise.all(promises);
       for (const res of results) {
-        const list = (res.data ?? []) as RecommendedUser[];
+        const list = (res.data ?? []) as Record<string, unknown>[];
         for (const row of list) {
-          if (row.id !== myId && !seen.has(row.id)) {
-            seen.add(row.id);
-            merged.push(row);
+          if (!isProfileCompleted(row)) continue;
+          const id = row?.id as string;
+          if (id !== myId && !seen.has(id)) {
+            seen.add(id);
+            merged.push(toRecommendedUser(row));
           }
         }
       }
@@ -224,6 +236,7 @@ export async function getRecommendedUsers(
     }
 
     for (const row of safeList(randomRows as Record<string, unknown>[])) {
+      if (!isProfileCompleted(row)) continue;
       const id = row?.id as string | undefined;
       if (id && !seen.has(id)) {
         seen.add(id);
@@ -252,17 +265,28 @@ export async function getNewArrivalUsers(
   try {
     const sb = supabase as any;
     const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, birthday, is_age_public, gender, created_at";
-    const maxLimit = Math.min(limit, 10);
+    const maxLimit = Math.min(limit * 3, 30);
 
     const baseQuery = () =>
-      sb.from("profiles").select(fields).order("created_at", { ascending: false }).limit(maxLimit);
+      sb
+        .from("profiles")
+        .select(fields)
+        .order("created_at", { ascending: false })
+        .limit(maxLimit)
+        .eq("email_confirmed", true)
+        .not("nickname", "is", null)
+        .not("avatar_url", "is", null)
+        .not("bio", "is", null)
+        .not("prefecture", "is", null)
+        .not("exercises", "is", null);
 
     let query = baseQuery();
     if (myId) query = query.neq("id", myId);
-    const { data, error } = await query.eq("email_confirmed", true).not("nickname", "is", null);
+    const { data, error } = await query;
 
     if (!error && data?.length) {
-      return safeList(data as Record<string, unknown>[]).map((row) => ({
+      const completed = safeList(data as Record<string, unknown>[]).filter((row) => isProfileCompleted(row));
+      return completed.slice(0, limit).map((row) => ({
         ...toRecommendedUser(row),
         created_at: (row.created_at as string) ?? "",
       })) as NewArrivalUser[];
@@ -273,7 +297,8 @@ export async function getNewArrivalUsers(
     const { data: fallbackData, error: fallbackError } = await fallbackQuery;
 
     if (!fallbackError && fallbackData?.length) {
-      return safeList(fallbackData as Record<string, unknown>[]).map((row) => ({
+      const completed = safeList(fallbackData as Record<string, unknown>[]).filter((row) => isProfileCompleted(row));
+      return completed.slice(0, limit).map((row) => ({
         ...toRecommendedUser(row),
         created_at: (row.created_at as string) ?? "",
       })) as NewArrivalUser[];
