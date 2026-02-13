@@ -129,20 +129,24 @@ export default function OnboardingPage() {
     const supabase = createClient();
 
     async function checkUserAndProfile() {
-      await supabase.auth.refreshSession();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (cancelled) return;
-      if (!user) {
-        setCheckingProfile(false);
-        return;
-      }
-      setCurrentUser({ id: user.id });
-      const { data } = await supabase.from("profiles").select("avatar_url, nickname, username, bio, prefecture, exercises").eq("id", user.id).maybeSingle();
-      if (cancelled) return;
-      setCheckingProfile(false);
-      const row = data as { avatar_url: string | null; nickname: string | null; username: string | null; bio: string | null; prefecture: string | null; exercises: string[] | null } | null;
-      if (row && isProfileCompleted(row)) {
-        router.replace("/dashboard");
+      try {
+        await supabase.auth.refreshSession();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (cancelled) return;
+        if (!user) return;
+        setCurrentUser({ id: user.id });
+        const { data } = await supabase.from("profiles").select("avatar_url, nickname, username, bio, prefecture, exercises").eq("id", user.id).maybeSingle();
+        if (cancelled) return;
+        const row = data as { avatar_url: string | null; nickname: string | null; username: string | null; bio: string | null; prefecture: string | null; exercises: string[] | null } | null;
+        if (row && isProfileCompleted(row)) {
+          router.replace("/dashboard");
+        }
+      } catch (e) {
+        console.error("[onboarding] checkUserAndProfile:", e);
+      } finally {
+        if (!cancelled) {
+          setCheckingProfile(false);
+        }
       }
     }
 
@@ -158,6 +162,15 @@ export default function OnboardingPage() {
       subscription.unsubscribe();
     };
   }, [router]);
+
+  useEffect(() => {
+    if (!checkingProfile && !currentUser) {
+      const t = setTimeout(() => {
+        router.replace("/");
+      }, 2000);
+      return () => clearTimeout(t);
+    }
+  }, [checkingProfile, currentUser, router]);
 
   const toggleExercise = (opt: string) => {
     setExercises((prev) =>
@@ -356,10 +369,10 @@ export default function OnboardingPage() {
                       currentUser && !avatarUploading && "cursor-pointer"
                     )}
                   >
-                    {!currentUser && checkingProfile
+                    {checkingProfile
                       ? "読み込み中…"
                       : !currentUser
-                        ? "ログイン情報を読み込み中…"
+                        ? "ログイン後に利用できます"
                         : avatarUploading
                           ? "アップロード中…"
                           : "写真をアップロード"}
