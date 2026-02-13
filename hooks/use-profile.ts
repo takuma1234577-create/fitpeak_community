@@ -60,13 +60,47 @@ export function useProfile() {
     } catch (e) {
       console.error("[useProfile] Error:", e);
       return null;
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchProfile().then(setProfile);
+    let cancelled = false;
+    const supabase = createClient();
+
+    function done(profileResult: Profile | null) {
+      if (cancelled) return;
+      setProfile(profileResult);
+      setIsLoading(false);
+    }
+
+    // 初回: セッションがまだ復元されていない場合があるので、まず1回試す
+    fetchProfile().then((p) => {
+      if (cancelled) return;
+      setProfile(p);
+      if (p !== null) setIsLoading(false);
+    });
+
+    // 認証の初期セッションが確定してからもう一度取得（Cookie 復元後にプロフィールを表示するため）
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (cancelled) return;
+      if (event === "INITIAL_SESSION") {
+        fetchProfile().then(done);
+      }
+    });
+
+    // セッション復元が遅い場合のフォールバック（INITIAL_SESSION が来ない環境でも loading を終了する）
+    const fallback = setTimeout(() => {
+      if (cancelled) return;
+      setIsLoading(false);
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(fallback);
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   const updateProfile = useCallback(

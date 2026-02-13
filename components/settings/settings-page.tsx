@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
@@ -167,16 +167,35 @@ export default function SettingsPage() {
     }
   }, [profile])
 
-  /* LINEでログイン済みか（user_metadata.line_user_id）を取得 */
-  useEffect(() => {
-    let cancelled = false
+  /* LINEでログイン済みか（user_metadata.line_user_id）を取得・更新 */
+  const refreshHasLineLinked = useCallback(() => {
     createClient()
       .auth.getUser()
       .then(({ data: { user } }) => {
-        if (!cancelled) setHasLineLinked(!!(user?.user_metadata as { line_user_id?: string } | undefined)?.line_user_id)
+        setHasLineLinked(!!(user?.user_metadata as { line_user_id?: string } | undefined)?.line_user_id)
       })
-    return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const supabase = createClient()
+    function apply(user: { user_metadata?: Record<string, unknown> } | null) {
+      if (cancelled) return
+      setHasLineLinked(!!(user?.user_metadata as { line_user_id?: string } | undefined)?.line_user_id)
+    }
+    // 設定画面に戻った直後はサーバーからセッションを再取得して連携状態を反映する
+    supabase.auth.refreshSession().then(({ data: { user } }) => apply(user))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      apply(session?.user ?? null)
+    })
+    const onFocus = () => refreshHasLineLinked()
+    window.addEventListener("focus", onFocus)
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+      window.removeEventListener("focus", onFocus)
+    }
+  }, [refreshHasLineLinked])
 
   const markChanged = () => setHasChanges(true)
 
