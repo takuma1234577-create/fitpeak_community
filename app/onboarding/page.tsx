@@ -120,18 +120,23 @@ export default function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [checkingProfile, setCheckingProfile] = useState(true);
+  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
 
   const age = calcAge(birthday || null);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const supabase = createClient();
+    const supabase = createClient();
+
+    async function checkUserAndProfile() {
+      await supabase.auth.refreshSession();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user || cancelled) {
+      if (cancelled) return;
+      if (!user) {
         setCheckingProfile(false);
         return;
       }
+      setCurrentUser({ id: user.id });
       const { data } = await supabase.from("profiles").select("avatar_url, nickname, username, bio, prefecture, exercises").eq("id", user.id).maybeSingle();
       if (cancelled) return;
       setCheckingProfile(false);
@@ -139,8 +144,19 @@ export default function OnboardingPage() {
       if (row && isProfileCompleted(row)) {
         router.replace("/dashboard");
       }
-    })();
-    return () => { cancelled = true; };
+    }
+
+    checkUserAndProfile();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (cancelled) return;
+      if (event === "INITIAL_SESSION") {
+        checkUserAndProfile();
+      }
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [router]);
 
   const toggleExercise = (opt: string) => {
@@ -153,18 +169,16 @@ export default function OnboardingPage() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    const userId = currentUser?.id;
+    if (!userId) {
+      setAvatarError("ログイン情報を読み込み中です。しばらく待ってからもう一度お試しください。");
+      return;
+    }
     setAvatarError(null);
     setSaveError(null);
     setAvatarUploading(true);
     try {
-      const supabase = createClient();
-      await supabase.auth.refreshSession();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setAvatarError("ログインしていません。ページを再読み込みしてからもう一度お試しください。");
-        return;
-      }
-      const url = await uploadAvatar(user.id, file);
+      const url = await uploadAvatar(userId, file);
       setAvatarUrl(url);
       setAvatarVersion((v) => v + 1);
     } catch (err) {
@@ -299,7 +313,7 @@ export default function OnboardingPage() {
               <span className={labelClass}>
                 プロフィール画像 <span className="text-red-400">*</span>
               </span>
-              <div className="flex items-center gap-5">
+              <div className={cn("flex items-center gap-5", !currentUser && "pointer-events-none opacity-80")}>
                 <input
                   id="onboarding-avatar-input"
                   ref={fileInputRef}
@@ -309,13 +323,15 @@ export default function OnboardingPage() {
                   onChange={handleAvatarChange}
                 />
                 <label
-                  htmlFor={avatarUploading ? undefined : "onboarding-avatar-input"}
+                  htmlFor={currentUser && !avatarUploading ? "onboarding-avatar-input" : undefined}
                   className={cn(
                     "relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-border bg-secondary flex items-center justify-center",
-                    !avatarUploading && "cursor-pointer"
+                    currentUser && !avatarUploading && "cursor-pointer"
                   )}
                 >
-                  {avatarUploading ? (
+                  {!currentUser && checkingProfile ? (
+                    <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+                  ) : avatarUploading ? (
                     <Loader2 className="h-10 w-10 animate-spin text-gold" />
                   ) : avatarUrl ? (
                     <Image
@@ -334,17 +350,28 @@ export default function OnboardingPage() {
                 </label>
                 <div className="flex flex-col gap-1.5">
                   <label
-                    htmlFor={avatarUploading ? undefined : "onboarding-avatar-input"}
+                    htmlFor={currentUser && !avatarUploading ? "onboarding-avatar-input" : undefined}
                     className={cn(
                       "text-left text-sm font-semibold text-gold hover:text-gold-light transition-colors",
-                      !avatarUploading && "cursor-pointer"
+                      currentUser && !avatarUploading && "cursor-pointer"
                     )}
                   >
-                    {avatarUploading ? "アップロード中…" : "写真をアップロード"}
+                    {!currentUser && checkingProfile
+                      ? "読み込み中…"
+                      : !currentUser
+                        ? "ログイン情報を読み込み中…"
+                        : avatarUploading
+                          ? "アップロード中…"
+                          : "写真をアップロード"}
                   </label>
                   <p className="text-xs text-muted-foreground">
                     JPG, PNG, WebP。2MB以下
                   </p>
+                  {!currentUser && !checkingProfile && (
+                    <p className="text-xs text-amber-600">
+                      ログイン情報が取得できませんでした。ページを再読み込みするか、ログインし直してください。
+                    </p>
+                  )}
                   {avatarError && (
                     <p className="text-xs text-red-400">{avatarError}</p>
                   )}
