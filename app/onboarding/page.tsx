@@ -158,9 +158,10 @@ export default function OnboardingPage() {
     setAvatarUploading(true);
     try {
       const supabase = createClient();
+      await supabase.auth.refreshSession();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setAvatarError("ログインしていません。");
+        setAvatarError("ログインしていません。ページを再読み込みしてからもう一度お試しください。");
         return;
       }
       const url = await uploadAvatar(user.id, file);
