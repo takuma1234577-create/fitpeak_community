@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getFollowEmailContent, sendNotificationEmail } from "@/lib/email-notifications";
+import { sendLinePush } from "@/lib/line-notifications";
 
 type Body = {
   /** フォローされた側（通知を受け取る人） */
@@ -50,6 +51,14 @@ export async function POST(request: Request) {
       subject,
       text
     );
+
+    const lineUserId = (followedUser as { user_metadata?: { line_user_id?: string } }).user_metadata?.line_user_id;
+    if (lineUserId) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
+      await sendLinePush(lineUserId, `【FITPEAK】${followerName}さんがあなたをフォローしました。`, {
+        linkUrl: appUrl ? `${appUrl}/dashboard/notifications` : undefined,
+      });
+    }
 
     if (sendError) {
       console.error("[notify-follow] Resend error:", sendError);

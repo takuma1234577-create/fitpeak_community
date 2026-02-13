@@ -4,6 +4,7 @@ import {
   getRecruitmentApplyEmailContent,
   sendNotificationEmail,
 } from "@/lib/email-notifications";
+import { sendLinePush } from "@/lib/line-notifications";
 
 export async function POST(request: Request) {
   try {
@@ -41,6 +42,16 @@ export async function POST(request: Request) {
     const { subject, text } = getRecruitmentApplyEmailContent(applicant, title);
 
     const { error: sendError } = await sendNotificationEmail(creator.email, subject, text);
+
+    const lineUserId = (creator as { user_metadata?: { line_user_id?: string } }).user_metadata?.line_user_id;
+    if (lineUserId) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
+      await sendLinePush(
+        lineUserId,
+        `【FITPEAK】${applicant}さんから「${title}」への合トレ参加申請が届きました。`,
+        { linkUrl: appUrl ? `${appUrl}/dashboard/recruit/manage` : undefined }
+      );
+    }
 
     if (sendError) {
       console.error("[notify-recruitment-apply] Resend error:", sendError);

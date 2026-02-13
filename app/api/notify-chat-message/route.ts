@@ -5,6 +5,7 @@ import {
   getIndividualMessageEmailContent,
   sendNotificationEmail,
 } from "@/lib/email-notifications";
+import { sendLinePush } from "@/lib/line-notifications";
 
 type Body = {
   recipient_user_id: string;
@@ -46,6 +47,19 @@ export async function POST(request: Request) {
       : getIndividualMessageEmailContent(sender_nickname);
 
     const { error: sendError } = await sendNotificationEmail(recipient.email, subject, text);
+
+    const lineUserId = (recipient as { user_metadata?: { line_user_id?: string } }).user_metadata?.line_user_id;
+    if (lineUserId) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
+      const lineText = is_group
+        ? `【FITPEAK】${sender_nickname}さんがグループ「${group_name ?? "グループ"}」でメッセージを送信しました。`
+        : `【FITPEAK】${sender_nickname}さんからダイレクトメッセージが届きました。`;
+      await sendLinePush(lineUserId, lineText, {
+        linkUrl: appUrl ? `${appUrl}/dashboard/messages` : undefined,
+      });
+    } else {
+      console.info("[notify-chat-message] Recipient has no line_user_id (not linked LINE login), skipping LINE push. recipient_user_id:", recipient_user_id);
+    }
 
     if (sendError) {
       console.error("[notify-chat-message] Resend error:", sendError);
