@@ -66,6 +66,8 @@ export async function POST(request: Request) {
       await sendLinePush(lineUserId, `【FITPEAK】${followerName}さんがあなたをフォローしました。`, {
         linkUrl: appUrl ? `${appUrl}/dashboard/notifications` : undefined,
       });
+    } else {
+      console.info("[notify-follow] LINE通知スキップ: フォローされた側に line_user_id がありません（LINEでログインしていない）。following_id:", following_id);
     }
 
     if (sendError) {

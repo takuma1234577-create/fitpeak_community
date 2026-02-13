@@ -66,7 +66,7 @@ export async function POST(request: Request) {
         linkUrl: appUrl ? `${appUrl}/dashboard/messages` : undefined,
       });
     } else {
-      console.info("[notify-chat-message] Recipient has no line_user_id (not linked LINE login), skipping LINE push. recipient_user_id:", recipient_user_id);
+      console.info("[notify-chat-message] LINE通知スキップ: 受け手に line_user_id がありません（LINEでログインしていない）。recipient_user_id:", recipient_user_id);
     }
 
     if (sendError) {

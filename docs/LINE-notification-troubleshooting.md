@@ -1,5 +1,19 @@
 # LINE 通知が届かないときの確認リスト
 
+## 原因の切り分け（ログで確認）
+
+サーバーログ（Vercel の Functions ログや `npm run dev` のターミナル）に次のどれが出ているかで原因を絞れます。
+
+| ログの内容 | 原因 | 対処 |
+|------------|------|------|
+| `LINE通知スキップ: 受け手に line_user_id がありません`（notify-chat-message） | **通知を受け取る人**が LINE でログインしていない | 通知を受け取りたいアカウントで **LINE でログイン** し直す |
+| `LINE通知スキップ: フォローされた側に line_user_id がありません`（notify-follow） | **フォローされた人**が LINE でログインしていない | 同上 |
+| `LINE_MESSAGING_CHANNEL_ACCESS_TOKEN is not set` | 環境変数が未設定 | 下記「2.」を参照 |
+| `[LINE push] API error. status: 403` | 友だちにいない **または** LINE Login と Messaging API が別チャネルでリンクされていない | 下記「3.」「6.」を参照 |
+| `[LINE push] API error. status: 401` | トークン無効 | 下記「4.」を参照 |
+
+---
+
 ## LINEでログインしているかの確認方法
 
 ### 方法1: アプリの設定画面で確認（ユーザー向け）
@@ -71,11 +85,31 @@
 
 ---
 
+## 6. LINE Login チャネルと Messaging API チャネルがリンクされていない（403 の主因の一つ）
+
+**原因**: LINE でログインに使っているチャネル（LINE Login）と、プッシュ送信に使っているチャネル（Messaging API）が **別のまま** で、リンクされていない。
+
+- LINE の仕様で、**ログイン時に取得したユーザーID（line_user_id）でプッシュを送れるのは、その LINE Login チャネルと「リンク」した公式アカウント（Messaging API）だけ**です。
+- リンクしていない別の Messaging API チャネルのトークンで送ると、**403** になるか、届きません。
+
+**対処**:
+
+1. **LINE Developers Console** を開く。
+2. **LINE Login チャネル**（ログイン用に作ったチャネル）の設定を開く。
+3. **「LINE Official Account をリンク」**（または「Messaging API と連携」）で、**プッシュ通知に使いたい公式アカウント（Messaging API チャネル）を同じプロバイダー内でリンク**する。
+4. リンク後、その **Messaging API チャネル** の Channel access token（長期）を `LINE_MESSAGING_CHANNEL_ACCESS_TOKEN` に設定する。
+5. ユーザーには **その公式アカウントを友だち追加** してもらう（ログインだけでは通知は届かない）。
+
+※ LINE Login 用と Messaging API 用に **1 本のチャネルで両方の機能を有効にしている** 場合は、リンクは不要です。
+
+---
+
 ## まとめ
 
 | 確認項目 | 内容 |
 |----------|------|
 | 受け手のログイン方法 | **LINE でログイン** したアカウントか（メールのみは `line_user_id` なし） |
-| 環境変数 | `LINE_MESSAGING_CHANNEL_ACCESS_TOKEN` がサーバー環境に設定されているか |
-| 友だち追加 | 受け手が **公式LINE を友だち追加** しているか |
+| チャネルリンク | **LINE Login チャネル** と **Messaging API（公式アカウント）** がリンクされているか（別チャネルだと 403） |
+| 環境変数 | `LINE_MESSAGING_CHANNEL_ACCESS_TOKEN` がサーバー環境に設定されているか（リンクした Messaging API のトークン） |
+| 友だち追加 | 受け手が **その公式LINE を友だち追加** しているか |
 | トークン | Messaging API の Channel access token が有効か |

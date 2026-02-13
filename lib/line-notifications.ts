@@ -53,8 +53,14 @@ export async function sendLinePush(
 
     if (!res.ok) {
       const body = await res.text();
-      // 400: 無効な to / 403: 友だちにいない / 401: トークン無効 など
-      console.warn("[LINE push] API error. status:", res.status, "body:", body);
+      // 400: 無効な to / 403: 友だちにいない or チャネル未リンク / 401: トークン無効 など
+      console.warn(
+        "[LINE push] API error. status:",
+        res.status,
+        "body:",
+        body.slice(0, 200),
+        "| 403=友だち追加が必要 or LINE Login と Messaging API チャネルをリンクしてください"
+      );
       return { error: null };
     }
     return { error: null };
