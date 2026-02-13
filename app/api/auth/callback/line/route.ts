@@ -204,25 +204,22 @@ export async function GET(request: NextRequest) {
       nextPathAfterAuth = "/onboarding";
     }
   }
-  const redirectTo = `${appBase}/auth/callback?next=${encodeURIComponent(nextPathAfterAuth)}`;
   if (nextPath) {
     cookieStore.delete(LINE_AUTH_NEXT_COOKIE);
   }
+
+  // PKCE 環境では action_link のリダイレクトで code/hash が付与されないことがあるため、
+  // hashed_token で自前のコールバックに飛ばし、そこで verifyOtp してセッション確立する。
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email,
-    options: { redirectTo },
   });
 
-  if (linkError || !linkData?.properties?.action_link) {
+  if (linkError || !linkData?.properties?.hashed_token) {
     return NextResponse.redirect(settingsFailUrl);
   }
 
-  const actionLink = linkData.properties.action_link;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
-  const magicLinkUrl = actionLink.startsWith("http")
-    ? actionLink
-    : `${supabaseUrl}/${actionLink.replace(/^\//, "")}`;
-
-  return NextResponse.redirect(magicLinkUrl);
+  const hashedToken = linkData.properties.hashed_token;
+  const callbackUrl = `${appBase}/auth/callback?token_hash=${encodeURIComponent(hashedToken)}&type=magiclink&next=${encodeURIComponent(nextPathAfterAuth)}`;
+  return NextResponse.redirect(callbackUrl);
 }

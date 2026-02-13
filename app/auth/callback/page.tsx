@@ -7,8 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 
 /**
  * マジックリンク（LINEログイン等）で戻ってきたときに、
- * URL の code をセッションに交換してから next へリダイレクトする。
- * これがないとオンボーディングで「ログイン情報が取得できませんでした」になる。
+ * URL の code または token_hash をセッションに交換してから next へリダイレクトする。
  */
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -18,12 +17,15 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     let cancelled = false;
     const code = searchParams.get("code");
+    const tokenHash = searchParams.get("token_hash");
+    const type = searchParams.get("type") ?? "magiclink";
     const next = searchParams.get("next") ?? "/dashboard";
     const nextPath = next.startsWith("/") ? next : `/${next}`;
 
     (async () => {
       const supabase = createClient();
 
+      // PKCE: code でセッション取得
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (cancelled) return;
@@ -32,12 +34,27 @@ export default function AuthCallbackPage() {
           setError("認証の有効期限が切れています。もう一度ログインしてください。");
           return;
         }
-        // セッション確立後、URL の code を消して next へ遷移
         router.replace(nextPath);
         return;
       }
 
-      // code がない場合（ハッシュで既に処理された等）、セッションがあれば next へ
+      // token_hash + type で検証（generateLink のリダイレクトで渡される場合がある）
+      if (tokenHash) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: type as "magiclink" | "signup" | "recovery" | "invite" | "email_change" | "email",
+        });
+        if (cancelled) return;
+        if (verifyError) {
+          console.error("[auth/callback] verifyOtp error:", verifyError);
+          setError("認証の有効期限が切れています。もう一度ログインしてください。");
+          return;
+        }
+        router.replace(nextPath);
+        return;
+      }
+
+      // 既にセッションがある場合（ハッシュで処理済み等）
       const {
         data: { session },
       } = await supabase.auth.getSession();
