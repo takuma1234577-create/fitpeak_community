@@ -173,8 +173,22 @@ export async function GET(request: NextRequest) {
   // ログイン後の遷移先: プロフィール未完了なら必ずオンボーディングへ（nextPath は完了時のみ使用）
   const appBase = appUrl.replace(/\/$/, "");
   const targetUser = await findUserByEmail(1);
+  if (!targetUser) {
+    if (nextPath) cookieStore.delete(LINE_AUTH_NEXT_COOKIE);
+    return NextResponse.redirect(settingsFailUrl);
+  }
+
+  // 公式LINE連携した時点で仮ユーザー（profiles）の箱を必ず作成。プロフィール未入力のままオンボーディングへ遷移し、入力後に本登録として表示される。
+  const provisionalUsername = email ? email.split("@")[0] : (payload.name ?? "user");
+  await (admin as any)
+    .from("profiles")
+    .upsert(
+      { id: targetUser.id, username: provisionalUsername },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
+
   let redirectTo: string;
-  if (targetUser) {
+  {
     const { data: profileRow } = await admin
       .from("profiles")
       .select("avatar_url, nickname, username, bio, prefecture, exercises")
@@ -188,8 +202,6 @@ export async function GET(request: NextRequest) {
     } else {
       redirectTo = `${appBase}/onboarding`;
     }
-  } else {
-    redirectTo = `${appBase}/onboarding`;
   }
   if (nextPath) {
     cookieStore.delete(LINE_AUTH_NEXT_COOKIE);
