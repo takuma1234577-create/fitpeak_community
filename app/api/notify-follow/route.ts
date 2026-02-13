@@ -12,7 +12,15 @@ type Body = {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as Body;
+    let body: Body;
+    try {
+      body = (await request.json()) as Body;
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
     const { following_id, follower_id } = body;
 
     if (!following_id || !follower_id) {

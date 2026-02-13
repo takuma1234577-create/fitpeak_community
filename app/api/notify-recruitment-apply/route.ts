@@ -8,7 +8,15 @@ import { sendLinePush } from "@/lib/line-notifications";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
     const {
       creator_id,
       recruitment_title,

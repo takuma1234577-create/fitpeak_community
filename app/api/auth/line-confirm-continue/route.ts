@@ -6,7 +6,7 @@ const LINE_CONFIRM_COOKIE = "line_confirm_token";
 
 type Payload = { email: string; url: string; exp: number };
 
-export async function POST() {
+export async function GET() {
   const cookieStore = await cookies();
   const token = cookieStore.get(LINE_CONFIRM_COOKIE)?.value;
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
