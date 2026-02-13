@@ -257,7 +257,12 @@ export default function SettingsPage() {
       router.refresh()
       window.location.reload()
     } catch (err) {
-      const message = err instanceof Error ? err.message : "写真のアップロードに失敗しました。"
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof (err as { message?: string })?.message === "string"
+            ? (err as { message: string }).message
+            : "写真のアップロードに失敗しました。"
       setAvatarError(message)
       console.error("Avatar upload failed:", err)
     } finally {
