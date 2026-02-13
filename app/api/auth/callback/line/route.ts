@@ -194,25 +194,5 @@ export async function GET(request: NextRequest) {
     ? actionLink
     : `${supabaseUrl}/${actionLink.replace(/^\//, "")}`;
 
-  // 確認ステップ: どのメールでログインするか表示してからマジックリンクへ
-  const LINE_CONFIRM_COOKIE = "line_confirm_token";
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (secret) {
-    const token = jwt.sign(
-      { email, url: magicLinkUrl, exp: Math.floor(Date.now() / 1000) + 120 },
-      secret,
-      { algorithm: "HS256" }
-    );
-    const res = NextResponse.redirect(`${baseUrl}/auth/line-confirm`);
-    res.cookies.set(LINE_CONFIRM_COOKIE, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 120,
-      path: "/",
-    });
-    return res;
-  }
-
   return NextResponse.redirect(magicLinkUrl);
 }
