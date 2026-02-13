@@ -299,9 +299,9 @@ export default function AuthForm() {
           <button type="button" className="flex flex-1 items-center justify-center gap-2.5 rounded-lg border border-border bg-secondary py-3 text-sm font-bold text-foreground transition-all duration-300 hover:border-gold/40 hover:bg-secondary/80">
             <GoogleIcon /> Google
           </button>
-          <button type="button" className="flex flex-1 items-center justify-center gap-2.5 rounded-lg border border-border bg-secondary py-3 text-sm font-bold text-foreground transition-all duration-300 hover:border-gold/40 hover:bg-secondary/80">
+          <a href="/api/auth/line" className="flex flex-1 items-center justify-center gap-2.5 rounded-lg border border-border bg-secondary py-3 text-sm font-bold text-foreground transition-all duration-300 hover:border-gold/40 hover:bg-secondary/80">
             <LineIcon /> LINE
-          </button>
+          </a>
         </div>
 
         <p className="mt-7 text-center text-xs text-muted-foreground">
