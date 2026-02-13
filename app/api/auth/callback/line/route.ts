@@ -31,18 +31,25 @@ export async function GET(request: NextRequest) {
 
   const loginUrl = (code: string) => getLoginUrl(request, code);
 
+  const cookieStore = await cookies();
+  const nextPath = cookieStore.get(LINE_AUTH_NEXT_COOKIE)?.value;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? request.nextUrl.origin;
+  const settingsFailUrl =
+    nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
+      ? `${baseUrl}${nextPath}?error=line_link_failed`
+      : loginUrl("line_login_failed");
+
   if (errorFromLine) {
-    return NextResponse.redirect(loginUrl("line_login_failed"));
+    return NextResponse.redirect(settingsFailUrl);
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(loginUrl("line_login_failed"));
+    return NextResponse.redirect(settingsFailUrl);
   }
 
-  const cookieStore = await cookies();
   const savedState = cookieStore.get(STATE_COOKIE_NAME)?.value;
   if (!savedState || savedState !== state) {
-    return NextResponse.redirect(loginUrl("line_login_failed"));
+    return NextResponse.redirect(settingsFailUrl);
   }
 
   // state 使用済みなので Cookie を削除
@@ -53,7 +60,7 @@ export async function GET(request: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
   if (!channelId || !channelSecret || !appUrl) {
-    return NextResponse.redirect(loginUrl("line_login_failed"));
+    return NextResponse.redirect(settingsFailUrl);
   }
 
   const redirectUri = `${appUrl.replace(/\/$/, "")}/api/auth/callback/line`;
@@ -75,11 +82,11 @@ export async function GET(request: NextRequest) {
       body: tokenBody.toString(),
     });
   } catch {
-    return NextResponse.redirect(loginUrl("line_login_failed"));
+    return NextResponse.redirect(settingsFailUrl);
   }
 
   if (!tokenRes.ok) {
-    return NextResponse.redirect(loginUrl("line_login_failed"));
+    return NextResponse.redirect(settingsFailUrl);
   }
 
   type LineTokenResponse = { id_token?: string };
@@ -87,7 +94,7 @@ export async function GET(request: NextRequest) {
   const idToken = tokenData.id_token;
 
   if (!idToken) {
-    return NextResponse.redirect(loginUrl("line_login_failed"));
+    return NextResponse.redirect(settingsFailUrl);
   }
 
   // 2. ID トークンを検証（LINE Web ログインは HS256 + Channel Secret）
@@ -99,23 +106,40 @@ export async function GET(request: NextRequest) {
       issuer: "https://access.line.me",
     }) as LineIdTokenPayload;
   } catch {
-    return NextResponse.redirect(loginUrl("line_login_failed"));
+    return NextResponse.redirect(settingsFailUrl);
   }
 
   const email = payload.email?.trim();
   const lineUserId = payload.sub;
 
   if (!email) {
-    return NextResponse.redirect(loginUrl("line_email_required"));
+    return NextResponse.redirect(nextPath && nextPath.startsWith("/") ? `${baseUrl}${nextPath}?error=line_email_required` : loginUrl("line_email_required"));
   }
 
   // 3. Supabase Admin でユーザーを確保し、マジックリンクでログイン
   const admin = createAdminClient();
+  const emailLower = email.toLowerCase();
 
-  const { data: existingList } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const existingUser = existingList?.users?.find(
-    (u) => u.email?.toLowerCase() === email.toLowerCase()
-  );
+  /** メールで既存ユーザーを検索（複数ページ） */
+  async function findUserByEmail(
+    maxPages: number
+  ): Promise<{ id: string; user_metadata?: Record<string, unknown> } | null> {
+    for (let page = 1; page <= maxPages; page++) {
+      const { data, error } = await admin.auth.admin.listUsers({
+        page,
+        perPage: 100,
+      });
+      if (error || !data?.users?.length) return null;
+      const user = data.users.find(
+        (u) => u.email?.toLowerCase() === emailLower
+      );
+      if (user) return { id: user.id, user_metadata: user.user_metadata as Record<string, unknown> | undefined };
+      if (data.users.length < 100) break;
+    }
+    return null;
+  }
+
+  let existingUser = await findUserByEmail(10);
 
   if (existingUser) {
     await admin.auth.admin.updateUserById(existingUser.id, {
@@ -128,17 +152,25 @@ export async function GET(request: NextRequest) {
       user_metadata: { line_user_id: lineUserId },
     });
     if (createError || !newUser?.user) {
-      return NextResponse.redirect(loginUrl("line_login_failed"));
+      // 既存登録済みの可能性: もう一度検索して更新
+      const found = await findUserByEmail(50);
+      if (found) {
+        await admin.auth.admin.updateUserById(found.id, {
+          user_metadata: { ...found.user_metadata, line_user_id: lineUserId },
+        });
+      } else {
+        console.error("[callback/line] createUser failed:", createError?.message);
+        return NextResponse.redirect(settingsFailUrl);
+      }
     }
   }
 
   // 4. マジックリンク発行してその URL へリダイレクト
-  const nextPath = cookieStore.get(LINE_AUTH_NEXT_COOKIE)?.value;
-  const baseUrl = appUrl.replace(/\/$/, "");
+  const appBase = appUrl.replace(/\/$/, "");
   const redirectTo =
     nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")
-      ? `${baseUrl}${nextPath}`
-      : `${baseUrl}/dashboard`;
+      ? `${appBase}${nextPath}`
+      : `${appBase}/dashboard`;
   if (nextPath) {
     cookieStore.delete(LINE_AUTH_NEXT_COOKIE);
   }
@@ -149,7 +181,7 @@ export async function GET(request: NextRequest) {
   });
 
   if (linkError || !linkData?.properties?.action_link) {
-    return NextResponse.redirect(loginUrl("line_login_failed"));
+    return NextResponse.redirect(settingsFailUrl);
   }
 
   const actionLink = linkData.properties.action_link;
@@ -157,6 +189,26 @@ export async function GET(request: NextRequest) {
   const magicLinkUrl = actionLink.startsWith("http")
     ? actionLink
     : `${supabaseUrl}/${actionLink.replace(/^\//, "")}`;
+
+  // 確認ステップ: どのメールでログインするか表示してからマジックリンクへ
+  const LINE_CONFIRM_COOKIE = "line_confirm_token";
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (secret) {
+    const token = jwt.sign(
+      { email, url: magicLinkUrl, exp: Math.floor(Date.now() / 1000) + 120 },
+      secret,
+      { algorithm: "HS256" }
+    );
+    const res = NextResponse.redirect(`${baseUrl}/auth/line-confirm`);
+    res.cookies.set(LINE_CONFIRM_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 120,
+      path: "/",
+    });
+    return res;
+  }
 
   return NextResponse.redirect(magicLinkUrl);
 }

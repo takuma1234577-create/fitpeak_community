@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import {
   UserCircle,
@@ -66,8 +66,11 @@ const labelClass =
 /* ── Main Component ──────────────────────────────────── */
 export default function SettingsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { profile, isLoading, updateProfile } = useProfile()
   const [active, setActive] = useState<Category>("account")
+  const lineLinkError = searchParams.get("error") === "line_link_failed"
+  const lineEmailError = searchParams.get("error") === "line_email_required"
   const [hasChanges, setHasChanges] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -307,6 +310,16 @@ export default function SettingsPage() {
       <div className="flex flex-col gap-8">
         {/* 公式LINE連携（目立つブロック） */}
         <div className="rounded-2xl border-2 border-[#06C755]/40 bg-[#06C755]/10 p-5 sm:p-6">
+          {lineLinkError && (
+            <div className="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              連携に失敗しました。このアカウントのメールアドレスと、LINEに設定されているメールアドレスが同じか確認してください。同じメールでLINEログインすると連携されます。
+            </div>
+          )}
+          {lineEmailError && (
+            <div className="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              LINEでメールアドレスが取得できませんでした。LINEの設定でメールを公開するか、別の方法でログインしてください。
+            </div>
+          )}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#06C755]/20">
@@ -319,7 +332,7 @@ export default function SettingsPage() {
                 <p className="mt-0.5 text-sm text-muted-foreground">
                   {hasLineLinked === true
                     ? "このアカウントはLINEと連携済みです。友だち追加で通知が届きます。"
-                    : "LINEと連携すると、メッセージ・合トレ申請・フォローなどの通知をLINEで受け取れます。"}
+                    : "LINEと連携すると、メッセージ・合トレ申請・フォローなどの通知をLINEで受け取れます。このアカウントのメールとLINEのメールが同じ場合に連携されます。"}
                 </p>
               </div>
             </div>

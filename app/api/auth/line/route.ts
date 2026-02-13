@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import type { Database } from "@/types/supabase";
 
 const LINE_AUTH_URL = "https://access.line.me/oauth2/v2.1/authorize";
 const LINE_SCOPE = "openid email profile";
@@ -19,6 +20,8 @@ function generateState(): string {
 export async function GET(request: NextRequest) {
   const channelId = process.env.LINE_CHANNEL_ID;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!channelId || !appUrl) {
     return NextResponse.redirect(
@@ -38,25 +41,43 @@ export async function GET(request: NextRequest) {
   });
 
   const authUrl = `${LINE_AUTH_URL}?${params.toString()}`;
-  const cookieStore = await cookies();
+  const response = NextResponse.redirect(authUrl);
 
-  cookieStore.set(STATE_COOKIE_NAME, state, {
+  // 既存のSupabaseセッションを必ず破棄（別アカウントの残りセッションで誤ログインしないようにする）
+  if (supabaseUrl && supabaseAnonKey) {
+    const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, { ...options, path: "/" })
+          );
+        },
+      },
+    });
+    await supabase.auth.signOut();
+  }
+
+  const cookieOpts = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 10, // 10分
+    sameSite: "lax" as const,
     path: "/",
+  };
+
+  response.cookies.set(STATE_COOKIE_NAME, state, {
+    ...cookieOpts,
+    maxAge: 60 * 10, // 10分
   });
 
   if (nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
-    cookieStore.set(LINE_AUTH_NEXT_COOKIE, nextPath, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+    response.cookies.set(LINE_AUTH_NEXT_COOKIE, nextPath, {
+      ...cookieOpts,
       maxAge: 60 * 10,
-      path: "/",
     });
   }
 
-  return NextResponse.redirect(authUrl);
+  return response;
 }

@@ -303,6 +303,9 @@ export default function AuthForm() {
             <LineIcon /> LINE
           </a>
         </div>
+        <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+          LINEでログインすると、LINEに登録しているメールアドレスのアカウントでログインします。
+        </p>
 
         <p className="mt-7 text-center text-xs text-muted-foreground">
           {activeTab === "login" ? (<>アカウントをお持ちでない方は <button type="button" onClick={() => setActiveTab("signup")} className="font-bold text-foreground transition-colors hover:text-gold-light">新規登録</button></>) : (<>アカウントをお持ちの方は <button type="button" onClick={() => setActiveTab("login")} className="font-bold text-foreground transition-colors hover:text-gold-light">ログイン</button></>)}
