@@ -105,6 +105,7 @@ export default function OnboardingPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<string>("");
   const [birthday, setBirthday] = useState("");
@@ -152,10 +153,14 @@ export default function OnboardingPage() {
     e.target.value = "";
     if (!file) return;
     setSaveError(null);
+    setAvatarUploading(true);
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setSaveError("ログインしていません。");
+        return;
+      }
       const url = await uploadAvatar(user.id, file);
       setAvatarUrl(url);
       setAvatarVersion((v) => v + 1);
@@ -164,6 +169,8 @@ export default function OnboardingPage() {
       setSaveError(
         err instanceof Error ? err.message : "画像のアップロードに失敗しました。"
       );
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -286,16 +293,28 @@ export default function OnboardingPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             {/* アバター */}
             <div className="flex flex-col gap-2.5">
-              <label className={labelClass}>
+              <span className={labelClass}>
                 プロフィール画像 <span className="text-red-400">*</span>
-              </label>
+              </span>
               <div className="flex items-center gap-5">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-border bg-secondary"
+                <input
+                  id="onboarding-avatar-input"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+                <label
+                  htmlFor={avatarUploading ? undefined : "onboarding-avatar-input"}
+                  className={cn(
+                    "relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-border bg-secondary flex items-center justify-center",
+                    !avatarUploading && "cursor-pointer"
+                  )}
                 >
-                  {avatarUrl ? (
+                  {avatarUploading ? (
+                    <Loader2 className="h-10 w-10 animate-spin text-gold" />
+                  ) : avatarUrl ? (
                     <Image
                       src={`${avatarUrl}${avatarUrl.includes("?") ? "&" : "?"}v=${avatarVersion}`}
                       alt="アバター"
@@ -308,25 +327,23 @@ export default function OnboardingPage() {
                       <Camera className="h-10 w-10" />
                     </div>
                   )}
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
+                </label>
                 <div className="flex flex-col gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-left text-sm font-semibold text-gold hover:text-gold-light transition-colors"
+                  <label
+                    htmlFor={avatarUploading ? undefined : "onboarding-avatar-input"}
+                    className={cn(
+                      "text-left text-sm font-semibold text-gold hover:text-gold-light transition-colors",
+                      !avatarUploading && "cursor-pointer"
+                    )}
                   >
-                    写真をアップロード
-                  </button>
+                    {avatarUploading ? "アップロード中…" : "写真をアップロード"}
+                  </label>
                   <p className="text-xs text-muted-foreground">
                     JPG, PNG, WebP。2MB以下
                   </p>
+                  {saveError && (saveError.includes("画像") || saveError.includes("アップロード")) && (
+                    <p className="text-xs text-red-400">{saveError}</p>
+                  )}
                 </div>
               </div>
             </div>
