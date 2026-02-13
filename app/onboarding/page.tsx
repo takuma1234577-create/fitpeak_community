@@ -106,6 +106,7 @@ export default function OnboardingPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<string>("");
   const [birthday, setBirthday] = useState("");
@@ -152,13 +153,14 @@ export default function OnboardingPage() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setAvatarError(null);
     setSaveError(null);
     setAvatarUploading(true);
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setSaveError("ログインしていません。");
+        setAvatarError("ログインしていません。");
         return;
       }
       const url = await uploadAvatar(user.id, file);
@@ -166,9 +168,9 @@ export default function OnboardingPage() {
       setAvatarVersion((v) => v + 1);
     } catch (err) {
       console.error(err);
-      setSaveError(
-        err instanceof Error ? err.message : "画像のアップロードに失敗しました。"
-      );
+      const msg = err instanceof Error ? err.message : "画像のアップロードに失敗しました。";
+      setAvatarError(msg);
+      setSaveError(msg);
     } finally {
       setAvatarUploading(false);
     }
@@ -302,7 +304,7 @@ export default function OnboardingPage() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
+                  className="sr-only"
                   onChange={handleAvatarChange}
                 />
                 <label
@@ -316,6 +318,7 @@ export default function OnboardingPage() {
                     <Loader2 className="h-10 w-10 animate-spin text-gold" />
                   ) : avatarUrl ? (
                     <Image
+                      key={avatarVersion}
                       src={`${avatarUrl}${avatarUrl.includes("?") ? "&" : "?"}v=${avatarVersion}`}
                       alt="アバター"
                       fill
@@ -341,8 +344,8 @@ export default function OnboardingPage() {
                   <p className="text-xs text-muted-foreground">
                     JPG, PNG, WebP。2MB以下
                   </p>
-                  {saveError && (saveError.includes("画像") || saveError.includes("アップロード")) && (
-                    <p className="text-xs text-red-400">{saveError}</p>
+                  {avatarError && (
+                    <p className="text-xs text-red-400">{avatarError}</p>
                   )}
                 </div>
               </div>
