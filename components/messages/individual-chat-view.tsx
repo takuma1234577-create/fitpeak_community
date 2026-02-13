@@ -252,17 +252,31 @@ export default function IndividualChatView({
         .select("user_id")
         .eq("conversation_id", id);
       const otherIds = safeList(participants as { user_id: string }[] | null).map((p) => p.user_id).filter((uid) => uid !== myUserId);
+      const myName = otherUser?.name ?? "誰か";
       for (const uid of otherIds) {
         await (supabase as any).from("notifications").insert({
           user_id: uid,
           sender_id: myUserId,
           type: "message",
-          content: "新着メッセージがあります",
+          content: `${myName}さんからメッセージが届きました`,
           link: `/dashboard/messages/${id}`,
         });
+        try {
+          await fetch("/api/notify-chat-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipient_user_id: uid,
+              sender_nickname: myName,
+              is_group: false,
+            }),
+          });
+        } catch {
+          // メール送信は省略可
+        }
       }
     },
-    [id, myUserId]
+    [id, myUserId, otherUser?.name]
   );
 
   const sendText = async () => {

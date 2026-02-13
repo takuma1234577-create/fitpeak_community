@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { Resend } from "resend";
-
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "FITPEAK <onboarding@resend.dev>";
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+import {
+  getRecruitmentApplyEmailContent,
+  sendNotificationEmail,
+} from "@/lib/email-notifications";
 
 export async function POST(request: Request) {
   try {
@@ -36,21 +36,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const subject = "【FITPEAK】合トレに参加申請が届きました";
     const applicant = applicant_nickname ?? "誰か";
     const title = recruitment_title ?? "募集";
-    const text = `${applicant}さんが「${title}」に参加申請しました。サイトの通知からご確認ください。`;
+    const { subject, text } = getRecruitmentApplyEmailContent(applicant, title);
 
-    if (!resend) {
-      return NextResponse.json({ ok: true, email_skipped: true });
-    }
-
-    const { error: sendError } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: creator.email,
-      subject,
-      text,
-    });
+    const { error: sendError } = await sendNotificationEmail(creator.email, subject, text);
 
     if (sendError) {
       console.error("[notify-recruitment-apply] Resend error:", sendError);

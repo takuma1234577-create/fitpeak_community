@@ -61,7 +61,8 @@
 12. `schema-migrations/009_get_prefecture_counts_rpc.sql`（都道府県マップ用の集計 RPC。SQL で集計→アプリで正規化の導線）
 13. `schema-migrations/006_groups_header_url.sql`（groups に header_url カラム追加）
 14. `schema-migrations/010_update_group_header_rpc.sql`（グループヘッダー画像の変更。RLS で更新できない場合に必要）
-15. その他 `supabase-*.sql`（storage / messages など）
+15. `schema-migrations/011_notifications_type_follow.sql`（フォロー通知の type 追加）
+16. その他 `supabase-*.sql`（storage / messages など）
 
 既に本番で動いている DB には、**変更したマイグレーション（004 や notifications など）を「もう一度」実行しても、今回の修正で安全に通るようになっています。**
 

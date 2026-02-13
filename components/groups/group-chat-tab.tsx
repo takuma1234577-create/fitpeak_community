@@ -134,6 +134,37 @@ export default function GroupChatTab({
         sender_avatar: profRow?.avatar_url ?? null,
       },
     ]);
+
+    // 参加者へ通知＋メール（自分以外）
+    const { data: participants } = await (supabase as any)
+      .from("conversation_participants")
+      .select("user_id")
+      .eq("conversation_id", conversationId);
+    const participantIds = ensureArray(participants) as unknown as { user_id: string }[];
+    const recipientIds = participantIds.map((p) => p.user_id).filter((uid) => uid !== myUserId);
+    for (const uid of recipientIds) {
+      await (supabase as any).from("notifications").insert({
+        user_id: uid,
+        sender_id: myUserId,
+        type: "message",
+        content: `${name}さんが「${groupName}」でメッセージを送信しました`,
+        link: `/dashboard/messages/${conversationId}`,
+      });
+      try {
+        await fetch("/api/notify-chat-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipient_user_id: uid,
+            sender_nickname: name,
+            is_group: true,
+            group_name: groupName,
+          }),
+        });
+      } catch {
+        // メール送信は省略可
+      }
+    }
   };
 
   if (loading) {
