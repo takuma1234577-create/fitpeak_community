@@ -77,7 +77,7 @@ export default function GroupChatView({
           <UserPlus className="h-5 w-5" />
         </button>
       </header>
-      <div className={cn("flex min-h-0 flex-1 flex-col bg-[#070707]")}>
+      <div className={cn("flex min-h-0 flex-1 flex-col bg-background")}>
         <GroupChatTab
           conversationId={conversationId}
           groupName={groupName}

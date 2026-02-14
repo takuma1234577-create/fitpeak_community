@@ -182,7 +182,7 @@ export default function GroupChatTab({
   return (
     <div
       className={cn(
-        "flex flex-col bg-[#070707]",
+        "flex flex-col bg-background",
         fullHeight
           ? "min-h-0 flex-1 rounded-none border-0"
           : "min-h-[400px] max-h-[60vh] rounded-xl border border-border/40"
@@ -236,7 +236,7 @@ export default function GroupChatTab({
                       "max-w-[280px] rounded-2xl px-4 py-2.5 text-sm leading-relaxed sm:max-w-[360px]",
                       isMe
                         ? "rounded-br-md bg-gold font-medium text-[#050505]"
-                        : "rounded-bl-md bg-[#2a2a2a] text-foreground"
+                        : "rounded-bl-md bg-secondary text-foreground"
                     )}
                   >
                     {(() => {
@@ -318,6 +318,7 @@ export default function GroupChatTab({
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.nativeEvent.isComposing) return;
                   e.preventDefault();
                   handleSend();
                 }

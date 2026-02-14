@@ -169,7 +169,7 @@ function PrefectureUsersPanel({
       setLoading(true);
       try {
         const res = await fetch(
-          `/api/prefecture-users?prefecture=${encodeURIComponent(prefecture)}`
+          `/api/prefecture-users?prefecture=${encodeURIComponent(prefecture === "all" ? "all" : prefecture)}`
         );
         const body = await res.json().catch(() => ({ users: [] }));
         const list = Array.isArray(body.users)
@@ -207,7 +207,7 @@ function PrefectureUsersPanel({
 
       <div
         role="dialog"
-        aria-label={`${prefecture}のユーザー一覧`}
+        aria-label={prefecture === "all" ? "全国のユーザー一覧" : `${prefecture}のユーザー一覧`}
         className="fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col rounded-t-2xl border-t border-[#f0e6c0] bg-[#fff] shadow-2xl animate-in slide-in-from-bottom duration-300"
       >
         <div className="flex justify-center pt-3 pb-1">
@@ -221,10 +221,12 @@ function PrefectureUsersPanel({
             </div>
             <div>
               <h3 className="text-base font-bold text-foreground tracking-tight">
-                {prefecture}
+                {prefecture === "all" ? "全国" : prefecture}
               </h3>
               <p className="text-[11px] text-[#B8960C] font-medium">
-                住まいが{prefecture}のトレーニー {userCount}人
+                {prefecture === "all"
+                  ? `トレーニー ${userCount}人`
+                  : `住まいが${prefecture}のトレーニー ${userCount}人`}
               </p>
             </div>
           </div>
@@ -249,7 +251,9 @@ function PrefectureUsersPanel({
             <div className="flex flex-col items-center justify-center py-16">
               <Users className="h-8 w-8 text-[#D4AF37]/30" />
               <p className="mt-3 text-xs text-muted-foreground">
-                住まいが{prefecture}のユーザーはまだいません
+                {prefecture === "all"
+                  ? "ユーザーはまだいません"
+                  : `住まいが${prefecture}のユーザーはまだいません`}
               </p>
             </div>
           ) : (
@@ -296,6 +300,9 @@ export default function JapanMapSection({
     setHoveredPrefecture(null);
   }, []);
 
+  const showAllUsersPanel = selectedPrefecture === "__all__";
+  const showPrefecturePanel = selectedPrefecture && selectedPrefecture !== "__all__";
+
   const handleRegionToggle = useCallback((region: RegionKey) => {
     setExpandedRegion((prev) => (prev === region ? null : region));
   }, []);
@@ -321,12 +328,17 @@ export default function JapanMapSection({
           </div>
         </div>
         {totalUsers > 0 && (
-          <div className="flex items-center gap-1.5 rounded-full bg-[#FFF8E1] px-3 py-1">
+          <button
+            type="button"
+            onClick={() => setSelectedPrefecture("__all__")}
+            className="flex items-center gap-1.5 rounded-full bg-[#FFF8E1] px-3 py-1 transition-colors hover:bg-[#FFE082] active:scale-95"
+            aria-label="ユーザー一覧を表示"
+          >
             <Users className="h-3 w-3 text-[#D4AF37]" />
             <span className="text-[11px] font-bold text-[#B8960C] tabular-nums">
               {totalUsers.toLocaleString()}
             </span>
-          </div>
+          </button>
         )}
       </div>
 
@@ -500,7 +512,15 @@ export default function JapanMapSection({
         )}
       </div>
 
-      {selectedPrefecture && (
+      {showAllUsersPanel && (
+        <PrefectureUsersPanel
+          prefecture="all"
+          userCount={totalUsers}
+          myUserId={myUserId}
+          onClose={handleClosePanel}
+        />
+      )}
+      {showPrefecturePanel && selectedPrefecture && (
         <PrefectureUsersPanel
           prefecture={selectedPrefecture}
           userCount={prefectureCounts[selectedPrefecture] || 0}

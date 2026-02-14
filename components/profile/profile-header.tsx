@@ -102,6 +102,8 @@ interface ProfileHeaderProps {
   onFollowersClick?: () => void;
   /** フォロー中数をクリックしたとき（一覧モーダル用） */
   onFollowingClick?: () => void;
+  /** 先着100人記念バッジを表示 */
+  showEarlyAdopterBadge?: boolean;
 }
 
 function toFullUrl(kind: keyof SnsLinks, value: string): string {
@@ -141,6 +143,7 @@ export default function ProfileHeader({
   onBlockChange,
   onFollowersClick,
   onFollowingClick,
+  showEarlyAdopterBadge = false,
 }: ProfileHeaderProps) {
   const router = useRouter();
   const showFollowMessage = !isOwnProfile && profileUserId;
@@ -262,8 +265,16 @@ export default function ProfileHeader({
         </div>
 
         <div className="mb-4">
-          <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {name}
+            {showEarlyAdopterBadge && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-gold/50 bg-gold/20 px-2.5 py-0.5 text-xs font-bold text-gold"
+                title="先着100人登録記念"
+              >
+                🎉 先着100人
+              </span>
+            )}
           </h1>
           {bio && (
             <p className="mt-1 text-sm font-semibold tracking-wide text-foreground">

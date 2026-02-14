@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { getPrefectureMatchValues } from "@/lib/japan-map-paths";
+import { TILE_PREFECTURES } from "@/lib/japan-map-paths";
 
 export const dynamic = "force-dynamic";
 
@@ -14,18 +15,32 @@ type PrefectureUserRow = {
   created_at: string | null;
 };
 
+function getAllPrefectureMatchValues(): string[] {
+  const uniq = new Set<string>();
+  for (const p of TILE_PREFECTURES) {
+    for (const v of getPrefectureMatchValues(p.name)) {
+      uniq.add(v);
+    }
+  }
+  return Array.from(uniq);
+}
+
 /**
  * 都道府県マップのモーダル用。指定都道府県に住むユーザー一覧を返す。
- * サーバー側で RPC を呼ぶため、クライアントの 400 を避けられる。
+ * prefecture=all のときは全国のユーザー一覧を返す。
  */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const prefecture = searchParams.get("prefecture");
-    if (!prefecture || !prefecture.trim()) {
+    let matchValues: string[];
+    if (prefecture === "all" || prefecture === "全国") {
+      matchValues = getAllPrefectureMatchValues();
+    } else if (!prefecture || !prefecture.trim()) {
       return NextResponse.json({ users: [] });
+    } else {
+      matchValues = getPrefectureMatchValues(prefecture.trim());
     }
-    const matchValues = getPrefectureMatchValues(prefecture.trim());
     const supabase = await createClient();
     const { data: rows, error } = await (supabase as any).rpc("get_prefecture_users", {
       match_values: matchValues,

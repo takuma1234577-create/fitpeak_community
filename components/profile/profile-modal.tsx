@@ -59,6 +59,7 @@ export default function ProfileModal({
               avatarUrl={profile.avatar_url ?? null}
               name={name}
               onBack={() => onOpenChange(false)}
+              showEarlyAdopterBadge={(profile as { early_adopter?: boolean }).early_adopter ?? false}
             />
           )}
         </div>

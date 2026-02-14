@@ -128,6 +128,7 @@ export default function ProfilePage() {
             headerUrl={(otherProfile as { header_url?: string | null }).header_url ?? null}
             avatarUrl={otherProfile.avatar_url ?? null}
             name={name}
+            showEarlyAdopterBadge={(otherProfile as { early_adopter?: boolean }).early_adopter ?? false}
             onBack={() => router.push("/dashboard")}
             bio={otherProfile.bio ?? null}
             goal={(otherProfile as { goal?: string | null }).goal ?? null}
@@ -260,6 +261,7 @@ export default function ProfilePage() {
           onBlockChange={refetchBlock}
           onFollowersClick={profileUserId ? () => { setFollowModalTab("followers"); setFollowModalOpen(true); } : undefined}
           onFollowingClick={profileUserId ? () => { setFollowModalTab("following"); setFollowModalOpen(true); } : undefined}
+          showEarlyAdopterBadge={(p as { early_adopter?: boolean }).early_adopter ?? false}
         />
         {profileUserId && (
           <FollowListModal

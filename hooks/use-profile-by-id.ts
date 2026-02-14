@@ -45,6 +45,7 @@ function sanitizeProfile(raw: Record<string, unknown> & { bench_press_max?: numb
     is_age_public: normalized.is_age_public !== false,
     is_prefecture_public: normalized.is_prefecture_public !== false,
     is_home_gym_public: normalized.is_home_gym_public !== false,
+    early_adopter: (normalized.early_adopter as boolean) ?? false,
   } as Profile;
 }
 

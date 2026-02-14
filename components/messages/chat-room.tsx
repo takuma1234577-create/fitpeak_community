@@ -278,6 +278,7 @@ export default function ChatRoom({
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.nativeEvent.isComposing) return;
                   e.preventDefault();
                   handleSend();
                 }

@@ -47,6 +47,8 @@ export interface OtherProfileTopProps {
   onFollowersClick?: () => void;
   /** フォロー中数をクリックしたとき（一覧モーダル用） */
   onFollowingClick?: () => void;
+  /** 先着100人記念バッジを表示 */
+  showEarlyAdopterBadge?: boolean;
 }
 
 export default function OtherProfileTop({
@@ -71,6 +73,7 @@ export default function OtherProfileTop({
   onMessage,
   onFollowersClick,
   onFollowingClick,
+  showEarlyAdopterBadge = false,
 }: OtherProfileTopProps) {
   const initial = (name || "?").charAt(0).toUpperCase();
   const avatarSrc = avatarUrl
@@ -134,8 +137,16 @@ export default function OtherProfileTop({
               </div>
             )}
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             {name || "名前未設定"}
+            {showEarlyAdopterBadge && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border border-gold/50 bg-gold/20 px-2.5 py-0.5 text-[10px] font-bold text-gold"
+                title="先着100人登録記念"
+              >
+                🎉 先着100人
+              </span>
+            )}
           </h1>
         </div>
 

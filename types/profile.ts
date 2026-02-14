@@ -40,6 +40,8 @@ export interface Profile {
   twitter_url?: string | null;
   tiktok_url?: string | null;
   facebook_url?: string | null;
+  /** 先着100人記念バッジ */
+  early_adopter?: boolean;
 }
 
 export type ProfileUpdate = Partial<
