@@ -82,7 +82,8 @@ async function fetchFollowers(profileUserId: string, myUserId: string | null): P
     .from("follows")
     .select("follower_id")
     .eq("following_id", profileUserId);
-  const ids = ensureArray(rows).map((r: { follower_id: string }) => r.follower_id);
+  const rowsList = ensureArray(rows) as { follower_id: string }[];
+  const ids = rowsList.map((r) => r.follower_id);
   if (ids.length === 0) return [];
   const { data: profiles } = await (supabase as any)
     .from("profiles")
@@ -95,7 +96,8 @@ async function fetchFollowers(profileUserId: string, myUserId: string | null): P
     .select("following_id")
     .eq("follower_id", myUserId)
     .in("following_id", ids);
-  const followingSet = new Set(ensureArray(myFollows).map((r: { following_id: string }) => r.following_id));
+  const myFollowsList = ensureArray(myFollows) as { following_id: string }[];
+  const followingSet = new Set(myFollowsList.map((r) => r.following_id));
   return safeArray(list).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
 }
 
@@ -105,7 +107,8 @@ async function fetchFollowing(profileUserId: string, myUserId: string | null): P
     .from("follows")
     .select("following_id")
     .eq("follower_id", profileUserId);
-  const ids = ensureArray(rows).map((r: { following_id: string }) => r.following_id);
+  const rowsList = ensureArray(rows) as { following_id: string }[];
+  const ids = rowsList.map((r) => r.following_id);
   if (ids.length === 0) return [];
   const { data: profiles } = await (supabase as any)
     .from("profiles")
@@ -118,7 +121,8 @@ async function fetchFollowing(profileUserId: string, myUserId: string | null): P
     .select("following_id")
     .eq("follower_id", myUserId)
     .in("following_id", ids);
-  const followingSet = new Set(ensureArray(myFollows).map((r: { following_id: string }) => r.following_id));
+  const myFollowsList = ensureArray(myFollows) as { following_id: string }[];
+  const followingSet = new Set(myFollowsList.map((r) => r.following_id));
   return safeArray(list).map((p) => ({ ...p, isFollowing: followingSet.has(p.id) }));
 }
 

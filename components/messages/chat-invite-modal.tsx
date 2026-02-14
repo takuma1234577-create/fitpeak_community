@@ -70,7 +70,8 @@ export default function ChatInviteModal({
       .from("groups")
       .select("id, name, created_by, chat_room_id")
       .eq("created_by", myUserId);
-    const managed = safeArray(managedGroups).map((g: { id: string; name: string; created_by: string; chat_room_id: string | null }) => ({
+    const managedList = safeArray(managedGroups) as { id: string; name: string; created_by: string; chat_room_id: string | null }[];
+    const managed = managedList.map((g) => ({
       id: g.id,
       name: g.name,
       created_by: g.created_by,
@@ -83,9 +84,10 @@ export default function ChatInviteModal({
       .from("group_members")
       .select("group_id")
       .eq("user_id", myUserId);
-    const memberGroupIds = safeArray(memberRows).map((r: { group_id: string }) => r.group_id);
+    const memberRowsList = safeArray(memberRows) as { group_id: string }[];
+    const memberGroupIds = memberRowsList.map((r) => r.group_id);
     const excludeIds = new Set(managed.map((g) => g.id));
-    const belongIds = memberGroupIds.filter((id: string) => !excludeIds.has(id));
+    const belongIds = memberGroupIds.filter((id) => !excludeIds.has(id));
 
     let belong: GroupItem[] = [];
     if (belongIds.length > 0) {
@@ -93,7 +95,8 @@ export default function ChatInviteModal({
         .from("groups")
         .select("id, name, created_by, chat_room_id")
         .in("id", belongIds);
-      belong = safeArray(belongGroups).map((g: { id: string; name: string; created_by: string; chat_room_id: string | null }) => ({
+      const belongList = safeArray(belongGroups) as { id: string; name: string; created_by: string; chat_room_id: string | null }[];
+      belong = belongList.map((g) => ({
         id: g.id,
         name: g.name,
         created_by: g.created_by,
@@ -110,7 +113,8 @@ export default function ChatInviteModal({
       .select("id, title, status, user_id")
       .eq("user_id", myUserId)
       .eq("status", "open");
-    const managedRecList = safeArray(managedRecs).map((r: { id: string; title: string; status: string; user_id: string }) => ({
+    const managedRecsList = safeArray(managedRecs) as { id: string; title: string; status: string; user_id: string }[];
+    const managedRecList = managedRecsList.map((r) => ({
       id: r.id,
       title: r.title,
       status: r.status,
@@ -123,9 +127,10 @@ export default function ChatInviteModal({
       .from("recruitment_participants")
       .select("recruitment_id")
       .eq("user_id", myUserId);
-    const appliedIds = [...new Set(safeArray(appliedRows).map((r: { recruitment_id: string }) => r.recruitment_id))];
+    const appliedRowsList = safeArray(appliedRows) as { recruitment_id: string }[];
+    const appliedIds = [...new Set(appliedRowsList.map((r) => r.recruitment_id))];
     const appliedExclude = new Set(managedRecList.map((r) => r.id));
-    const appliedOnlyIds = appliedIds.filter((id: string) => !appliedExclude.has(id));
+    const appliedOnlyIds = appliedIds.filter((id) => !appliedExclude.has(id));
 
     let appliedRecList: RecruitmentItem[] = [];
     if (appliedOnlyIds.length > 0) {
@@ -134,7 +139,8 @@ export default function ChatInviteModal({
         .select("id, title, status, user_id")
         .in("id", appliedOnlyIds)
         .eq("status", "open");
-      appliedRecList = safeArray(appliedRecs).map((r: { id: string; title: string; status: string; user_id: string }) => ({
+      const appliedRecsList = safeArray(appliedRecs) as { id: string; title: string; status: string; user_id: string }[];
+      appliedRecList = appliedRecsList.map((r) => ({
         id: r.id,
         title: r.title,
         status: r.status,
