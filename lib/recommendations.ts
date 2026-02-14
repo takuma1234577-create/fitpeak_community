@@ -267,7 +267,7 @@ export async function getRecommendedUsers(
     const excludeIds = [myId, ...step1.map((u) => u.id)];
     const { data: randomRows, error } = await sb.rpc("get_random_profiles", {
       p_exclude_ids: excludeIds,
-      p_limit: need,
+      p_limit: Math.max(need * 3, 15),
     });
 
     if (error) {
@@ -340,6 +340,7 @@ export async function getOfficialGroupForPrefecture(
  * myId が渡されていれば自分を除く。過去登録者も含め全員が対象。
  * 1) メール確認済みを優先して新規登録順で取得。
  * 2) 0人のときは email_confirmed を外して再試行（LINE 等の OAuth ユーザー対応）
+ * 3) limit に満たないときは get_random_profiles で補填（より多くの候補から取得）
  */
 export async function getNewArrivalUsers(
   supabase: SupabaseClient,
@@ -349,7 +350,7 @@ export async function getNewArrivalUsers(
   try {
     const sb = supabase as any;
     const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, birthday, is_age_public, gender, created_at";
-    const maxLimit = Math.min(limit * 3, 30);
+    const maxLimit = Math.max(limit * 5, 50);
 
     const baseFilters = () =>
       sb
@@ -370,30 +371,50 @@ export async function getNewArrivalUsers(
       return q;
     };
 
-    const { data, error } = await runQuery(true);
+    const collectCompleted = (rows: Record<string, unknown>[]) =>
+      safeList(rows).filter((row) => isProfileCompleted(row));
 
+    let completed: Record<string, unknown>[] = [];
+
+    const { data, error } = await runQuery(true);
     if (!error && data?.length) {
-      const completed = safeList(data as Record<string, unknown>[]).filter((row) => isProfileCompleted(row));
-      if (completed.length > 0) {
-        return completed.slice(0, limit).map((row) => ({
-          ...toRecommendedUser(row),
-          created_at: (row.created_at as string) ?? "",
-        })) as NewArrivalUser[];
+      completed = collectCompleted(data as Record<string, unknown>[]);
+    }
+
+    if (completed.length === 0) {
+      const { data: fallbackData, error: fallbackError } = await runQuery(false);
+      if (!fallbackError && fallbackData?.length) {
+        completed = collectCompleted(fallbackData as Record<string, unknown>[]);
       }
     }
 
-    // 0人のとき: email_confirmed を外して再試行（LINE 等 OAuth ユーザー対応）
-    const { data: fallbackData, error: fallbackError } = await runQuery(false);
+    let result = completed.slice(0, limit).map((row) => ({
+      ...toRecommendedUser(row),
+      created_at: (row.created_at as string) ?? "",
+    })) as NewArrivalUser[];
 
-    if (!fallbackError && fallbackData?.length) {
-      const completed = safeList(fallbackData as Record<string, unknown>[]).filter((row) => isProfileCompleted(row));
-      return completed.slice(0, limit).map((row) => ({
-        ...toRecommendedUser(row),
-        created_at: (row.created_at as string) ?? "",
-      })) as NewArrivalUser[];
+    if (result.length < limit) {
+      const excludeIds = [myId, ...result.map((u) => u.id)].filter(Boolean) as string[];
+      const need = Math.max(limit - result.length, 10);
+      const { data: randomRows } = await sb.rpc("get_random_profiles", {
+        p_exclude_ids: excludeIds,
+        p_limit: need,
+      });
+      const seen = new Set(result.map((u) => u.id));
+      for (const row of safeList(randomRows as Record<string, unknown>[])) {
+        if (result.length >= limit) break;
+        if (!isProfileCompleted(row)) continue;
+        const id = row?.id as string | undefined;
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        result.push({
+          ...toRecommendedUser(row),
+          created_at: (row.created_at as string) ?? "",
+        } as NewArrivalUser);
+      }
     }
 
-    return [];
+    return result;
   } catch (e) {
     console.error("getNewArrivalUsers error:", e);
     return [];
