@@ -237,7 +237,7 @@ export default function AuthForm() {
           <span>LINEで新規登録・ログイン</span>
         </a>
         <p className="mb-8 text-center text-xs text-muted-foreground">
-          ワンクリックで簡単スタート。LINEに登録したメールアドレスでアカウント作成できます。
+          ワンクリックで簡単スタート。公式LINE連携で新着メッセージの受け取りができます。
         </p>
 
         <div className="flex items-center gap-4">
