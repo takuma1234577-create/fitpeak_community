@@ -158,6 +158,7 @@ function toRecommendedUser(row: Record<string, unknown>): RecommendedUser {
  * おすすめのユーザー: 最大5人を返す。
  * Step1: ジム・エリア・種目マッチで取得（最大5）。
  * Step2: 5人未満なら不足分をランダムで補填（ORDER BY RANDOM()）。
+ * email_confirmed は緩和: 条件に合うユーザーがいない場合は filter なしで再試行（LINE ユーザー対応）
  */
 export async function getRecommendedUsers(
   supabase: SupabaseClient,
@@ -170,20 +171,23 @@ export async function getRecommendedUsers(
     const target = Math.min(limit, RECOMMENDED_USERS_TARGET);
     const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, birthday, is_age_public, gender";
 
-    // Step 1: おすすめ（ジム・住まい・種目一致）で最大 target 名
-    const promises: Promise<{ data: RecommendedUser[] | null }>[] = [];
-
-    const visibleFilter = () =>
-      sb
+    const baseVisibleFilter = (useEmailConfirmed: boolean) => {
+      let q = sb
         .from("profiles")
         .select(fields)
         .neq("id", myId)
-        .eq("email_confirmed", true)
         .not("nickname", "is", null)
         .not("avatar_url", "is", null)
         .not("bio", "is", null)
         .not("prefecture", "is", null)
         .not("exercises", "is", null);
+      if (useEmailConfirmed) q = q.eq("email_confirmed", true);
+      return q;
+    };
+
+    // Step 1: おすすめ（ジム・住まい・種目一致）で最大 target 名
+    const promises: Promise<{ data: RecommendedUser[] | null }>[] = [];
+    const visibleFilter = () => baseVisibleFilter(true);
     if (myProfile?.home_gym?.trim()) {
       const pattern = `%${myProfile.home_gym.trim()}%`;
       promises.push(visibleFilter().ilike("home_gym", pattern).limit(target));
@@ -217,7 +221,42 @@ export async function getRecommendedUsers(
         }
       }
     }
-    const step1 = merged.slice(0, target);
+    let step1 = merged.slice(0, target);
+
+    // Step 1 fallback: 0人の場合、email_confirmed を外して再試行（LINE 等の OAuth ユーザー対応）
+    if (step1.length === 0 && promises.length > 0) {
+      const fallbackPromises: Promise<{ data: RecommendedUser[] | null }>[] = [];
+      if (myProfile?.home_gym?.trim()) {
+        const pattern = `%${myProfile.home_gym.trim()}%`;
+        fallbackPromises.push(baseVisibleFilter(false).ilike("home_gym", pattern).limit(target));
+      }
+      if (myProfile?.prefecture?.trim()) {
+        fallbackPromises.push(
+          baseVisibleFilter(false).eq("prefecture", myProfile.prefecture.trim()).limit(target)
+        );
+      }
+      if (myProfile?.exercises?.length) {
+        const ex = myProfile.exercises.filter(Boolean);
+        if (ex.length > 0) {
+          fallbackPromises.push(baseVisibleFilter(false).overlaps("exercises", ex).limit(target));
+        }
+      }
+      if (fallbackPromises.length > 0) {
+        const fallbackResults = await Promise.all(fallbackPromises);
+        for (const res of fallbackResults) {
+          const list = (res.data ?? []) as Record<string, unknown>[];
+          for (const row of list) {
+            if (!isProfileCompleted(row)) continue;
+            const id = row?.id as string;
+            if (id !== myId && !seen.has(id)) {
+              seen.add(id);
+              step1.push(toRecommendedUser(row));
+            }
+          }
+        }
+        step1 = step1.slice(0, target);
+      }
+    }
 
     // Step 2: 不足分をランダムで補填（自分と Step1 の ID を除外）
     const need = target - step1.length;
@@ -299,8 +338,8 @@ export async function getOfficialGroupForPrefecture(
 /**
  * おすすめユーザー: created_at の新しい順（新規登録順）で取得。
  * myId が渡されていれば自分を除く。過去登録者も含め全員が対象。
- * 1) メール確認済み＆ニックネームありを優先して新規登録順で取得。
- * 2) 0人のときは条件を外し、全プロフィールを新規登録順で取得。
+ * 1) メール確認済みを優先して新規登録順で取得。
+ * 2) 0人のときは email_confirmed を外して再試行（LINE 等の OAuth ユーザー対応）
  */
 export async function getNewArrivalUsers(
   supabase: SupabaseClient,
@@ -312,34 +351,39 @@ export async function getNewArrivalUsers(
     const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, birthday, is_age_public, gender, created_at";
     const maxLimit = Math.min(limit * 3, 30);
 
-    const baseQuery = () =>
+    const baseFilters = () =>
       sb
         .from("profiles")
         .select(fields)
         .order("created_at", { ascending: false })
         .limit(maxLimit)
-        .eq("email_confirmed", true)
         .not("nickname", "is", null)
         .not("avatar_url", "is", null)
         .not("bio", "is", null)
         .not("prefecture", "is", null)
         .not("exercises", "is", null);
 
-    let query = baseQuery();
-    if (myId) query = query.neq("id", myId);
-    const { data, error } = await query;
+    const runQuery = (useEmailConfirmed: boolean) => {
+      let q = baseFilters();
+      if (useEmailConfirmed) q = q.eq("email_confirmed", true);
+      if (myId) q = q.neq("id", myId);
+      return q;
+    };
+
+    const { data, error } = await runQuery(true);
 
     if (!error && data?.length) {
       const completed = safeList(data as Record<string, unknown>[]).filter((row) => isProfileCompleted(row));
-      return completed.slice(0, limit).map((row) => ({
-        ...toRecommendedUser(row),
-        created_at: (row.created_at as string) ?? "",
-      })) as NewArrivalUser[];
+      if (completed.length > 0) {
+        return completed.slice(0, limit).map((row) => ({
+          ...toRecommendedUser(row),
+          created_at: (row.created_at as string) ?? "",
+        })) as NewArrivalUser[];
+      }
     }
 
-    let fallbackQuery = baseQuery();
-    if (myId) fallbackQuery = fallbackQuery.neq("id", myId);
-    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+    // 0人のとき: email_confirmed を外して再試行（LINE 等 OAuth ユーザー対応）
+    const { data: fallbackData, error: fallbackError } = await runQuery(false);
 
     if (!fallbackError && fallbackData?.length) {
       const completed = safeList(fallbackData as Record<string, unknown>[]).filter((row) => isProfileCompleted(row));
