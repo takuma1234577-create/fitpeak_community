@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "FITPEAK - Community",
+  title: "FITPEAK筋トレコミュニティ",
   description:
-    "Join the FITPEAK fitness community. Train harder, achieve more.",
+    "トレーニーのための筋トレコミュニティ【合トレ募集・筋トレ仲間探し、筋トレ情報交換】",
 };
 
 export const viewport: Viewport = {

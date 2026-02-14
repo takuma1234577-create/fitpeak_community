@@ -9,6 +9,7 @@ import {
   Send,
   Loader2,
   UserCircle,
+  UserPlus,
   MoreHorizontal,
   Check,
   CheckCheck,
@@ -16,6 +17,7 @@ import {
   ImagePlus,
   MapPin,
   Dumbbell,
+  MessageCircle,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { safeList } from "@/lib/utils";
@@ -23,6 +25,7 @@ import { useBlockedUserIds } from "@/hooks/use-blocked-ids";
 import { useProfileModal } from "@/contexts/profile-modal-context";
 import { uploadChatMedia, getMessageTypeFromFile } from "@/lib/upload-chat-media";
 import { cn } from "@/lib/utils";
+import ChatInviteModal from "@/components/messages/chat-invite-modal";
 
 type MessageRow = {
   id: string;
@@ -77,6 +80,7 @@ export default function IndividualChatView({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const { blockedIds } = useBlockedUserIds();
   const { openProfileModal } = useProfileModal();
   const visibleMessages = messages.filter(
@@ -449,14 +453,24 @@ export default function IndividualChatView({
         {!embedded && (
           <div className="flex shrink-0 items-center gap-1">
             {otherUser?.id ? (
-              <button
-                type="button"
-                onClick={() => openProfileModal(otherUser.id)}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
-                aria-label="プロフィール"
-              >
-                <UserCircle className="h-5 w-5" />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => openProfileModal(otherUser.id)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
+                  aria-label="プロフィール"
+                >
+                  <UserCircle className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInviteModalOpen(true)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-secondary/60 hover:text-foreground"
+                  aria-label="グループ・合トレに招待"
+                >
+                  <UserPlus className="h-5 w-5" />
+                </button>
+              </>
             ) : (
               <Link
                 href="/dashboard/messages"
@@ -593,9 +607,66 @@ export default function IndividualChatView({
                       return <>{msg.content}</>;
                     }
                   })()}
+                  {msg.message_type === "recruitment_invite" && (() => {
+                    try {
+                      const payload = JSON.parse(msg.content) as { recruitmentId?: string; title?: string; text?: string };
+                      const rId = payload.recruitmentId;
+                      const title = payload.title ?? "合トレ";
+                      const text = payload.text ?? "合トレに招待しました";
+                      return (
+                        <div className="space-y-2">
+                          {rId && (
+                            <Link
+                              href={`/dashboard/recruit?r=${rId}`}
+                              className="block rounded-lg border border-border/60 bg-background/80 p-2.5 transition-colors hover:border-gold/40"
+                            >
+                              <span className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                                <Dumbbell className="h-4 w-4 shrink-0" />
+                                {title}
+                              </span>
+                              <span className="mt-1 block text-xs text-muted-foreground">募集を見る</span>
+                            </Link>
+                          )}
+                          <p className="text-sm">{text}</p>
+                        </div>
+                      );
+                    } catch {
+                      return <>{msg.content}</>;
+                    }
+                  })()}
+                  {msg.message_type === "group_invite" && (() => {
+                    try {
+                      const payload = JSON.parse(msg.content) as { groupId?: string; groupName?: string; groupUrl?: string; text?: string };
+                      const gId = payload.groupId;
+                      const name = payload.groupName ?? "グループ";
+                      const url = payload.groupUrl ?? (gId ? `/dashboard/groups/${gId}` : "#");
+                      const text = payload.text ?? "グループに招待しました";
+                      return (
+                        <div className="space-y-2">
+                          {gId && (
+                            <Link
+                              href={url}
+                              className="block rounded-lg border border-border/60 bg-background/80 p-2.5 transition-colors hover:border-gold/40"
+                            >
+                              <span className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                                <MessageCircle className="h-4 w-4 shrink-0" />
+                                {name}
+                              </span>
+                              <span className="mt-1 block text-xs text-muted-foreground">グループを見る</span>
+                            </Link>
+                          )}
+                          <p className="text-sm">{text}</p>
+                        </div>
+                      );
+                    } catch {
+                      return <>{msg.content}</>;
+                    }
+                  })()}
                   {msg.message_type !== "image" &&
                     msg.message_type !== "video" &&
-                    msg.message_type !== "recruitment_approved" && <>{msg.content}</>}
+                    msg.message_type !== "recruitment_approved" &&
+                    msg.message_type !== "recruitment_invite" &&
+                    msg.message_type !== "group_invite" && <>{msg.content}</>}
                 </div>
 
                 <div
@@ -698,6 +769,15 @@ export default function IndividualChatView({
           </button>
         </form>
       </footer>
+
+      <ChatInviteModal
+        open={inviteModalOpen}
+        onOpenChange={setInviteModalOpen}
+        conversationId={id}
+        myUserId={myUserId ?? ""}
+        targetUserId={otherUser?.id ?? null}
+        onInviteSent={fetchConversation}
+      />
     </div>
   );
 }

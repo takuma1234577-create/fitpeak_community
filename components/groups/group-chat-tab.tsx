@@ -24,6 +24,8 @@ interface GroupChatTabProps {
   onEnsureParticipant?: () => Promise<void>;
   /** true のときメッセージ画面でフル表示（高さを親に合わせる） */
   fullHeight?: boolean;
+  /** 変更時にメッセージを再取得（招待送信後など） */
+  refreshTrigger?: number;
 }
 
 export default function GroupChatTab({
@@ -32,6 +34,7 @@ export default function GroupChatTab({
   myUserId,
   onEnsureParticipant,
   fullHeight = false,
+  refreshTrigger = 0,
 }: GroupChatTabProps) {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +90,7 @@ export default function GroupChatTab({
   useEffect(() => {
     onEnsureParticipant?.();
     loadMessages();
-  }, [conversationId, loadMessages, onEnsureParticipant]);
+  }, [conversationId, loadMessages, onEnsureParticipant, refreshTrigger]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -238,7 +241,32 @@ export default function GroupChatTab({
                   >
                     {(() => {
                       try {
-                        const j = JSON.parse(msg.content) as { recruitmentId?: string; title?: string; text?: string };
+                        const j = JSON.parse(msg.content) as {
+                          type?: string;
+                          recruitmentId?: string;
+                          title?: string;
+                          text?: string;
+                          groupId?: string;
+                          groupName?: string;
+                          groupUrl?: string;
+                        };
+                        if (j.type === "group_invite" && j.groupId) {
+                          return (
+                            <div className="space-y-2">
+                              <Link
+                                href={j.groupUrl ?? `/dashboard/groups/${j.groupId}`}
+                                className="block rounded-lg border border-border/60 bg-background/80 p-2.5 transition-colors hover:border-gold/40"
+                              >
+                                <span className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                                  <MessageCircle className="h-4 w-4 shrink-0" />
+                                  {j.groupName ?? "グループ"}
+                                </span>
+                                <span className="mt-1 block text-xs text-muted-foreground">グループを見る</span>
+                              </Link>
+                              <p>{j.text ?? "グループを共有しました"}</p>
+                            </div>
+                          );
+                        }
                         if (j.recruitmentId && j.text) {
                           return (
                             <div className="space-y-2">

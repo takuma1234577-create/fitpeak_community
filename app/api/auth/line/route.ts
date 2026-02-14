@@ -41,28 +41,28 @@ export async function GET(request: NextRequest) {
   });
 
   const authUrl = `${LINE_AUTH_URL}?${params.toString()}`;
-  const response = NextResponse.redirect(authUrl);
-
   const cookieOpts = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
+    maxAge: 60 * 10, // 10分
   };
 
-  // state を先に設定（signOut の前で確実にセット）
-  response.cookies.set(STATE_COOKIE_NAME, state, {
-    ...cookieOpts,
-    maxAge: 60 * 10, // 10分
+  // 302 リダイレクトだと一部環境で Cookie が保存されず 1 回目が state 不一致になるため、
+  // 200 + HTML リダイレクトにして Cookie を確実に保存してから LINE へ飛ばす
+  const html = `<!DOCTYPE html><html><head><script>window.location.replace(${JSON.stringify(authUrl)});</script></head><body>Redirecting to LINE...</body></html>`;
+  const response = new NextResponse(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
   });
+
+  response.cookies.set(STATE_COOKIE_NAME, state, cookieOpts);
   if (nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
-    response.cookies.set(LINE_AUTH_NEXT_COOKIE, nextPath, {
-      ...cookieOpts,
-      maxAge: 60 * 10,
-    });
+    response.cookies.set(LINE_AUTH_NEXT_COOKIE, nextPath, cookieOpts);
   }
 
-  // 既存のSupabaseセッションを破棄（state は上で設定済み。signOut が Cookie を上書きしないよう注意）
+  // 既存の Supabase セッションを破棄
   if (supabaseUrl && supabaseAnonKey) {
     const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
       cookies: {
@@ -79,16 +79,10 @@ export async function GET(request: NextRequest) {
     await supabase.auth.signOut();
   }
 
-  // signOut の setAll のあとでも state を再設定して確実に残す
-  response.cookies.set(STATE_COOKIE_NAME, state, {
-    ...cookieOpts,
-    maxAge: 60 * 10,
-  });
+  // signOut で上書きされうるので state を再設定
+  response.cookies.set(STATE_COOKIE_NAME, state, cookieOpts);
   if (nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
-    response.cookies.set(LINE_AUTH_NEXT_COOKIE, nextPath, {
-      ...cookieOpts,
-      maxAge: 60 * 10,
-    });
+    response.cookies.set(LINE_AUTH_NEXT_COOKIE, nextPath, cookieOpts);
   }
 
   return response;
