@@ -265,7 +265,7 @@ export default function OnboardingPage() {
         const { error } = await sb.from("profiles").insert({ id: user.id, ...payload });
         if (error) throw error;
       }
-      window.location.href = "/dashboard";
+      window.location.href = "/onboarding/recommendations";
     } catch (err: unknown) {
       const errObj = err as Record<string, unknown> | null;
       const message =

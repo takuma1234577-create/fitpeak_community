@@ -5,8 +5,7 @@ export default function Page() {
   return (
     <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-background px-4 py-12 md:py-16">
       <div
-        className="absolute inset-0"
-        style={{ pointerEvents: "none" }}
+        className="pointer-events-none absolute inset-0 z-0"
         aria-hidden
       >
         <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-gold/[0.06] blur-[140px]" />
@@ -29,7 +28,7 @@ export default function Page() {
         </div>
       </div>
 
-      <div className="relative z-10 w-full" style={{ pointerEvents: "auto" }}>
+      <div className="relative z-10 w-full max-w-[440px]">
         <AuthForm />
       </div>
     </main>

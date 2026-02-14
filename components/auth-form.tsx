@@ -226,16 +226,17 @@ export default function AuthForm() {
     <div className="mx-auto w-full max-w-[440px]">
       <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-xl shadow-black/10 backdrop-blur-sm sm:p-10">
         {/* LINE で新規登録・ログイン（メイン CTA） */}
-        <a
-          href="/api/auth/line"
-          className="group relative mb-6 flex w-full items-center justify-center gap-3 rounded-xl bg-[#06C755] py-4 text-base font-bold text-white shadow-lg shadow-[#06C755]/25 transition-all duration-300 hover:bg-[#05b34a] hover:shadow-xl hover:shadow-[#06C755]/30 active:scale-[0.98]"
+        <button
+          type="button"
+          onClick={() => { window.location.href = "/api/auth/line"; }}
+          className="group relative mb-6 flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl bg-[#06C755] py-4 text-base font-bold text-white shadow-lg shadow-[#06C755]/25 transition-all duration-300 hover:bg-[#05b34a] hover:shadow-xl hover:shadow-[#06C755]/30 active:scale-[0.98]"
         >
           <span className="absolute -top-1.5 right-4 rounded-full bg-gold px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-[#050505]">
             おすすめ
           </span>
           <LineIcon className="h-6 w-6 text-white" />
           <span>LINEで新規登録・ログイン</span>
-        </a>
+        </button>
         <p className="mb-8 text-center text-xs text-muted-foreground">
           ワンクリックで簡単スタート。公式LINE連携で新着メッセージの受け取りができます。
         </p>

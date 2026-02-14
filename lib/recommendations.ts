@@ -252,6 +252,29 @@ export async function getRecommendedUsers(
 }
 
 /**
+ * 都道府県の公式グループを取得
+ */
+export async function getOfficialGroupForPrefecture(
+  supabase: SupabaseClient,
+  prefecture: string
+): Promise<{ id: string; name: string; description: string | null; chat_room_id: string | null } | null> {
+  if (!prefecture?.trim()) return null;
+  try {
+    const { data, error } = await (supabase as any)
+      .from("groups")
+      .select("id, name, description, chat_room_id")
+      .eq("category", "公式")
+      .eq("prefecture", prefecture.trim())
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as { id: string; name: string; description: string | null; chat_room_id: string | null };
+  } catch (e) {
+    console.error("getOfficialGroupForPrefecture error:", e);
+    return null;
+  }
+}
+
+/**
  * おすすめユーザー: created_at の新しい順（新規登録順）で取得。
  * myId が渡されていれば自分を除く。過去登録者も含め全員が対象。
  * 1) メール確認済み＆ニックネームありを優先して新規登録順で取得。
