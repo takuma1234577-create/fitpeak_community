@@ -36,7 +36,7 @@ BEGIN
 
   FOREACH pref IN ARRAY prefectures
   LOOP
-    INSERT INTO public.conversations () VALUES () RETURNING id INTO conv_id;
+    INSERT INTO public.conversations DEFAULT VALUES RETURNING id INTO conv_id;
 
     INSERT INTO public.groups (name, description, category, created_by, is_private, chat_room_id, prefecture)
     VALUES (
