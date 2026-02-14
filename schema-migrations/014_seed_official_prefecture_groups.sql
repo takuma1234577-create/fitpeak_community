@@ -1,15 +1,9 @@
 -- 014: 47都道府県の公式グループを一括作成
 -- 管理者: takuma1234577@gmail.com
--- 使い方: 013 を実行後、Supabase ダッシュボード → SQL Editor → このファイルの中身を貼り付けて Run
--- 注意: 管理者ユーザー（auth.users + profiles）が存在することが前提です
--- SECURITY DEFINER により RLS をバイパスして INSERT を実行します
+-- 使い方: このファイルをすべてコピーして SQL Editor に貼り付け、Run をクリック
+-- 注意: 1文だけなので Explain ボタンを押さないこと。Run を使用
 
-CREATE OR REPLACE FUNCTION public.seed_official_prefecture_groups(admin_email text DEFAULT 'takuma1234577@gmail.com')
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
+DO $$
 DECLARE
   admin_id uuid;
   pref text;
@@ -25,9 +19,9 @@ DECLARE
     '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
   ];
 BEGIN
-  SELECT id INTO admin_id FROM auth.users WHERE email = admin_email LIMIT 1;
+  SELECT id INTO admin_id FROM auth.users WHERE email = 'takuma1234577@gmail.com' LIMIT 1;
   IF admin_id IS NULL THEN
-    RAISE EXCEPTION '管理者ユーザーが見つかりません。% で登録されているか確認してください。', admin_email;
+    RAISE EXCEPTION '管理者ユーザーが見つかりません。takuma1234577@gmail.com で登録されているか確認してください。';
   END IF;
 
   INSERT INTO public.profiles (id, username, nickname)
@@ -38,7 +32,7 @@ BEGIN
   LOOP
     INSERT INTO public.conversations DEFAULT VALUES RETURNING id INTO conv_id;
 
-    INSERT INTO public.groups (name, description, category, created_by, is_private, chat_room_id, prefecture)
+    INSERT INTO public.groups (name, description, category, created_by, is_private, chat_room_id, prefecture, header_url)
     VALUES (
       'FITPEAK ' || pref,
       pref || 'の筋トレ仲間とつながる公式グループです。地域の仲間と情報交換や合トレの募集ができます。',
@@ -46,7 +40,8 @@ BEGIN
       admin_id,
       false,
       conv_id,
-      pref
+      pref,
+      'https://placehold.jp/72/0f172a/d4af37/800x450.png?text=' || pref
     )
     RETURNING id INTO grp_id;
 
@@ -55,7 +50,4 @@ BEGIN
   END LOOP;
 
   RAISE NOTICE '47都道府県の公式グループを作成しました。';
-END;
-$$;
-
-SELECT public.seed_official_prefecture_groups();
+END $$;

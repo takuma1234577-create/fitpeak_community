@@ -252,6 +252,28 @@ export async function getRecommendedUsers(
 }
 
 /**
+ * 全国共通の公式グループ（prefecture が NULL）を取得（例: トレーニーの集まり場）
+ * おすすめページで常に表示するグループ
+ */
+export async function getGeneralOfficialGroups(
+  supabase: SupabaseClient
+): Promise<{ id: string; name: string; description: string | null; chat_room_id: string | null }[]> {
+  try {
+    const { data, error } = await (supabase as any)
+      .from("groups")
+      .select("id, name, description, chat_room_id")
+      .eq("category", "公式")
+      .is("prefecture", null)
+      .order("created_at", { ascending: true });
+    if (error || !data?.length) return [];
+    return data as { id: string; name: string; description: string | null; chat_room_id: string | null }[];
+  } catch (e) {
+    console.error("getGeneralOfficialGroups error:", e);
+    return [];
+  }
+}
+
+/**
  * 都道府県の公式グループを取得
  */
 export async function getOfficialGroupForPrefecture(

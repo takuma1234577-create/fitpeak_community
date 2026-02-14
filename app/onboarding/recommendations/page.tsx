@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { isProfileCompleted } from "@/lib/profile-completed";
-import { getRecommendedUsers, getOfficialGroupForPrefecture, getMyProfile } from "@/lib/recommendations";
+import { getRecommendedUsers, getOfficialGroupForPrefecture, getGeneralOfficialGroups, getMyProfile } from "@/lib/recommendations";
 import type { RecommendedUser } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
 import { useProfileModal } from "@/contexts/profile-modal-context";
@@ -104,7 +104,7 @@ function OfficialGroupCard({
   group: { id: string; name: string; description: string | null; chat_room_id: string | null };
   myUserId: string | null;
   isJoined: boolean;
-  onJoin: () => void;
+  onJoin: (groupId: string) => void;
   joining: boolean;
 }) {
   return (
@@ -147,7 +147,7 @@ function OfficialGroupCard({
         ) : (
           <button
             type="button"
-            onClick={onJoin}
+            onClick={() => onJoin(group.id)}
             disabled={joining}
             className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-gold bg-gold py-2.5 text-sm font-bold text-[#050505] transition-colors hover:bg-gold-light disabled:opacity-60"
           >
@@ -169,15 +169,15 @@ export default function OnboardingRecommendationsPage() {
   const { openProfileModal } = useProfileModal();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<RecommendedUser[]>([]);
-  const [officialGroup, setOfficialGroup] = useState<{
+  const [officialGroups, setOfficialGroups] = useState<{
     id: string;
     name: string;
     description: string | null;
     chat_room_id: string | null;
-  } | null>(null);
+  }[]>([]);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [myPrefecture, setMyPrefecture] = useState<string | null>(null);
-  const [joining, setJoining] = useState(false);
+  const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
   const [joinedGroupIds, setJoinedGroupIds] = useState<Set<string>>(new Set());
 
   const onOpenProfile = useCallback(
@@ -224,25 +224,37 @@ export default function OnboardingRecommendationsPage() {
       const pref = myProfile?.prefecture?.trim() ?? null;
       setMyPrefecture(pref);
 
-      const [recUsers, group] = await Promise.all([
+      const [recUsers, generalGroups, prefGroup] = await Promise.all([
         getRecommendedUsers(supabase, myProfile, user.id, 5),
+        getGeneralOfficialGroups(supabase),
         pref ? getOfficialGroupForPrefecture(supabase, pref) : null,
       ]);
 
+      const allGroups: { id: string; name: string; description: string | null; chat_room_id: string | null }[] = [];
+      const seenIds = new Set<string>();
+      for (const g of generalGroups) {
+        if (!seenIds.has(g.id)) {
+          seenIds.add(g.id);
+          allGroups.push(g);
+        }
+      }
+      if (prefGroup && !seenIds.has(prefGroup.id)) {
+        allGroups.push(prefGroup);
+      }
+
       if (!cancelled) {
         setUsers(recUsers);
+        setOfficialGroups(allGroups);
 
-        if (group) {
-          setOfficialGroup(group);
+        if (allGroups.length > 0) {
           const { data: members } = await supabase
             .from("group_members")
             .select("group_id")
             .eq("user_id", user.id)
-            .eq("group_id", group.id);
+            .in("group_id", allGroups.map((g) => g.id));
           const memberList = (members ?? []) as { group_id: string }[];
-          if (memberList.length > 0) {
-            setJoinedGroupIds((prev) => new Set(prev).add(group.id));
-          }
+          const joined = new Set(memberList.map((m) => m.group_id));
+          setJoinedGroupIds(joined);
         }
       }
       setLoading(false);
@@ -250,24 +262,26 @@ export default function OnboardingRecommendationsPage() {
     return () => { cancelled = true; };
   }, [router]);
 
-  const handleJoinGroup = async () => {
-    if (!officialGroup || !myUserId) return;
-    setJoining(true);
+  const handleJoinGroup = async (groupId: string) => {
+    if (!myUserId) return;
+    const group = officialGroups.find((g) => g.id === groupId);
+    if (!group) return;
+    setJoiningGroupId(groupId);
     try {
       const supabase = createClient();
       const sb = supabase as any;
-      await sb.from("group_members").insert({ group_id: officialGroup.id, user_id: myUserId });
-      if (officialGroup.chat_room_id) {
+      await sb.from("group_members").insert({ group_id: groupId, user_id: myUserId });
+      if (group.chat_room_id) {
         await sb.from("conversation_participants").insert({
-          conversation_id: officialGroup.chat_room_id,
+          conversation_id: group.chat_room_id,
           user_id: myUserId,
         });
       }
-      setJoinedGroupIds((prev) => new Set(prev).add(officialGroup.id));
+      setJoinedGroupIds((prev) => new Set(prev).add(groupId));
     } catch (e) {
       console.error(e);
     } finally {
-      setJoining(false);
+      setJoiningGroupId(null);
     }
   };
 
@@ -337,20 +351,25 @@ export default function OnboardingRecommendationsPage() {
           )}
         </section>
 
-        {/* おすすめグループ（地域の公式） */}
-        {officialGroup && (
+        {/* おすすめグループ（トレーニーの集まり場 + 地域の公式） */}
+        {officialGroups.length > 0 && (
           <section className="mb-8">
             <div className="mb-4 flex items-center gap-2">
               <Shield className="h-5 w-5 text-gold" />
               <h2 className="text-base font-bold text-foreground">おすすめグループ</h2>
             </div>
-            <OfficialGroupCard
-              group={officialGroup}
-              myUserId={myUserId}
-              isJoined={joinedGroupIds.has(officialGroup.id)}
-              onJoin={handleJoinGroup}
-              joining={joining}
-            />
+            <div className="flex flex-col gap-4">
+              {officialGroups.map((group) => (
+                <OfficialGroupCard
+                  key={group.id}
+                  group={group}
+                  myUserId={myUserId}
+                  isJoined={joinedGroupIds.has(group.id)}
+                  onJoin={handleJoinGroup}
+                  joining={joiningGroupId === group.id}
+                />
+              ))}
+            </div>
           </section>
         )}
 
