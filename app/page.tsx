@@ -1,36 +1,51 @@
-import { Dumbbell } from "lucide-react";
-import AuthForm from "@/components/auth-form";
+import type { Metadata } from "next";
+import LpHeader from "@/components/lp/lp-header";
+import LpHero from "@/components/lp/lp-hero";
+import LpProblem from "@/components/lp/lp-problem";
+import LpFeatures from "@/components/lp/lp-features";
+import LpSocialProof from "@/components/lp/lp-social-proof";
+import LpFaq from "@/components/lp/lp-faq";
+import LpCta from "@/components/lp/lp-cta";
+import LpFooter from "@/components/lp/lp-footer";
 
-export default function Page() {
+export const metadata: Metadata = {
+  title:
+    "FITPEAK | 日本最大級の合トレ募集・筋トレ記録共有アプリ - トレーニングパートナーを見つけよう",
+  description:
+    "FITPEAKは合トレ仲間の募集、筋トレメニュー・ログの共有、ジム対抗ランキングが楽しめる日本最大級のトレーニングコミュニティアプリです。エニタイム・ゴールドジム・チョコザップなど全国のジムに対応。無料で今すぐ始めよう。",
+  keywords: [
+    "合トレ",
+    "合トレ募集",
+    "筋トレ仲間",
+    "トレーニングパートナー",
+    "筋トレ記録",
+    "ジム仲間",
+    "FITPEAK",
+    "エニタイムフィットネス",
+    "ゴールドジム",
+    "筋トレアプリ",
+  ],
+  openGraph: {
+    title: "FITPEAK | 日本最大級の合トレ募集・筋トレ記録共有アプリ",
+    description:
+      "一人では続かない筋トレを、最高のパートナーと。合トレ募集・ログ共有・ジム対抗ランキングが無料で使える。",
+    type: "website",
+  },
+};
+
+export default function LandingPage() {
   return (
-    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-background px-4 py-12 md:py-16">
-      <div
-        className="pointer-events-none absolute inset-0 z-0"
-        aria-hidden
-      >
-        <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-gold/[0.06] blur-[140px]" />
-        <div className="absolute -bottom-56 -left-56 h-[600px] w-[600px] rounded-full bg-gold/[0.05] blur-[160px]" />
-        <div className="absolute top-1/2 left-1/2 h-[800px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/[0.03] blur-[200px]" />
-      </div>
-
-      {/* ヒーローセクション + CTA */}
-      <div className="relative z-10 mb-10 w-full max-w-[440px] text-center">
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex items-center gap-3">
-            <Dumbbell className="h-10 w-10 text-gold" strokeWidth={2.5} />
-            <h1 className="text-4xl font-black tracking-[0.2em] text-gold md:text-5xl">
-              FITPEAK
-            </h1>
-          </div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Community
-          </p>
-        </div>
-      </div>
-
-      <div className="relative z-10 w-full max-w-[440px]">
-        <AuthForm />
-      </div>
-    </main>
+    <>
+      <LpHeader />
+      <main>
+        <LpHero />
+        <LpProblem />
+        <LpFeatures />
+        <LpSocialProof />
+        <LpFaq />
+        <LpCta />
+      </main>
+      <LpFooter />
+    </>
   );
 }

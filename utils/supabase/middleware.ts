@@ -42,9 +42,9 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const isTopOrDashboard = pathname === "/" || pathname.startsWith("/dashboard");
+  const isDashboard = pathname.startsWith("/dashboard");
 
-  if (user && isTopOrDashboard) {
+  if (user && isDashboard) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("avatar_url, nickname, username, bio, prefecture, exercises")

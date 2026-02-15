@@ -10,13 +10,20 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "FITPEAK筋トレコミュニティ",
+  title: {
+    default: "FITPEAK | 日本最大級の合トレ募集・筋トレ記録共有アプリ",
+    template: "%s | FITPEAK",
+  },
   description:
     "トレーニーのための筋トレコミュニティ【合トレ募集・筋トレ仲間探し、筋トレ情報交換】",
+  metadataBase: new URL("https://fitpeak.jp"),
 };
 
 export const viewport: Viewport = {
   themeColor: "#ffffff",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
