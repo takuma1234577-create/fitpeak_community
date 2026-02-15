@@ -7,6 +7,8 @@ export type MyProfile = {
   prefecture: string | null;
   home_gym: string | null;
   exercises: string[] | null;
+  training_years?: number | null;
+  training_level?: string | null;
 };
 
 export type RecruitmentWithProfile = {
@@ -56,7 +58,7 @@ export async function getMyProfile(
   try {
     const { data, error } = await (supabase as any)
       .from("profiles")
-      .select("id, prefecture, home_gym, exercises")
+      .select("id, prefecture, home_gym, exercises, training_years, training_level")
       .eq("id", userId)
       .maybeSingle();
     if (error || !data) return null;
@@ -308,6 +310,64 @@ export async function getGeneralOfficialGroups(
     return data as { id: string; name: string; description: string | null; chat_room_id: string | null }[];
   } catch (e) {
     console.error("getGeneralOfficialGroups error:", e);
+    return [];
+  }
+}
+
+export type OfficialGroup = { id: string; name: string; description: string | null; chat_room_id: string | null };
+
+/**
+ * オンボーディングおすすめ用: 3つのグループを取得
+ * 1. 都道府県グループ
+ * 2. 上級者(training_level=advanced) → ガチトレしたい人の集まり、それ以外 → ゆるトレの会
+ * 3. ベンチプレス100kg目指す会
+ */
+export async function getRecommendedGroupsForOnboarding(
+  supabase: SupabaseClient,
+  myProfile: MyProfile | null
+): Promise<OfficialGroup[]> {
+  try {
+    const sb = supabase as any;
+    const result: OfficialGroup[] = [];
+    const seenIds = new Set<string>();
+
+    const addGroup = (g: OfficialGroup | null) => {
+      if (g && !seenIds.has(g.id)) {
+        seenIds.add(g.id);
+        result.push(g);
+      }
+    };
+
+    // 1. 都道府県グループ
+    const pref = myProfile?.prefecture?.trim();
+    if (pref) {
+      const prefGroup = await getOfficialGroupForPrefecture(supabase, pref);
+      addGroup(prefGroup);
+    }
+
+    // 2. ガチトレ or ゆるトレ（training_level=advanced → ガチトレ、それ以外 → ゆるトレ）
+    const isAdvanced = myProfile?.training_level === "advanced";
+    const levelGroupName = isAdvanced ? "ガチトレしたい人の集まり" : "ゆるトレの会";
+    const { data: levelGroup } = await sb
+      .from("groups")
+      .select("id, name, description, chat_room_id")
+      .eq("category", "公式")
+      .eq("name", levelGroupName)
+      .maybeSingle();
+    addGroup(levelGroup as OfficialGroup | null);
+
+    // 3. ベンチプレス100kg目指す会
+    const { data: benchGroup } = await sb
+      .from("groups")
+      .select("id, name, description, chat_room_id")
+      .eq("category", "公式")
+      .eq("name", "ベンチプレス100kg目指す会")
+      .maybeSingle();
+    addGroup(benchGroup as OfficialGroup | null);
+
+    return result;
+  } catch (e) {
+    console.error("getRecommendedGroupsForOnboarding error:", e);
     return [];
   }
 }

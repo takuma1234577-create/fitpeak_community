@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { isProfileCompleted } from "@/lib/profile-completed";
-import { getRecommendedUsers, getOfficialGroupForPrefecture, getGeneralOfficialGroups, getMyProfile } from "@/lib/recommendations";
+import { getRecommendedUsers, getRecommendedGroupsForOnboarding, getMyProfile } from "@/lib/recommendations";
 import type { RecommendedUser } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
 import { useProfileModal } from "@/contexts/profile-modal-context";
@@ -224,23 +224,10 @@ export default function OnboardingRecommendationsPage() {
       const pref = myProfile?.prefecture?.trim() ?? null;
       setMyPrefecture(pref);
 
-      const [recUsers, generalGroups, prefGroup] = await Promise.all([
+      const [recUsers, allGroups] = await Promise.all([
         getRecommendedUsers(supabase, myProfile, user.id, 5),
-        getGeneralOfficialGroups(supabase),
-        pref ? getOfficialGroupForPrefecture(supabase, pref) : null,
+        getRecommendedGroupsForOnboarding(supabase, myProfile),
       ]);
-
-      const allGroups: { id: string; name: string; description: string | null; chat_room_id: string | null }[] = [];
-      const seenIds = new Set<string>();
-      for (const g of generalGroups) {
-        if (!seenIds.has(g.id)) {
-          seenIds.add(g.id);
-          allGroups.push(g);
-        }
-      }
-      if (prefGroup && !seenIds.has(prefGroup.id)) {
-        allGroups.push(prefGroup);
-      }
 
       if (!cancelled) {
         setUsers(recUsers);

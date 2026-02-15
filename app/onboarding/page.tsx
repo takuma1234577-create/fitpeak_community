@@ -114,6 +114,8 @@ export default function OnboardingPage() {
   const [prefecture, setPrefecture] = useState("");
   const [homeGym, setHomeGym] = useState("");
   const [exercises, setExercises] = useState<string[]>([]);
+  const [trainingYears, setTrainingYears] = useState("");
+  const [trainingLevel, setTrainingLevel] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
   const [isAgePublic, setIsAgePublic] = useState(true);
   const [isPrefecturePublic, setIsPrefecturePublic] = useState(true);
   const [isHomeGymPublic, setIsHomeGymPublic] = useState(true);
@@ -248,6 +250,8 @@ export default function OnboardingPage() {
         prefecture: prefecture || null,
         home_gym: homeGym.trim() || null,
         exercises: exercises.length > 0 ? exercises : null,
+        training_years: Math.max(0, Math.min(99, Number(trainingYears) || 0)),
+        training_level: trainingLevel,
         is_age_public: isAgePublic,
         is_prefecture_public: isPrefecturePublic,
         is_home_gym_public: isHomeGymPublic,
@@ -550,6 +554,53 @@ export default function OnboardingPage() {
                   <Lock className="h-3 w-3" />
                   よく行くジムを非公開にする
                 </label>
+              </div>
+            </div>
+
+            {/* 筋トレ歴（年数） */}
+            <div className="flex flex-col gap-2.5">
+              <label htmlFor="training-years" className={labelClass}>
+                筋トレ歴（年数）
+              </label>
+              <div className="relative">
+                <Dumbbell className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+                <input
+                  id="training-years"
+                  type="number"
+                  min="0"
+                  max="99"
+                  value={trainingYears}
+                  onChange={(e) => setTrainingYears(e.target.value)}
+                  placeholder="例: 3"
+                  className="w-full rounded-lg border border-border bg-secondary py-3.5 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/40"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">年</span>
+              </div>
+            </div>
+
+            {/* レベル */}
+            <div className="flex flex-col gap-2.5">
+              <span className={labelClass}>レベル</span>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: "beginner" as const, label: "初心者" },
+                  { value: "intermediate" as const, label: "中級者" },
+                  { value: "advanced" as const, label: "上級者" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setTrainingLevel(opt.value)}
+                    className={cn(
+                      "rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all",
+                      trainingLevel === opt.value
+                        ? "border-gold bg-gold/15 text-gold"
+                        : "border-border bg-secondary text-muted-foreground hover:border-foreground/20"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </div>
 
