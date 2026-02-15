@@ -250,8 +250,12 @@ export default function OnboardingPage() {
         prefecture: prefecture || null,
         home_gym: homeGym.trim() || null,
         exercises: exercises.length > 0 ? exercises : null,
-        training_years: Math.max(0, Math.min(99, Number(trainingYears) || 0)),
-        training_level: trainingLevel,
+        training_years: (() => {
+          const yrs = Math.max(0, Math.min(99, Number(trainingYears) || 0));
+          if (trainingLevel === "advanced") return Math.max(yrs, 3);
+          if (trainingLevel === "intermediate") return Math.max(yrs, 1);
+          return yrs;
+        })(),
         is_age_public: isAgePublic,
         is_prefecture_public: isPrefecturePublic,
         is_home_gym_public: isHomeGymPublic,

@@ -345,8 +345,9 @@ export async function getRecommendedGroupsForOnboarding(
       addGroup(prefGroup);
     }
 
-    // 2. ガチトレ or ゆるトレ（training_level=advanced → ガチトレ、それ以外 → ゆるトレ）
-    const isAdvanced = myProfile?.training_level === "advanced";
+    // 2. ガチトレ or ゆるトレ（training_level=advanced または training_years>=3 → ガチトレ、それ以外 → ゆるトレ）
+    const isAdvanced =
+      myProfile?.training_level === "advanced" || (myProfile?.training_years ?? 0) >= 3;
     const levelGroupName = isAdvanced ? "ガチトレしたい人の集まり" : "ゆるトレの会";
     const { data: levelGroup } = await sb
       .from("groups")
