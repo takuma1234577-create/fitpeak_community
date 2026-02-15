@@ -293,6 +293,125 @@ export async function getRecommendedUsers(
 }
 
 /**
+ * オンボーディング用: 住まい（都道府県）の近い順で最大5人を返す。
+ * 同じ都道府県を最優先、不足分は全国から補填。RPC に依存しない。
+ */
+export async function getRecommendedUsersForOnboarding(
+  supabase: SupabaseClient,
+  myProfile: MyProfile | null,
+  myId: string,
+  limit = 5
+): Promise<RecommendedUser[]> {
+  try {
+    const sb = supabase as any;
+    const fields = "id, nickname, username, bio, avatar_url, prefecture, home_gym, exercises, birthday, is_age_public, gender";
+    const seen = new Set<string>([myId]);
+    const result: RecommendedUser[] = [];
+
+    const baseQuery = (inclEmailFilter: boolean) => {
+      let q = sb
+        .from("profiles")
+        .select(fields)
+        .neq("id", myId)
+        .not("nickname", "is", null)
+        .not("avatar_url", "is", null)
+        .not("bio", "is", null)
+        .not("prefecture", "is", null)
+        .not("exercises", "is", null);
+      if (inclEmailFilter) q = q.eq("email_confirmed", true);
+      return q;
+    };
+
+    // 1. 同じ都道府県を優先（最大5人）
+    const pref = myProfile?.prefecture?.trim();
+    if (pref) {
+      for (const useEmail of [true, false]) {
+        const { data } = await baseQuery(useEmail)
+          .eq("prefecture", pref)
+          .order("created_at", { ascending: false })
+          .limit(limit);
+        for (const row of safeList(data as Record<string, unknown>[])) {
+          if (!isProfileCompleted(row)) continue;
+          const id = row?.id as string;
+          if (id && !seen.has(id)) {
+            seen.add(id);
+            result.push(toRecommendedUser(row));
+            if (result.length >= limit) return result;
+          }
+        }
+        if (result.length > 0) break;
+      }
+    }
+
+    // 2. 不足分を全国から補填（新着順）
+    if (result.length < limit) {
+      for (const useEmail of [true, false]) {
+        let q = sb
+          .from("profiles")
+          .select(fields)
+          .neq("id", myId)
+          .not("nickname", "is", null)
+          .not("avatar_url", "is", null)
+          .not("bio", "is", null)
+          .not("prefecture", "is", null)
+          .not("exercises", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(Math.max(limit * 3, 20));
+        if (useEmail) q = q.eq("email_confirmed", true);
+        const { data } = await q;
+        for (const row of safeList(data as Record<string, unknown>[])) {
+          if (result.length >= limit) break;
+          if (!isProfileCompleted(row)) continue;
+          const id = row?.id as string;
+          if (id && !seen.has(id)) {
+            seen.add(id);
+            result.push(toRecommendedUser(row));
+          }
+        }
+        if (result.length >= limit) break;
+      }
+    }
+
+    // 3. 0人の場合: 条件を緩めて再試行（ニックネーム・アバター・都道府県があれば表示）
+    if (result.length === 0) {
+      const hasMinimalProfile = (row: Record<string, unknown>) => {
+        const nick = (row?.nickname ?? row?.username ?? "").toString().trim();
+        const avatar = row?.avatar_url;
+        const pref = (row?.prefecture ?? "").toString().trim();
+        return nick.length > 0 && !!avatar && pref.length > 0;
+      };
+      for (const useEmail of [true, false]) {
+        let q = sb
+          .from("profiles")
+          .select(fields)
+          .neq("id", myId)
+          .not("avatar_url", "is", null)
+          .not("prefecture", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (useEmail) q = q.eq("email_confirmed", true);
+        const { data } = await q;
+        for (const row of safeList(data as Record<string, unknown>[])) {
+          if (result.length >= limit) break;
+          if (!hasMinimalProfile(row)) continue;
+          const id = row?.id as string;
+          if (id && !seen.has(id)) {
+            seen.add(id);
+            result.push(toRecommendedUser(row));
+          }
+        }
+        if (result.length > 0) break;
+      }
+    }
+
+    return result.slice(0, limit);
+  } catch (e) {
+    console.error("getRecommendedUsersForOnboarding error:", e);
+    return [];
+  }
+}
+
+/**
  * 全国共通の公式グループ（prefecture が NULL）を取得（例: トレーニーの集まり場）
  * おすすめページで常に表示するグループ
  */
@@ -318,13 +437,15 @@ export type OfficialGroup = { id: string; name: string; description: string | nu
 
 /**
  * オンボーディングおすすめ用: 3つのグループを取得
- * 1. 都道府県グループ
+ * 1. 都道府県グループ（必ず先頭）
  * 2. 上級者(training_level=advanced) → ガチトレしたい人の集まり、それ以外 → ゆるトレの会
  * 3. ベンチプレス100kg目指す会
+ * @param prefectureOverride - myProfile.prefecture がない場合の都道府県（ページ側から渡す）
  */
 export async function getRecommendedGroupsForOnboarding(
   supabase: SupabaseClient,
-  myProfile: MyProfile | null
+  myProfile: MyProfile | null,
+  prefectureOverride?: string | null
 ): Promise<OfficialGroup[]> {
   try {
     const sb = supabase as any;
@@ -338,16 +459,15 @@ export async function getRecommendedGroupsForOnboarding(
       }
     };
 
-    // 1. 都道府県グループ
-    const pref = myProfile?.prefecture?.trim();
+    // 1. 都道府県グループ（必ずおすすめ・先頭）
+    const pref = (myProfile?.prefecture?.trim() || prefectureOverride?.trim() || "").trim();
     if (pref) {
       const prefGroup = await getOfficialGroupForPrefecture(supabase, pref);
       addGroup(prefGroup);
     }
 
-    // 2. ガチトレ or ゆるトレ（training_level=advanced または training_years>=3 → ガチトレ、それ以外 → ゆるトレ）
-    const isAdvanced =
-      myProfile?.training_level === "advanced" || (myProfile?.training_years ?? 0) >= 3;
+    // 2. 上級者(training_level=advanced) → ガチトレ、中級・初級 → ゆるトレ
+    const isAdvanced = myProfile?.training_level === "advanced";
     const levelGroupName = isAdvanced ? "ガチトレしたい人の集まり" : "ゆるトレの会";
     const { data: levelGroup } = await sb
       .from("groups")
@@ -366,6 +486,15 @@ export async function getRecommendedGroupsForOnboarding(
       .maybeSingle();
     addGroup(benchGroup as OfficialGroup | null);
 
+    // 018未実行時のフォールバック: 全国公式グループから不足分を補填（最大3つまで）
+    if (result.length < 3) {
+      const general = await getGeneralOfficialGroups(supabase);
+      for (const g of general) {
+        if (result.length >= 3) break;
+        addGroup(g);
+      }
+    }
+
     return result;
   } catch (e) {
     console.error("getRecommendedGroupsForOnboarding error:", e);
@@ -375,21 +504,34 @@ export async function getRecommendedGroupsForOnboarding(
 
 /**
  * 都道府県の公式グループを取得
+ * prefecture 列で検索し、見つからない場合は名前 "FITPEAK {都道府県}" でフォールバック
  */
 export async function getOfficialGroupForPrefecture(
   supabase: SupabaseClient,
   prefecture: string
 ): Promise<{ id: string; name: string; description: string | null; chat_room_id: string | null } | null> {
-  if (!prefecture?.trim()) return null;
+  const pref = prefecture?.trim();
+  if (!pref) return null;
   try {
-    const { data, error } = await (supabase as any)
+    const sb = supabase as any;
+    // 1. prefecture 列で検索
+    let { data, error } = await sb
       .from("groups")
       .select("id, name, description, chat_room_id")
       .eq("category", "公式")
-      .eq("prefecture", prefecture.trim())
+      .eq("prefecture", pref)
       .maybeSingle();
-    if (error || !data) return null;
-    return data as { id: string; name: string; description: string | null; chat_room_id: string | null };
+    if (!error && data) return data as { id: string; name: string; description: string | null; chat_room_id: string | null };
+    // 2. フォールバック: 名前 "FITPEAK {都道府県}" で検索
+    const namePattern = `FITPEAK ${pref}`;
+    const res = await sb
+      .from("groups")
+      .select("id, name, description, chat_room_id")
+      .eq("category", "公式")
+      .eq("name", namePattern)
+      .maybeSingle();
+    if (res.error || !res.data) return null;
+    return res.data as { id: string; name: string; description: string | null; chat_room_id: string | null };
   } catch (e) {
     console.error("getOfficialGroupForPrefecture error:", e);
     return null;

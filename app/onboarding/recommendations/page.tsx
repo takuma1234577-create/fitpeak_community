@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { isProfileCompleted } from "@/lib/profile-completed";
-import { getRecommendedUsers, getRecommendedGroupsForOnboarding, getMyProfile } from "@/lib/recommendations";
+import { getRecommendedUsersForOnboarding, getRecommendedGroupsForOnboarding, getMyProfile } from "@/lib/recommendations";
 import type { RecommendedUser } from "@/lib/recommendations";
 import { useFollow } from "@/hooks/use-follow";
 import { useProfileModal } from "@/contexts/profile-modal-context";
@@ -221,12 +221,12 @@ export default function OnboardingRecommendationsPage() {
 
       setMyUserId(user.id);
       const myProfile = await getMyProfile(supabase, user.id);
-      const pref = myProfile?.prefecture?.trim() ?? null;
+      const pref = myProfile?.prefecture?.trim() ?? (profileRow.data as unknown as { prefecture?: string | null } | null)?.prefecture?.trim() ?? null;
       setMyPrefecture(pref);
 
       const [recUsers, allGroups] = await Promise.all([
-        getRecommendedUsers(supabase, myProfile, user.id, 5),
-        getRecommendedGroupsForOnboarding(supabase, myProfile),
+        getRecommendedUsersForOnboarding(supabase, myProfile, user.id, 5),
+        getRecommendedGroupsForOnboarding(supabase, myProfile, pref),
       ]);
 
       if (!cancelled) {
