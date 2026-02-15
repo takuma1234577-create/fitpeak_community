@@ -26,6 +26,7 @@ import { useProfileModal } from "@/contexts/profile-modal-context";
 import { uploadChatMedia, getMessageTypeFromFile } from "@/lib/upload-chat-media";
 import { cn } from "@/lib/utils";
 import ChatInviteModal from "@/components/messages/chat-invite-modal";
+import MessageContextMenu from "@/components/messages/message-context-menu";
 
 type MessageRow = {
   id: string;
@@ -81,6 +82,9 @@ export default function IndividualChatView({
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msg: MessageRow } | null>(null);
+  const [replyTo, setReplyTo] = useState<MessageRow | null>(null);
+  const pendingLongPressRef = useRef<{ timer: ReturnType<typeof setTimeout>; msg: MessageRow } | null>(null);
   const { blockedIds } = useBlockedUserIds();
   const { openProfileModal } = useProfileModal();
   const visibleMessages = messages.filter(
@@ -168,6 +172,53 @@ export default function IndividualChatView({
       .eq("conversation_id", id)
       .eq("user_id", myUserId);
   }, [id, myUserId]);
+
+  function getCopyableText(msg: MessageRow): string {
+    const mt = msg.message_type ?? "text";
+    if (mt === "image") return msg.content;
+    if (mt === "video") return msg.content;
+    if (mt === "recruitment_approved" || mt === "recruitment_invite") {
+      try {
+        const j = JSON.parse(msg.content) as { text?: string };
+        return j.text ?? msg.content;
+      } catch {
+        return msg.content;
+      }
+    }
+    if (mt === "group_invite") {
+      try {
+        const j = JSON.parse(msg.content) as { text?: string };
+        return j.text ?? msg.content;
+      } catch {
+        return msg.content;
+      }
+    }
+    return msg.content;
+  }
+
+  const handleCopyMessage = useCallback((msg: MessageRow) => {
+    const text = getCopyableText(msg);
+    navigator.clipboard?.writeText(text).catch(() => {});
+  }, []);
+
+  const handleDeleteMessage = useCallback(
+    async (msg: MessageRow) => {
+      if (msg.sender_id !== myUserId) return;
+      try {
+        const supabase = createClient();
+        await (supabase as any).from("messages").delete().eq("id", msg.id);
+        setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+      } catch (e) {
+        console.error("delete message:", e);
+      }
+    },
+    [myUserId]
+  );
+
+  const handleReplyToMessage = useCallback((msg: MessageRow) => {
+    setReplyTo(msg);
+    textareaRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     fetchConversation();
@@ -296,6 +347,7 @@ export default function IndividualChatView({
     };
     setMessages((prev) => [...prev, optimistic]);
     setInput("");
+    setReplyTo(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setSending(true);
     try {
@@ -539,8 +591,10 @@ export default function IndividualChatView({
 
               <div className={cn("group flex items-end gap-1.5", isMe && "flex-row-reverse")}>
                 <div
+                  role="button"
+                  tabIndex={0}
                   className={cn(
-                    "relative max-w-[75vw] px-4 py-2.5 text-[14px] leading-[1.55] sm:max-w-[380px]",
+                    "relative max-w-[75vw] cursor-context-menu px-4 py-2.5 text-[14px] leading-[1.55] select-text sm:max-w-[380px]",
                     isMe
                       ? cn(
                           "bg-gold text-[#050505] font-medium",
@@ -558,6 +612,31 @@ export default function IndividualChatView({
                         )
                   )}
                   style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                  onTouchStart={(e) => {
+                    const t = e.touches[0];
+                    if (!t) return;
+                    const timer = setTimeout(() => {
+                      setContextMenu({ x: t.clientX, y: t.clientY, msg });
+                      pendingLongPressRef.current = null;
+                    }, 400);
+                    pendingLongPressRef.current = { timer, msg };
+                  }}
+                  onTouchEnd={() => {
+                    if (pendingLongPressRef.current) {
+                      clearTimeout(pendingLongPressRef.current.timer);
+                      pendingLongPressRef.current = null;
+                    }
+                  }}
+                  onTouchMove={() => {
+                    if (pendingLongPressRef.current) {
+                      clearTimeout(pendingLongPressRef.current.timer);
+                      pendingLongPressRef.current = null;
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({ x: e.clientX, y: e.clientY, msg });
+                  }}
                 >
                   {msg.message_type === "image" && (
                     <a
@@ -709,6 +788,22 @@ export default function IndividualChatView({
 
       {/* 3. 入力エリア (下部固定) */}
       <footer className="flex-none border-t border-border/30 bg-background p-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {replyTo && (
+          <div className="mb-2 flex items-center justify-between rounded-lg border border-border/60 bg-secondary/50 px-3 py-2">
+            <span className="line-clamp-1 text-xs text-muted-foreground">
+              返信: {getCopyableText(replyTo).slice(0, 40)}
+              {(getCopyableText(replyTo).length > 40) && "…"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setReplyTo(null)}
+              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="返信をキャンセル"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <form
           className="flex gap-2 items-end"
           onSubmit={(e) => {
@@ -770,6 +865,22 @@ export default function IndividualChatView({
           </button>
         </form>
       </footer>
+
+      {contextMenu && (
+        <MessageContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isOwnMessage={contextMenu.msg.sender_id === myUserId}
+          onCopy={() => handleCopyMessage(contextMenu.msg)}
+          onDelete={
+            contextMenu.msg.sender_id === myUserId
+              ? () => handleDeleteMessage(contextMenu.msg)
+              : undefined
+          }
+          onReply={() => handleReplyToMessage(contextMenu.msg)}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       <ChatInviteModal
         open={inviteModalOpen}

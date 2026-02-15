@@ -318,6 +318,13 @@ export default function MessagesPage() {
               messages={messages}
               onBack={handleBack}
               onSend={handleSendMessage}
+              myUserId={myUserId}
+              onDeleteMessage={async (msgId) => {
+                if (!activeId || !myUserId) return;
+                const supabase = createClient();
+                await (supabase as any).from("messages").delete().eq("id", msgId);
+                setMessages((prev) => prev.filter((m) => m.id !== msgId));
+              }}
             />
           )
         ) : (

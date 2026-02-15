@@ -7,6 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/utils/supabase/client";
 import { cn, safeArray } from "@/lib/utils";
 import { ensureArray } from "@/lib/data-sanitizer";
+import MessageContextMenu from "@/components/messages/message-context-menu";
 
 type MessageRow = {
   id: string;
@@ -39,7 +40,39 @@ export default function GroupChatTab({
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msg: MessageRow } | null>(null);
+  const [replyTo, setReplyTo] = useState<MessageRow | null>(null);
+  const pendingLongPressRef = useRef<{ timer: ReturnType<typeof setTimeout>; msg: MessageRow } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  function getCopyableText(msg: MessageRow): string {
+    try {
+      const j = JSON.parse(msg.content) as { type?: string; text?: string };
+      if (j.text) return j.text;
+    } catch {
+      /* not JSON */
+    }
+    return msg.content;
+  }
+
+  const handleCopyMessage = useCallback((msg: MessageRow) => {
+    navigator.clipboard?.writeText(getCopyableText(msg)).catch(() => {});
+  }, []);
+
+  const handleDeleteMessage = useCallback(async (msg: MessageRow) => {
+    if (msg.sender_id !== myUserId) return;
+    try {
+      const supabase = createClient();
+      await (supabase as any).from("messages").delete().eq("id", msg.id);
+      setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+    } catch (e) {
+      console.error("delete message:", e);
+    }
+  }, [myUserId]);
+
+  const handleReplyToMessage = useCallback((msg: MessageRow) => {
+    setReplyTo(msg);
+  }, []);
 
   const loadMessages = useCallback(async () => {
     const supabase = createClient();
@@ -102,6 +135,7 @@ export default function GroupChatTab({
     const text = input.trim();
     if (!text) return;
     setInput("");
+    setReplyTo(null);
     const supabase = createClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: inserted, error } = await (supabase as any)
@@ -232,12 +266,39 @@ export default function GroupChatTab({
                     </span>
                   )}
                   <div
+                    role="button"
+                    tabIndex={0}
                     className={cn(
-                      "max-w-[280px] rounded-2xl px-4 py-2.5 text-sm leading-relaxed sm:max-w-[360px]",
+                      "relative max-w-[280px] cursor-context-menu rounded-2xl px-4 py-2.5 text-sm leading-relaxed select-text sm:max-w-[360px]",
                       isMe
                         ? "rounded-br-md bg-gold font-medium text-[#050505]"
                         : "rounded-bl-md bg-secondary text-foreground"
                     )}
+                    onTouchStart={(e) => {
+                      const t = e.touches[0];
+                      if (!t) return;
+                      const timer = setTimeout(() => {
+                        setContextMenu({ x: t.clientX, y: t.clientY, msg });
+                        pendingLongPressRef.current = null;
+                      }, 400);
+                      pendingLongPressRef.current = { timer, msg };
+                    }}
+                    onTouchEnd={() => {
+                      if (pendingLongPressRef.current) {
+                        clearTimeout(pendingLongPressRef.current.timer);
+                        pendingLongPressRef.current = null;
+                      }
+                    }}
+                    onTouchMove={() => {
+                      if (pendingLongPressRef.current) {
+                        clearTimeout(pendingLongPressRef.current.timer);
+                        pendingLongPressRef.current = null;
+                      }
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({ x: e.clientX, y: e.clientY, msg });
+                    }}
                   >
                     {(() => {
                       try {
@@ -303,7 +364,39 @@ export default function GroupChatTab({
         )}
       </div>
 
+      {contextMenu && (
+        <MessageContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isOwnMessage={contextMenu.msg.sender_id === myUserId}
+          onCopy={() => handleCopyMessage(contextMenu.msg)}
+          onDelete={
+            contextMenu.msg.sender_id === myUserId
+              ? () => handleDeleteMessage(contextMenu.msg)
+              : undefined
+          }
+          onReply={() => handleReplyToMessage(contextMenu.msg)}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
       <div className="border-t border-border/40 bg-background px-4 py-3">
+        {replyTo && (
+          <div className="mb-2 flex items-center justify-between rounded-lg border border-border/60 bg-secondary/50 px-3 py-2">
+            <span className="line-clamp-1 text-xs text-muted-foreground">
+              返信: {replyTo.sender_name} - {getCopyableText(replyTo).slice(0, 30)}
+              {(getCopyableText(replyTo).length > 30) && "…"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setReplyTo(null)}
+              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="返信をキャンセル"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <div className="flex items-end gap-2">
           <button
             type="button"

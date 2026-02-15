@@ -14,6 +14,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import MessageContextMenu from "@/components/messages/message-context-menu";
 
 export interface Message {
   id: string;
@@ -35,6 +36,8 @@ interface ChatRoomProps {
   messages: Message[];
   onBack: () => void;
   onSend?: (text: string) => void | Promise<void>;
+  myUserId?: string | null;
+  onDeleteMessage?: (msgId: string) => void | Promise<void>;
 }
 
 function DateChip({ label }: { label: string }) {
@@ -52,9 +55,14 @@ export default function ChatRoom({
   messages,
   onBack,
   onSend: onSendProp,
+  myUserId = null,
+  onDeleteMessage,
 }: ChatRoomProps) {
   const [input, setInput] = useState("");
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msg: Message } | null>(null);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const pendingLongPressRef = useRef<{ timer: ReturnType<typeof setTimeout>; msg: Message } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -86,11 +94,25 @@ export default function ChatRoom({
     if (onSendProp) {
       onSendProp(text);
       setInput("");
+      setReplyTo(null);
       if (textareaRef.current) textareaRef.current.style.height = "auto";
       return;
     }
     setInput("");
   };
+
+  const handleCopyMessage = useCallback((msg: Message) => {
+    navigator.clipboard?.writeText(msg.text).catch(() => {});
+  }, []);
+
+  const handleDeleteMessage = useCallback(
+    async (msg: Message) => {
+      if (msg.isMe && onDeleteMessage) {
+        await onDeleteMessage(msg.id);
+      }
+    },
+    [onDeleteMessage]
+  );
 
   const avatarSrc = user.avatar || "/placeholder.svg";
 
@@ -201,8 +223,10 @@ export default function ChatRoom({
 
               <div className={cn("group flex items-end gap-1.5", msg.isMe && "flex-row-reverse")}>
                 <div
+                  role="button"
+                  tabIndex={0}
                   className={cn(
-                    "relative max-w-[75vw] px-4 py-2.5 text-[14px] leading-[1.55] sm:max-w-[380px]",
+                    "relative max-w-[75vw] cursor-context-menu px-4 py-2.5 text-[14px] leading-[1.55] select-text sm:max-w-[380px]",
                     msg.isMe
                       ? cn(
                           "bg-gold text-[#050505] font-medium",
@@ -220,6 +244,31 @@ export default function ChatRoom({
                         )
                   )}
                   style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                  onTouchStart={(e) => {
+                    const t = e.touches[0];
+                    if (!t) return;
+                    const timer = setTimeout(() => {
+                      setContextMenu({ x: t.clientX, y: t.clientY, msg });
+                      pendingLongPressRef.current = null;
+                    }, 400);
+                    pendingLongPressRef.current = { timer, msg };
+                  }}
+                  onTouchEnd={() => {
+                    if (pendingLongPressRef.current) {
+                      clearTimeout(pendingLongPressRef.current.timer);
+                      pendingLongPressRef.current = null;
+                    }
+                  }}
+                  onTouchMove={() => {
+                    if (pendingLongPressRef.current) {
+                      clearTimeout(pendingLongPressRef.current.timer);
+                      pendingLongPressRef.current = null;
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({ x: e.clientX, y: e.clientY, msg });
+                  }}
                 >
                   {msg.text}
                 </div>
@@ -258,8 +307,43 @@ export default function ChatRoom({
         </div>
       )}
 
+      {contextMenu && (
+        <MessageContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isOwnMessage={contextMenu.msg.isMe}
+          onCopy={() => handleCopyMessage(contextMenu.msg)}
+          onDelete={
+            contextMenu.msg.isMe && onDeleteMessage
+              ? () => handleDeleteMessage(contextMenu.msg)
+              : undefined
+          }
+          onReply={() => {
+            setReplyTo(contextMenu.msg);
+            textareaRef.current?.focus();
+          }}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
       {/* ── Input area (V0 style) ── */}
       <div className="relative z-10 border-t border-border/20 bg-background/95 px-3 py-2.5 backdrop-blur-xl sm:px-5 sm:py-3">
+        {replyTo && (
+          <div className="mb-2 flex items-center justify-between rounded-lg border border-border/60 bg-secondary/50 px-3 py-2">
+            <span className="line-clamp-1 text-xs text-muted-foreground">
+              返信: {replyTo.text.slice(0, 40)}
+              {replyTo.text.length > 40 && "…"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setReplyTo(null)}
+              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="返信をキャンセル"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <div className="flex items-end gap-2">
           <div className="flex shrink-0 items-center gap-0.5 pb-1">
             <button

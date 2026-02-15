@@ -30,8 +30,16 @@ export async function getOrCreateConversation(
     .in("conversation_id", myIds);
 
   const rows = safeList(otherInMy as { conversation_id: string }[] | null);
-  const convId = rows[0]?.conversation_id;
-  if (convId) return convId;
+  const sharedConvIds = rows.map((r) => r.conversation_id);
+
+  // グループ・合トレチャット（groups/recruitments.chat_room_id と紐付く会話）は除外し、1対1会話のみを対象にする
+  for (const cid of sharedConvIds) {
+    const [groupRes, recruitRes] = await Promise.all([
+      sb.from("groups").select("id").eq("chat_room_id", cid).maybeSingle(),
+      sb.from("recruitments").select("id").eq("chat_room_id", cid).maybeSingle(),
+    ]);
+    if (!groupRes.data && !recruitRes.data) return cid; // どちらにも紐付いていない = 1対1会話
+  }
 
   return await createNewConversation(sb, myUserId, otherUserId);
 }
