@@ -50,14 +50,17 @@ export default function ProfilePage() {
   const { blockedIds } = useBlockedUserIds();
   const [followModalOpen, setFollowModalOpen] = useState(false);
   const [followModalTab, setFollowModalTab] = useState<FollowTab>("followers");
+  const [messageLoading, setMessageLoading] = useState(false);
 
   const handleMessage = async () => {
     if (!myProfile?.id || !profileUserId || myProfile.id === profileUserId) return;
+    setMessageLoading(true);
     try {
       const conversationId = await getOrCreateConversation(myProfile.id, profileUserId);
-      router.push(`/dashboard/messages/${conversationId}`);
+      window.location.href = `/dashboard/messages/${conversationId}`;
     } catch (err) {
       console.error("getOrCreateConversation:", err);
+      setMessageLoading(false);
     }
   };
 
@@ -145,6 +148,7 @@ export default function ProfilePage() {
             followLoading={followLoading}
             isOwnProfile={false}
             onMessage={handleMessage}
+            messageLoading={messageLoading}
             onFollowersClick={() => { setFollowModalTab("followers"); setFollowModalOpen(true); }}
             onFollowingClick={() => { setFollowModalTab("following"); setFollowModalOpen(true); }}
           />

@@ -43,6 +43,8 @@ export interface OtherProfileTopProps {
   isOwnProfile?: boolean;
   /** チャットボタン押下（その人との個別チャットへ遷移） */
   onMessage?: () => void;
+  /** チャット遷移処理中 */
+  messageLoading?: boolean;
   /** フォロワー数をクリックしたとき（一覧モーダル用） */
   onFollowersClick?: () => void;
   /** フォロー中数をクリックしたとき（一覧モーダル用） */
@@ -71,6 +73,7 @@ export default function OtherProfileTop({
   followLoading = false,
   isOwnProfile = false,
   onMessage,
+  messageLoading = false,
   onFollowersClick,
   onFollowingClick,
   showEarlyAdopterBadge = false,
@@ -250,9 +253,14 @@ export default function OtherProfileTop({
               <button
                 type="button"
                 onClick={onMessage}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gold py-3 text-sm font-bold tracking-wide text-[#050505] transition-all hover:bg-gold-light active:scale-[0.98]"
+                disabled={messageLoading}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gold py-3 text-sm font-bold tracking-wide text-[#050505] transition-all hover:bg-gold-light active:scale-[0.98] disabled:opacity-60"
               >
-                <MessageCircle className="h-4 w-4" />
+                {messageLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MessageCircle className="h-4 w-4" />
+                )}
                 チャット
               </button>
             )}
